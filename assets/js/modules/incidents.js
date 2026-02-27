@@ -100,10 +100,10 @@ async function loadData() {
     window.currentThresholds = thresholds;
 
     // Fetch units, ops, and incident types for the manual modal
-    const { data: units } = await supabase.from('units').select('id, economic_number').order('economic_number');
+    const { data: units } = await supabase.from('units').select('id, economic_number');
     const { data: ops } = await supabase.from('operators').select('id, name').order('name');
     const { data: types } = await supabase.from('incident_types').select('name').order('name');
-    window.allUnitsData = units || [];
+    window.allUnitsData = (units || []).sort((a,b) => a.economic_number.localeCompare(b.economic_number, undefined, {numeric: true}));
     window.allOpsData = ops || [];
     window.allIncidentTypes = types || [];
 
@@ -362,6 +362,17 @@ function openNewIncidentModal() {
         </div>
     `;
     document.body.appendChild(modal);
+
+    document.getElementById('man-inc-unit').addEventListener('change', async (e) => {
+        const unitId = e.target.value;
+        if (!unitId) return;
+        try {
+            const { data } = await supabase.from('assignments').select('operator_id').eq('unit_id', unitId).eq('is_active', true).single();
+            if (data && data.operator_id) {
+                document.getElementById('man-inc-op').value = data.operator_id;
+            }
+        } catch (err) { console.error('Error fetching operator automatically', err); }
+    });
 
     document.getElementById('btn-submit-man-inc').onclick = async function() {
         const unitId = document.getElementById('man-inc-unit').value;

@@ -55,8 +55,9 @@ export async function renderCameras(container) {
 }
 
 async function loadFilters() {
-    const { data: units } = await supabase.from('units').select('id, economic_number').order('economic_number');
+    let { data: units } = await supabase.from('units').select('id, economic_number');
     if (units) {
+        units = units.sort((a,b) => a.economic_number.localeCompare(b.economic_number, undefined, {numeric: true}));
         const select = document.getElementById('filter-unit');
         units.forEach(u => {
             select.insertAdjacentHTML('beforeend', `<option value="${u.id}">${u.economic_number}</option>`);
@@ -198,6 +199,17 @@ function openNewLogModal() {
         </div>
     `;
     document.body.appendChild(modal);
+
+    document.getElementById('log-unit').addEventListener('change', async (e) => {
+        const unitId = e.target.value;
+        if (!unitId) return;
+        try {
+            const { data } = await supabase.from('assignments').select('operator_id').eq('unit_id', unitId).eq('is_active', true).single();
+            if (data && data.operator_id) {
+                document.getElementById('log-op').value = data.operator_id;
+            }
+        } catch (err) { console.error('Error fetching operator automatically', err); }
+    });
 
     document.getElementById('btn-submit-log').onclick = async function() {
         const unitId = document.getElementById('log-unit').value;

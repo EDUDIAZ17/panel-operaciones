@@ -78,7 +78,7 @@ async function loadTable() {
         return;
     }
 
-    window.unitsData = units; 
+    window.unitsData = units.sort((a,b) => a.economic_number.localeCompare(b.economic_number, undefined, {numeric: true})); 
     window.operatorsData = allOps;
     window.clientsData = clients || [];
     window.locationsData = locations || [];
@@ -145,7 +145,13 @@ function renderRows(units, allOps) {
         const samsaraVeh = samsaraData.find(v => v.name.includes(unit.economic_number) || (unit.placas && v.name.includes(unit.placas)));
         const locationStr = samsaraVeh ? `<div class="text-[10px] text-blue-600 font-bold"><i class="fas fa-map-marker-alt"></i> GPS: ${samsaraVeh.location.speed} km/h</div>` : '<div class="text-[10px] text-gray-400">Sin GPS</div>';
         
-        const routeStr = typeof unit.details === 'string' ? unit.details : (unit.details?.route || 'Pendiente');
+        let routeStr = 'Pendiente';
+        if (typeof unit.details === 'object' && unit.details !== null) {
+            if (unit.details.origen && unit.details.destino) routeStr = `${unit.details.origen} - ${unit.details.destino}`;
+            else if (unit.details.route) routeStr = unit.details.route;
+        } else if (typeof unit.details === 'string') {
+            routeStr = unit.details;
+        }
 
         html += `
             <tr class="border-b hover:bg-gray-50 transition items-center">
