@@ -4,6 +4,8 @@ import { renderExpenses } from './modules/expenses.js';
 import { renderAdmin } from './modules/admin.js';
 import { renderReports } from './modules/reports.js';
 import { renderObservations } from './modules/observations.js';
+import { renderCameras } from './modules/cameras.js';
+import { renderIncidents } from './modules/incidents.js';
 
 // DOM Elements
 const contentArea = document.getElementById('content-area');
@@ -133,6 +135,16 @@ function loadView(view) {
             setActiveNav('nav-observations');
             renderObservations(contentArea);
             break;
+        case 'cameras':
+            pageTitle.textContent = 'Bitácora de Cámaras';
+            setActiveNav('nav-cameras');
+            renderCameras(contentArea);
+            break;
+        case 'incidents':
+            pageTitle.textContent = 'Incidencias Automáticas';
+            setActiveNav('nav-incidents');
+            renderIncidents(contentArea);
+            break;
     }
 }
 
@@ -148,6 +160,8 @@ attachNav('nav-expenses', 'expenses');
 attachNav('nav-reports', 'reports');
 attachNav('nav-observations', 'observations');
 attachNav('nav-admin', 'admin');
+attachNav('nav-cameras', 'cameras');
+attachNav('nav-incidents', 'incidents');
 
 const logoutBtn = document.getElementById('logout-btn');
 if (logoutBtn) {

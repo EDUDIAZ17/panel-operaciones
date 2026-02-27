@@ -65,6 +65,10 @@ async function loadTable() {
     
     const { data: allOps } = await supabase.from('operators').select('*').eq('active', true).order('name');
     
+    const { data: clients } = await supabase.from('clients').select('*').order('name');
+    const { data: locations } = await supabase.from('locations').select('*').order('name');
+    const { data: unitStatuses } = await supabase.from('unit_statuses').select('*').order('name');
+    
     // Fetch Samsara Data
     const samsaraData = await fetchSamsaraLocations();
     window.samsaraData = samsaraData;
@@ -76,9 +80,40 @@ async function loadTable() {
 
     window.unitsData = units; 
     window.operatorsData = allOps;
+    window.clientsData = clients || [];
+    window.locationsData = locations || [];
+    window.statusesData = unitStatuses || [];
 
     renderRows(units, allOps, samsaraData);
 }
+
+window.handleDynamicSelect = async (selectId, tableName) => {
+    const select = document.getElementById(selectId);
+    if (select.value === '__NEW__') {
+        const newValue = prompt('Ingresa el nuevo valor:');
+        if (newValue && newValue.trim()) {
+            const val = newValue.trim().toUpperCase();
+            const { data, error } = await supabase.from(tableName).insert([{ name: val }]).select();
+            if (error) {
+                alert('Error al guardar en base de datos: ' + error.message);
+                select.value = "";
+            } else {
+                const option = document.createElement('option');
+                option.value = val;
+                option.textContent = val;
+                select.insertBefore(option, select.querySelector('option[value="__NEW__"]'));
+                select.value = val;
+
+                if (tableName === 'clients') window.clientsData.push({name: val});
+                if (tableName === 'locations') window.locationsData.push({name: val});
+                if (tableName === 'unit_statuses') window.statusesData.push({name: val});
+                if (tableName === 'incident_types' && window.allIncidentTypes) window.allIncidentTypes.push({name: val});
+            }
+        } else {
+            select.value = "";
+        }
+    }
+};
 
 function renderRows(units, allOps) {
     const list = document.getElementById('assignments-body');
@@ -158,9 +193,9 @@ window.openEditModal = (unitId) => {
     const unit = window.unitsData.find(u => u.id === unitId);
     const ops = window.operatorsData;
     
-    // Default mock lists to prevent writing, only select
-    const clients = ["Amazon", "Mercado Libre", "DHL", "FedEx", "Walmart", "Nestle", "Bimbo"];
-    const destinations = ["CDMX", "Monterrey", "Guadalajara", "Queretaro", "Puebla", "Tijuana", "Leon", "San Luis Potosí"];
+    // Dynamically loaded generic catalogs
+    const clients = window.clientsData || [];
+    const destinations = window.locationsData || [];
 
     const currentClient = unit.details?.cliente || '';
     const currentOrigin = unit.details?.origen || '';
@@ -191,25 +226,28 @@ window.openEditModal = (unitId) => {
 
                 <div class="col-span-2">
                     <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1">Cliente</label>
-                    <select id="edit-client" class="w-full border-2 border-gray-200 focus:border-blue-500 outline-none p-2 rounded-lg font-medium text-blue-700">
+                    <select id="edit-client" class="w-full border-2 border-gray-200 focus:border-blue-500 outline-none p-2 rounded-lg font-medium text-blue-700" onchange="window.handleDynamicSelect('edit-client', 'clients')">
                         <option value="">Seleccionar Cliente...</option>
-                        ${clients.map(c => `<option value="${c}" ${currentClient === c ? 'selected' : ''}>${c}</option>`).join('')}
+                        ${clients.map(c => `<option value="${c.name}" ${currentClient === c.name ? 'selected' : ''}>${c.name}</option>`).join('')}
+                        <option value="__NEW__" class="font-bold text-green-600">+ Agregar Nuevo Cliente...</option>
                     </select>
                 </div>
 
                 <div>
                     <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1">Origen (Carga)</label>
-                    <select id="edit-origin" class="w-full border-2 border-gray-200 focus:border-blue-500 outline-none p-2 rounded-lg font-medium">
+                    <select id="edit-origin" class="w-full border-2 border-gray-200 focus:border-blue-500 outline-none p-2 rounded-lg font-medium" onchange="window.handleDynamicSelect('edit-origin', 'locations')">
                         <option value="">Seleccionar Origen...</option>
-                        ${destinations.map(d => `<option value="${d}" ${currentOrigin === d ? 'selected' : ''}>${d}</option>`).join('')}
+                        ${destinations.map(d => `<option value="${d.name}" ${currentOrigin === d.name ? 'selected' : ''}>${d.name}</option>`).join('')}
+                        <option value="__NEW__" class="font-bold text-green-600">+ Agregar Nuevo Origen...</option>
                     </select>
                 </div>
 
                 <div>
                     <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1">Destino (Entrega)</label>
-                    <select id="edit-dest" class="w-full border-2 border-gray-200 focus:border-blue-500 outline-none p-2 rounded-lg font-medium">
+                    <select id="edit-dest" class="w-full border-2 border-gray-200 focus:border-blue-500 outline-none p-2 rounded-lg font-medium" onchange="window.handleDynamicSelect('edit-dest', 'locations')">
                         <option value="">Seleccionar Destino...</option>
-                        ${destinations.map(d => `<option value="${d}" ${currentDest === d ? 'selected' : ''}>${d}</option>`).join('')}
+                        ${destinations.map(d => `<option value="${d.name}" ${currentDest === d.name ? 'selected' : ''}>${d.name}</option>`).join('')}
+                        <option value="__NEW__" class="font-bold text-green-600">+ Agregar Nuevo Destino...</option>
                     </select>
                 </div>
 
@@ -268,9 +306,9 @@ window.openEditModal = (unitId) => {
 window.openScheduleModal = () => {
     const units = window.unitsData;
     
-    // Default mock lists to prevent writing, only select
-    const clients = ["Amazon", "Mercado Libre", "DHL", "FedEx", "Walmart", "Nestle", "Bimbo"];
-    const destinations = ["CDMX", "Monterrey", "Guadalajara", "Queretaro", "Puebla", "Tijuana", "Leon", "San Luis Potosí"];
+    // Dynamically loaded generic catalogs
+    const clients = window.clientsData || [];
+    const destinations = window.locationsData || [];
 
     const modal = document.createElement('div');
     modal.className = 'fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 fade-in';
@@ -293,25 +331,28 @@ window.openScheduleModal = () => {
 
                 <div class="col-span-2">
                     <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1">Cliente</label>
-                    <select id="sched-client" class="w-full border-2 border-gray-200 focus:border-purple-500 outline-none p-2 rounded-lg font-medium text-purple-700">
+                    <select id="sched-client" class="w-full border-2 border-gray-200 focus:border-purple-500 outline-none p-2 rounded-lg font-medium text-purple-700" onchange="window.handleDynamicSelect('sched-client', 'clients')">
                         <option value="">Seleccionar Cliente...</option>
-                        ${clients.map(c => `<option value="${c}">${c}</option>`).join('')}
+                        ${clients.map(c => `<option value="${c.name}">${c.name}</option>`).join('')}
+                        <option value="__NEW__" class="font-bold text-green-600">+ Agregar Nuevo Cliente...</option>
                     </select>
                 </div>
 
                 <div>
                     <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1">Origen (Carga)</label>
-                    <select id="sched-origin" class="w-full border-2 border-gray-200 focus:border-purple-500 outline-none p-2 rounded-lg font-medium">
+                    <select id="sched-origin" class="w-full border-2 border-gray-200 focus:border-purple-500 outline-none p-2 rounded-lg font-medium" onchange="window.handleDynamicSelect('sched-origin', 'locations')">
                         <option value="">Seleccionar Origen...</option>
-                        ${destinations.map(d => `<option value="${d}">${d}</option>`).join('')}
+                        ${destinations.map(d => `<option value="${d.name}">${d.name}</option>`).join('')}
+                        <option value="__NEW__" class="font-bold text-green-600">+ Agregar Nuevo Origen...</option>
                     </select>
                 </div>
 
                 <div>
                     <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1">Destino (Entrega)</label>
-                    <select id="sched-dest" class="w-full border-2 border-gray-200 focus:border-purple-500 outline-none p-2 rounded-lg font-medium">
+                    <select id="sched-dest" class="w-full border-2 border-gray-200 focus:border-purple-500 outline-none p-2 rounded-lg font-medium" onchange="window.handleDynamicSelect('sched-dest', 'locations')">
                         <option value="">Seleccionar Destino...</option>
-                        ${destinations.map(d => `<option value="${d}">${d}</option>`).join('')}
+                        ${destinations.map(d => `<option value="${d.name}">${d.name}</option>`).join('')}
+                        <option value="__NEW__" class="font-bold text-green-600">+ Agregar Nuevo Destino...</option>
                     </select>
                 </div>
 
@@ -376,15 +417,18 @@ window.openScheduleModal = () => {
 // 3. Status Modal (Quick Change)
 window.openStatusModal = (unitId) => {
     const currentStatus = window.unitsData.find(u => u.id === unitId).status;
-    const valid = ['Vacia', 'Cargada', 'En Taller', 'Transito', 'Sin Operador'];
+    const valid = window.statusesData || [];
+    const hasCurrent = valid.find(s => s.name === currentStatus);
+    const renderStatuses = hasCurrent ? valid : [...valid, {name: currentStatus}];
     
     const modal = document.createElement('div');
     modal.className = 'fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 fade-in';
     modal.innerHTML = `
         <div class="bg-white rounded-xl p-6 w-80 shadow-2xl border border-gray-100 text-center">
             <h3 class="text-lg font-black mb-4 text-gray-800">Actualizar Estatus</h3>
-            <select id="status-select" class="w-full border-2 border-gray-200 focus:border-blue-500 p-3 rounded-lg font-bold text-center mb-6 text-gray-700 outline-none">
-                ${valid.map(st => `<option value="${st}" ${currentStatus === st ? 'selected' : ''}>${st}</option>`).join('')}
+            <select id="status-select" class="w-full border-2 border-gray-200 focus:border-blue-500 p-3 rounded-lg font-bold text-center mb-6 text-gray-700 outline-none" onchange="window.handleDynamicSelect('status-select', 'unit_statuses')">
+                ${renderStatuses.map(st => `<option value="${st.name}" ${currentStatus === st.name ? 'selected' : ''}>${st.name}</option>`).join('')}
+                <option value="__NEW__" class="font-bold text-green-600">+ Agregar Nuevo Estatus...</option>
             </select>
             <div class="flex justify-center gap-3">
                 <button class="px-4 py-2 font-bold text-gray-500 hover:bg-gray-100 rounded-lg transition" onclick="this.closest('.fixed').remove()">Cancelar</button>
