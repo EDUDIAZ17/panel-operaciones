@@ -38,8 +38,9 @@ export async function renderDashboard(container) {
 
             <!-- TABLA OPERACIONES -->
             <div class="overflow-hidden rounded-lg shadow-2xl bg-black airport-board">
-                <div class="grid grid-cols-9 airport-header p-3 text-sm font-bold text-center">
+                <div class="grid grid-cols-10 airport-header p-3 text-[10px] md:text-sm font-bold text-center">
                     <div class="col-span-1 text-left">TIPO</div>
+                    <div class="col-span-1">CLIENTE</div>
                     <div class="col-span-1">ECO #</div>
                     <div class="col-span-1">PLACAS</div>
                     <div class="col-span-1">ESTATUS</div>
@@ -89,7 +90,7 @@ async function fetchAndUpdate() {
     // Fetch Samsara Data concurrently
     samsaraData = await fetchSamsaraLocations();
     
-    window.allUnits = units; 
+    window.allUnits = units.sort((a,b) => a.economic_number.localeCompare(b.economic_number, undefined, {numeric: true}));
     applyFiltersAndRender();
 }
 
@@ -144,7 +145,16 @@ function renderRows(units, container) {
             mapsUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
         }
 
-        const route = typeof unit.details === 'string' ? unit.details : (unit.details?.route || '---'); 
+        const cliente = (typeof unit.details === 'object' && unit.details?.cliente) ? unit.details.cliente : '---';
+
+        let customRoute = '---';
+        if (typeof unit.details === 'object' && unit.details !== null) {
+            if (unit.details.origen && unit.details.destino) customRoute = `${unit.details.origen} - ${unit.details.destino}`;
+            else if (unit.details.route) customRoute = unit.details.route;
+        } else if (typeof unit.details === 'string') {
+            customRoute = unit.details;
+        }
+
         const city = samsaraVeh ? `<span class="text-[10px] block truncate text-gray-400">GPS Activo</span>` : '<span class="text-[10px] text-gray-600">No Signal</span>';
 
         let rowClass = 'border-l-4 border-transparent airport-flip'; 
@@ -152,23 +162,24 @@ function renderRows(units, container) {
         if(unit.status.includes('Transito') || unit.status === 'Cargada') rowClass += ' border-l-green-900';
 
         html += `
-            <div class="grid grid-cols-9 border-b border-gray-800 p-3 items-center hover:bg-gray-800 transition airport-row ${rowClass} time-row" 
+            <div class="grid grid-cols-10 border-b border-gray-800 p-3 items-center hover:bg-gray-800 transition airport-row ${rowClass} time-row" 
                  style="animation-delay: ${idx * 0.1}s"
                  data-timestamp="${unit.last_status_update}" 
                  data-status="${unit.status}">
                  
-                <div class="col-span-1 text-blue-400 font-bold">${unit.type}</div>
-                <div class="col-span-1 text-white font-mono text-lg text-center">${unit.economic_number}</div>
-                <div class="col-span-1 text-gray-400 text-sm text-center">${placas}</div>
+                <div class="col-span-1 text-blue-400 font-bold text-xs md:text-sm">${unit.type}</div>
+                <div class="col-span-1 text-purple-400 text-[10px] md:text-xs font-bold text-center truncate">${cliente}</div>
+                <div class="col-span-1 text-white font-mono text-sm md:text-lg text-center">${unit.economic_number}</div>
+                <div class="col-span-1 text-gray-400 text-[10px] md:text-sm text-center">${placas}</div>
                 
                 <div class="col-span-1 flex items-center justify-center">
                     <span class="status-indicator w-3 h-3 rounded-full mr-2"></span>
-                    <span class="uppercase text-sm font-bold text-gray-300">${unit.status}</span>
+                    <span class="uppercase text-[10px] md:text-sm font-bold text-gray-300 truncate">${unit.status}</span>
                 </div>
                 
-                <div class="col-span-1 text-gray-300 text-sm truncate pl-4">${opName}</div>
+                <div class="col-span-1 text-gray-300 text-[10px] md:text-sm truncate pl-4">${opName}</div>
                 
-                <div class="col-span-1 text-center text-xs text-orange-400 font-mono">${route}</div>
+                <div class="col-span-1 text-center text-[10px] md:text-xs text-orange-400 font-mono">${customRoute}</div>
                 <div class="col-span-1 text-center font-mono">
                     <a href="${mapsUrl}" target="_blank">
                         ${location}

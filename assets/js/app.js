@@ -6,6 +6,7 @@ import { renderReports } from './modules/reports.js';
 import { renderObservations } from './modules/observations.js';
 import { renderCameras } from './modules/cameras.js';
 import { renderIncidents } from './modules/incidents.js';
+import { renderClientReports } from './modules/client_reports.js';
 
 // DOM Elements
 const contentArea = document.getElementById('content-area');
@@ -51,6 +52,11 @@ try {
             document.getElementById('nav-expenses')?.classList.add('hidden-section');
             document.getElementById('nav-observations')?.classList.add('hidden-section');
             document.getElementById('nav-reports')?.classList.add('hidden-section');
+        }
+
+        // Only torre de control uses the client reports by default, hide for others unless they are admin/direccion
+        if (role !== 'torre_control' && role !== 'admin') {
+            document.getElementById('nav-client-reports')?.classList.add('hidden-section');
         }
 
         // RH: solo panel(dashboard) y su seccion (observaciones)
@@ -146,6 +152,11 @@ function loadView(view) {
             setActiveNav('nav-incidents');
             renderIncidents(contentArea);
             break;
+        case 'client-reports':
+            pageTitle.textContent = 'Reportes Específicos de Clientes';
+            setActiveNav('nav-client-reports');
+            renderClientReports(contentArea);
+            break;
     }
 }
 
@@ -163,6 +174,7 @@ attachNav('nav-observations', 'observations');
 attachNav('nav-admin', 'admin');
 attachNav('nav-cameras', 'cameras');
 attachNav('nav-incidents', 'incidents');
+attachNav('nav-client-reports', 'client-reports');
 
 const logoutBtn = document.getElementById('logout-btn');
 if (logoutBtn) {
