@@ -18,7 +18,7 @@ export async function renderIncidents(container) {
             </div>
 
             <!-- Dashboard Widgets row -->
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 shrink-0">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 shrink-0 h-auto">
                 <!-- Stats -->
                 <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col justify-center">
                     <div class="text-gray-500 text-sm font-bold uppercase tracking-wider mb-2">Total Incidencias (30 días)</div>
@@ -27,12 +27,12 @@ export async function renderIncidents(container) {
                 </div>
 
                 <!-- Chart container: Takes 2 cols -->
-                <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 lg:col-span-2 h-48">
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 lg:col-span-2 min-h-[300px]">
                     <canvas id="incidentsChart"></canvas>
                 </div>
             </div>
 
-            <div class="bg-white rounded-xl shadow-sm border border-gray-100 flex-1 overflow-hidden flex flex-col">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 flex-1 overflow-hidden flex flex-col min-h-[400px]">
                 <div class="p-4 border-b bg-gray-50 flex justify-between items-center">
                     <h4 class="font-bold text-gray-700">Historial de Incidencias</h4>
                     <select id="filter-status" class="border p-2 rounded-lg text-sm outline-none focus:border-red-500">

@@ -145,12 +145,17 @@ function renderRows(units, container) {
             mapsUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
         }
 
-        const cliente = (typeof unit.details === 'object' && unit.details?.cliente) ? unit.details.cliente : '---';
+        let parsedDetails = unit.details;
+        if (typeof parsedDetails === 'string') {
+            try { parsedDetails = JSON.parse(parsedDetails); } catch(e) {}
+        }
+
+        const cliente = (typeof parsedDetails === 'object' && parsedDetails?.cliente) ? parsedDetails.cliente : '---';
 
         let customRoute = '---';
-        if (typeof unit.details === 'object' && unit.details !== null) {
-            if (unit.details.origen && unit.details.destino) customRoute = `${unit.details.origen} - ${unit.details.destino}`;
-            else if (unit.details.route) customRoute = unit.details.route;
+        if (typeof parsedDetails === 'object' && parsedDetails !== null) {
+            if (parsedDetails.origen && parsedDetails.destino) customRoute = `${parsedDetails.origen} - ${parsedDetails.destino}`;
+            else if (parsedDetails.route) customRoute = parsedDetails.route;
         } else if (typeof unit.details === 'string') {
             customRoute = unit.details;
         }
