@@ -1,0 +1,40 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body, html {
+    height: 100%;
+    width: 100%;
+    overflow: hidden; /* App-like feel */
+}
+
+ul {
+    list-style: none;
+}
+
+a {
+    text-decoration: none;
+    color: inherit;
+}
+
+button {
+    cursor: pointer;
+    border: none;
+    font-family: inherit;
+}
+
+input, select, textarea {
+    font-family: inherit;
+    background: var(--bg-card);
+    border: 1px solid var(--bg-hover);
+    color: var(--text-main);
+    padding: 0.5rem;
+    border-radius: 4px;
+}
+
+input:focus, select:focus {
+    outline: 2px solid var(--primary);
+    border-color: transparent;
+}

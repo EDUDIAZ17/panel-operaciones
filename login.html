@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login - Panel Operaciones</title>
+    <!-- Fonts -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --primary: #10b981; /* Emerald-500 */
+        --bg-dark: #0f172a;
+        --bg-card: #1e293b;
+        --text-main: #f8fafc;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        background-color: var(--bg-dark);
+        color: var(--text-main);
+        font-family: "Inter", sans-serif;
+        height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        background-image: radial-gradient(
+          circle at 50% 50%,
+          #1e1b4b 0%,
+          #0f172a 100%
+        );
+      }
+
+      .login-container {
+        width: 100%;
+        max-width: 400px;
+        padding: 2rem;
+        background: rgba(30, 41, 59, 0.7);
+        backdrop-filter: blur(10px);
+        border-radius: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        animation: slideUp 0.5s ease-out;
+      }
+
+      @keyframes slideUp {
+        from {
+          transform: translateY(20px);
+          opacity: 0;
+        }
+        to {
+          transform: translateY(0);
+          opacity: 1;
+        }
+      }
+
+      .logo {
+        text-align: center;
+        margin-bottom: 2rem;
+      }
+
+      .logo h1 {
+        font-weight: 800;
+        font-size: 1.8rem;
+        background: linear-gradient(to right, #34d399, #10b981);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 0.5rem;
+      }
+
+      .logo p {
+        color: #94a3b8;
+        font-size: 0.9rem;
+      }
+
+      .form-group {
+        margin-bottom: 1.5rem;
+      }
+
+      .form-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-size: 0.85rem;
+        color: #cbd5e1;
+      }
+
+      input {
+        width: 100%;
+        padding: 0.75rem;
+        background: rgba(15, 23, 42, 0.6);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        color: white;
+        font-size: 1rem;
+        transition: all 0.2s;
+      }
+
+      input:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+      }
+
+      button {
+        width: 100%;
+        padding: 0.85rem;
+        background: var(--primary);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+
+      button:hover {
+        background: #059669; /* Emerald-600 */
+      }
+
+      select option {
+        background-color: var(--bg-card);
+        color: var(--text-main);
+      }
+
+      .error-msg {
+        color: #ef4444;
+        font-size: 0.85rem;
+        margin-top: 1rem;
+        text-align: center;
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="login-container">
+      <div class="logo">
+        <img
+          src="../logo/logo.png"
+          alt="Panel Alexa Logo"
+          style="max-height: 80px; margin: 0 auto 1rem auto; display: block"
+          onerror="this.style.display = 'none'"
+        />
+        <h1>PANEL ALEXA</h1>
+        <p>Logística y Transporte</p>
+      </div>
+
+      <!-- Tab Toggle for Login/Register -->
+      <div
+        style="
+          display: flex;
+          gap: 10px;
+          margin-bottom: 1.5rem;
+          background: rgba(15, 23, 42, 0.5);
+          padding: 5px;
+          border-radius: 8px;
+        "
+      >
+        <button
+          id="tab-login"
+          style="background: var(--primary); padding: 0.5rem; flex: 1"
+        >
+          Ingresar
+        </button>
+        <button
+          id="tab-register"
+          style="
+            background: transparent;
+            color: #94a3b8;
+            padding: 0.5rem;
+            flex: 1;
+          "
+        >
+          Crear Cuenta
+        </button>
+      </div>
+      <form id="login-form">
+        <div class="form-group">
+          <label>Usuario / Correo</label>
+          <input
+            type="email"
+            id="email"
+            required
+            placeholder="correo@alexatransportes.com.mx"
+          />
+        </div>
+        <div class="form-group">
+          <label>Contraseña</label>
+          <input
+            type="password"
+            id="password"
+            required
+            placeholder="••••••••"
+          />
+        </div>
+        <button type="submit">Iniciar Sesión</button>
+        <p id="error-msg" class="error-msg">Credenciales incorrectas</p>
+      </form>
+
+      <form id="register-form" style="display: none">
+        <div class="form-group">
+          <label>Nombre Completo</label>
+          <input type="text" id="reg-name" required placeholder="Juan Pérez" />
+        </div>
+        <div class="form-group">
+          <label>Correo Electrónico (@alexatransportes.com.mx)</label>
+          <input
+            type="email"
+            id="reg-email"
+            required
+            pattern=".+@alexatransportes\.com\.mx"
+            title="Debe ser un correo con dominio @alexatransportes.com.mx"
+            placeholder="nombre@alexatransportes.com.mx"
+          />
+        </div>
+        <div class="form-group">
+          <label>Contraseña</label>
+          <input
+            type="password"
+            id="reg-password"
+            required
+            placeholder="••••••••"
+          />
+        </div>
+        <div class="form-group">
+          <label>Rol</label>
+          <select
+            id="reg-role"
+            required
+            style="
+              width: 100%;
+              padding: 0.75rem;
+              background: rgba(15, 23, 42, 0.6);
+              border: 1px solid rgba(255, 255, 255, 0.1);
+              border-radius: 8px;
+              color: white;
+              font-size: 1rem;
+            "
+          >
+            <option value="" disabled selected>Selecciona tu rol</option>
+            <option value="operaciones">Operaciones</option>
+            <option value="torre_control">Torre de Control</option>
+            <option value="rh">Recursos Humanos</option>
+            <option value="direccion_general">Dirección General</option>
+            <option value="otros_usuarios">Otros Usuarios</option>
+          </select>
+        </div>
+        <button type="submit">Registrarme</button>
+        <p id="reg-error-msg" class="error-msg">Error al registrar</p>
+      </form>
+    </div>
+
+    <script type="module">
+      import { authenticate, registerUser } from "./assets/js/config/users.js";
+
+      // Toggle views with tabs
+      const tabLogin = document.getElementById("tab-login");
+      const tabRegister = document.getElementById("tab-register");
+      const formLogin = document.getElementById("login-form");
+      const formRegister = document.getElementById("register-form");
+
+      tabRegister.addEventListener("click", (e) => {
+        e.preventDefault();
+        formLogin.style.display = "none";
+        formRegister.style.display = "block";
+        tabRegister.style.background = "var(--primary)";
+        tabRegister.style.color = "white";
+        tabLogin.style.background = "transparent";
+        tabLogin.style.color = "#94a3b8";
+      });
+
+      tabLogin.addEventListener("click", (e) => {
+        e.preventDefault();
+        formRegister.style.display = "none";
+        formLogin.style.display = "block";
+        tabLogin.style.background = "var(--primary)";
+        tabLogin.style.color = "white";
+        tabRegister.style.background = "transparent";
+        tabRegister.style.color = "#94a3b8";
+      });
+
+      // Login
+      document.getElementById("login-form").addEventListener("submit", (e) => {
+        e.preventDefault();
+        const email = document.getElementById("email").value;
+        const password = document.getElementById("password").value;
+
+        const user = authenticate(email, password);
+
+        if (user) {
+          // Save session
+          sessionStorage.setItem("currentUser", JSON.stringify(user));
+          window.location.href = "index.html";
+        } else {
+          const err = document.getElementById("error-msg");
+          err.style.display = "block";
+          err.classList.add("shake");
+          setTimeout(() => err.classList.remove("shake"), 500);
+        }
+      });
+
+      // Register
+      document
+        .getElementById("register-form")
+        .addEventListener("submit", (e) => {
+          e.preventDefault();
+          const name = document.getElementById("reg-name").value;
+          const email = document.getElementById("reg-email").value;
+          const password = document.getElementById("reg-password").value;
+          const role = document.getElementById("reg-role").value;
+
+          if (!email.endsWith("@alexatransportes.com.mx")) {
+            alert("Solo se permiten correos @alexatransportes.com.mx");
+            return;
+          }
+
+          const success = registerUser({ name, email, password, role });
+
+          if (success) {
+            alert("Cuenta creada exitosamente. Ahora puedes iniciar sesión.");
+            tabLogin.click();
+          } else {
+            const err = document.getElementById("reg-error-msg");
+            err.textContent =
+              "El correo ya está registrado u ocurrió un error.";
+            err.style.display = "block";
+          }
+        });
+    </script>
+  </body>
+</html>
