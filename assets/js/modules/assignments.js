@@ -2,6 +2,8 @@ import { supabase } from '../services/supabaseClient.js';
 import { openHistoryModal } from './history.js';
 import { fetchSamsaraLocations } from '../services/samsara.js';
 
+window.openHistoryModal = openHistoryModal;
+
 export async function renderAssignments(container) {
     container.innerHTML = `
         <div id="view-assignments" class="p-6 fade-in">
@@ -145,10 +147,15 @@ function renderRows(units, allOps) {
         const samsaraVeh = samsaraData.find(v => v.name.includes(unit.economic_number) || (unit.placas && v.name.includes(unit.placas)));
         const locationStr = samsaraVeh ? `<div class="text-[10px] text-blue-600 font-bold"><i class="fas fa-map-marker-alt"></i> GPS: ${samsaraVeh.location.speed} km/h</div>` : '<div class="text-[10px] text-gray-400">Sin GPS</div>';
         
+        let parsedDetails = unit.details;
+        if (typeof parsedDetails === 'string') {
+            try { parsedDetails = JSON.parse(parsedDetails); } catch(e) {}
+        }
+
         let routeStr = 'Pendiente';
-        if (typeof unit.details === 'object' && unit.details !== null) {
-            if (unit.details.origen && unit.details.destino) routeStr = `${unit.details.origen} - ${unit.details.destino}`;
-            else if (unit.details.route) routeStr = unit.details.route;
+        if (typeof parsedDetails === 'object' && parsedDetails !== null) {
+            if (parsedDetails.origen && parsedDetails.destino) routeStr = `${parsedDetails.origen} - ${parsedDetails.destino}`;
+            else if (parsedDetails.route) routeStr = parsedDetails.route;
         } else if (typeof unit.details === 'string') {
             routeStr = unit.details;
         }
@@ -168,17 +175,17 @@ function renderRows(units, allOps) {
                     </span>
                     ${scheduleBadge}
                 </td>
-                <td class="p-4 text-sm">
-                    <div class="font-bold text-orange-600 uppercase">${routeStr}</div>
+                <td class="p-4 text-sm w-48 max-w-[200px]">
+                    <div class="font-bold text-orange-600 uppercase truncate" title="${routeStr}">${routeStr}</div>
                     ${locationStr}
                 </td>
-                <td class="p-4 text-sm text-gray-600">
+                <td class="p-4 text-sm text-gray-600 w-40">
                     <div><i class="far fa-clock"></i> ${dateDisplay}</div>
-                    <div class="text-xs font-bold mt-1 ${unit.last_modified_by ? 'text-indigo-600 bg-indigo-50 inline-block px-2 py-0.5 rounded' : 'text-gray-400'}">
+                    <div class="text-[10px] font-bold mt-1 ${unit.last_modified_by ? 'text-indigo-600 bg-indigo-50 inline-block px-1 rounded truncate max-w-full' : 'text-gray-400'}" title="${unit.last_modified_by || 'Sistema'}">
                         <i class="fas fa-user-edit"></i> ${unit.last_modified_by || 'Sistema'}
                     </div>
                 </td>
-                <td class="p-4 flex gap-2">
+                <td class="p-4 flex gap-2 w-32">
                     <button class="bg-blue-50 text-blue-600 hover:bg-blue-100 px-3 py-2 rounded transition" onclick="openEditModal('${unit.id}')" title="Editar Completo">
                         <i class="fas fa-edit"></i>
                     </button>
