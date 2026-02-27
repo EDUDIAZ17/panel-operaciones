@@ -1,0 +1,97 @@
+.board-grid {
+    display: grid;
+    gap: var(--space-md);
+}
+
+/* Flight Board Styles 2.0 */
+.board-container {
+    background: transparent;
+}
+
+.flight-row {
+    display: grid;
+    /* Updated grid definition to accommodate PLACAS */
+    grid-template-columns: 80px 100px 100px 1fr 1fr 140px 150px; 
+    gap: 10px;
+    background: var(--glass-bg);
+    backdrop-filter: blur(5px);
+    margin-bottom: 12px;
+    padding: 1rem;
+    align-items: center;
+    border-radius: 12px;
+    border: 1px solid var(--glass-border);
+    border-left: 4px solid transparent;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.flight-row.header {
+    background: transparent;
+    border: none;
+    backdrop-filter: none;
+    box-shadow: none;
+    margin-bottom: 0;
+    padding-bottom: 5px;
+}
+
+.flight-row.header .flight-cell {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.flight-row:hover:not(.header) {
+    transform: translateX(5px) scale(1.01);
+    box-shadow: 0 10px 25px -10px rgba(0,0,0,0.5);
+    background: rgba(30, 41, 59, 0.9);
+}
+
+.flight-row.status-green { 
+    border-left-color: var(--success); 
+    box-shadow: inset 10px 0 20px -20px var(--success);
+}
+.flight-row.status-yellow { 
+    border-left-color: var(--warning); 
+    box-shadow: inset 10px 0 20px -20px var(--warning);
+}
+.flight-row.status-red { 
+    border-left-color: var(--danger); 
+    box-shadow: inset 10px 0 20px -20px var(--danger);
+    animation: pulseRed 3s infinite;
+}
+
+.flight-cell {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.flight-cell.eco {
+    font-family: var(--board-font);
+    font-weight: 700;
+    font-size: 1.2rem;
+    color: white;
+    text-shadow: 0 0 10px rgba(255,255,255,0.3);
+}
+
+.flight-cell.placas {
+    font-family: var(--board-font);
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    background: rgba(255,255,255,0.05);
+    padding: 2px 6px;
+    border-radius: 4px;
+    text-align: center;
+}
+
+.time-elapsed {
+    font-family: var(--board-font);
+    font-weight: 700;
+}
+
+@keyframes pulseRed {
+    0% { box-shadow: inset 10px 0 20px -20px var(--danger); }
+    50% { box-shadow: inset 30px 0 40px -20px rgba(239, 68, 68, 0.5); }
+    100% { box-shadow: inset 10px 0 20px -20px var(--danger); }
+}
