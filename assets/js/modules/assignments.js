@@ -153,12 +153,16 @@ function renderRows(units, allOps) {
         }
 
         let routeStr = 'Pendiente';
+        let hasTrip = false;
         if (typeof parsedDetails === 'object' && parsedDetails !== null) {
+            if (parsedDetails.cliente) hasTrip = true;
             if (parsedDetails.origen && parsedDetails.destino) routeStr = `${parsedDetails.origen} - ${parsedDetails.destino}`;
             else if (parsedDetails.route) routeStr = parsedDetails.route;
         } else if (typeof unit.details === 'string') {
             routeStr = unit.details;
         }
+
+        let terminarViajeBtn = hasTrip ? `<button class="bg-green-50 text-green-600 hover:bg-green-100 px-3 py-2 rounded transition" onclick="openFinishTripModal('${unit.id}')" title="Terminar Viaje"><i class="fas fa-flag-checkered"></i></button>` : '';
 
         html += `
             <tr class="border-b hover:bg-gray-50 transition items-center">
@@ -186,7 +190,8 @@ function renderRows(units, allOps) {
                     </div>
                 </td>
                 <td class="p-4 flex gap-2 w-32">
-                    <button class="bg-blue-50 text-blue-600 hover:bg-blue-100 px-3 py-2 rounded transition" onclick="openEditModal('${unit.id}')" title="Editar Completo">
+                    ${terminarViajeBtn}
+                    <button class="bg-blue-50 text-blue-600 hover:bg-blue-100 px-3 py-2 rounded transition" onclick="openEditModal('${unit.id}')" title="Editar Detalles Actuales">
                         <i class="fas fa-edit"></i>
                     </button>
                     <button class="bg-gray-50 text-gray-600 hover:bg-gray-100 px-3 py-2 rounded transition" onclick="openHistoryModal('${unit.id}')" title="Historial">
@@ -210,12 +215,13 @@ window.openEditModal = (unitId) => {
     const clients = window.clientsData || [];
     const destinations = window.locationsData || [];
 
-    const currentClient = unit.details?.cliente || '';
-    const currentOrigin = unit.details?.origen || '';
-    const currentDest = unit.details?.destino || '';
+    const currentClient = typeof unit.details === 'object' ? (unit.details?.cliente || '') : '';
+    const currentOrigin = typeof unit.details === 'object' ? (unit.details?.origen || '') : '';
+    const currentDest = typeof unit.details === 'object' ? (unit.details?.destino || '') : '';
+    const currentAssignDate = typeof unit.details === 'object' ? (unit.details?.assignment_date || '') : '';
 
     // ISO string for datetime-local input (YYYY-MM-DDTHH:MM)
-    const currentIso = new Date(unit.last_status_update).toISOString().slice(0, 16);
+    const currentIso = currentAssignDate ? new Date(currentAssignDate).toISOString().slice(0, 16) : new Date(unit.last_status_update).toISOString().slice(0, 16);
 
     const modal = document.createElement('div');
     modal.className = 'fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 fade-in';
@@ -266,12 +272,12 @@ window.openEditModal = (unitId) => {
 
                 <div class="col-span-2">
                     <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1">Ruta Libre (Opcional)</label>
-                    <input type="text" id="edit-route" class="w-full border-2 border-gray-200 focus:border-blue-500 outline-none p-2 rounded-lg font-medium" value="${typeof unit.details === 'string' ? unit.details : (unit.details?.route || '')}" placeholder="Ej: Autopista 57">
+                    <input type="text" id="edit-route" class="w-full border-2 border-gray-200 focus:border-blue-500 outline-none p-2 rounded-lg font-medium" value="${typeof unit.details === 'string' ? unit.details : (typeof unit.details === 'object' ? (unit.details?.route || '') : '')}" placeholder="Ej: Autopista 57">
                 </div>
 
                 <div class="col-span-2">
                     <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1">Observaciones</label>
-                    <textarea id="edit-comments" class="w-full border-2 border-gray-200 focus:border-blue-500 outline-none p-2 rounded-lg font-medium" rows="2">${unit.details?.comments || ''}</textarea>
+                    <textarea id="edit-comments" class="w-full border-2 border-gray-200 focus:border-blue-500 outline-none p-2 rounded-lg font-medium" rows="2">${typeof unit.details === 'object' ? (unit.details?.comments || '') : ''}</textarea>
                 </div>
             </div>
 
@@ -300,11 +306,12 @@ window.openEditModal = (unitId) => {
         
         const currentUser = JSON.parse(sessionStorage.getItem('currentUser'));
 
+        let currentParsed = typeof unit.details === 'string' ? { raw: unit.details } : (unit.details || {});
+
         const { error } = await supabase.from('units').update({
             current_operator_id: newOp,
-            last_status_update: new Date(newDate).toISOString(),
             last_modified_by: currentUser.name,
-            details: { route: finalRoute, cliente, origen, destino, comments } 
+            details: { ...currentParsed, assignment_date: newDate, route: finalRoute, cliente, origen, destino, comments } 
         }).eq('id', unitId);
 
         if(error) alert(error.message);
@@ -315,9 +322,19 @@ window.openEditModal = (unitId) => {
     };
 }
 
-// 2. Schedule Modal (Programación)
 window.openScheduleModal = () => {
     const units = window.unitsData;
+    
+    // Sólo mostrar unidades que no tengan viaje activo
+    const availableUnits = units.filter(u => {
+        let d = u.details;
+        if(typeof d === 'string') { try{d=JSON.parse(d)}catch(e){} }
+        return !d || !d.cliente;
+    });
+
+    if(availableUnits.length === 0) {
+        return alert("Todas las unidades tienen un viaje activo. Para programar, primero debes 'Terminar Viaje' de alguna en la tabla.");
+    }
     
     // Dynamically loaded generic catalogs
     const clients = window.clientsData || [];
@@ -327,13 +344,14 @@ window.openScheduleModal = () => {
     modal.className = 'fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 fade-in';
     modal.innerHTML = `
         <div class="bg-white rounded-xl p-6 w-[32rem] shadow-2xl border border-gray-100">
-            <h3 class="text-xl font-black mb-6 border-b pb-2 text-purple-700"><i class="fas fa-calendar-alt mr-2"></i> Programar Viaje</h3>
+            <h3 class="text-xl font-black mb-6 border-b pb-2 text-purple-700"><i class="fas fa-calendar-alt mr-2"></i> Programar Nuevo Viaje</h3>
+            <p class="text-xs text-gray-500 mb-4 bg-gray-50 p-2 rounded border border-gray-200"><i class="fas fa-info-circle text-blue-500"></i> Solo se muestran unidades sin viaje activo. Al programar, el contador de tiempo de inactividad se reiniciará a cero.</p>
             
             <div class="grid grid-cols-2 gap-4 max-h-[70vh] overflow-y-auto custom-scrollbar pr-2">
                 <div class="col-span-2">
                     <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1">Seleccionar Unidad</label>
                     <select id="sched-unit" class="w-full border-2 border-gray-200 focus:border-purple-500 outline-none p-2 rounded-lg font-medium">
-                        ${units.map(u => `<option value="${u.id}">${u.economic_number} (${u.type})</option>`).join('')}
+                        ${availableUnits.map(u => `<option value="${u.id}">${u.economic_number} (${u.type}) - ${u.status}</option>`).join('')}
                     </select>
                 </div>
 
@@ -399,28 +417,108 @@ window.openScheduleModal = () => {
         }
         if(!finalRoute.trim()) return alert("Debes indicar Origen y Destino, o escribir una Ruta Libre.");
 
-        // Ideally we save this to a 'trips' table, but for now we update unit details to show 'Scheduled'
         const currentUser = JSON.parse(sessionStorage.getItem('currentUser'));
         
-        // Fetch current details first to not overwrite other stuff
-        const currentUnit = units.find(u => u.id == unitId);
-        const newDetails = typeof currentUnit.details === 'object' ? { ...currentUnit.details } : { raw: currentUnit.details || '' };
-        
-        newDetails.scheduled_trip = date;
-        newDetails.route = finalRoute; // Assign route to details for sync with dashboard
-        newDetails.cliente = cliente;
-        newDetails.origen = origen;
-        newDetails.destino = destino;
-        newDetails.status_at_scheduling = currentUnit.status;
+        const newDetails = {
+            scheduled_trip: date,
+            assignment_date: date,
+            route: finalRoute,
+            cliente: cliente,
+            origen: origen,
+            destino: destino
+        };
 
         const { error } = await supabase.from('units').update({
             details: newDetails,
+            last_status_update: new Date().toISOString(), // Restart time to 0
             last_modified_by: currentUser.name
         }).eq('id', unitId);
 
         if(error) alert(error.message);
         else {
             alert("Viaje Programado exitosamente.");
+            modal.remove();
+            loadTable();
+        }
+    };
+}
+
+// 2.5 Finish Trip Modal
+window.openFinishTripModal = (unitId) => {
+    const unit = window.unitsData.find(u => u.id === unitId);
+    let parsedDetails = unit.details;
+    if (typeof parsedDetails === 'string') {
+        try { parsedDetails = JSON.parse(parsedDetails); } catch(e) {}
+    }
+    const cliente = parsedDetails?.cliente || 'Desconocido';
+
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 fade-in';
+    modal.innerHTML = `
+        <div class="bg-white rounded-xl p-6 w-[32rem] shadow-2xl border border-gray-100 text-center">
+            <h3 class="text-xl font-black mb-4 text-gray-800"><i class="fas fa-flag-checkered text-green-500 mr-2"></i> Terminar Viaje</h3>
+            <p class="text-sm text-gray-600 mb-4 bg-green-50 p-2 rounded text-left">
+               Unidad: <b>${unit.economic_number}</b><br>
+               Cliente Actual: <b>${cliente}</b><br><br>
+               Al terminar el viaje, la unidad quedará <b>Vacia</b>, sus datos de viaje se limpiarán, su contador de tiempo se reiniciará a 0 y se guardará la acción en el historial.
+            </p>
+            
+            <div class="text-left mb-4">
+                <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1">Fecha y Hora de Término</label>
+                <input type="datetime-local" id="finish-date" class="w-full border-2 border-gray-200 focus:border-green-500 outline-none p-2 rounded-lg font-medium">
+            </div>
+            
+            <div class="text-left mb-6">
+                <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1">Observaciones del Viaje Completado</label>
+                <textarea id="finish-comments" class="w-full border-2 border-gray-200 focus:border-green-500 outline-none p-2 rounded-lg font-medium" rows="3" placeholder="Ingresa detalles de cómo terminó el viaje, novedades, etc..."></textarea>
+            </div>
+
+            <div class="flex justify-center gap-3">
+                <button class="px-5 py-2 font-bold text-gray-500 hover:bg-gray-100 rounded-lg transition" onclick="this.closest('.fixed').remove()">Cancelar</button>
+                <button class="px-5 py-2 font-bold bg-green-600 text-white rounded-lg hover:bg-green-700 transition shadow-lg shadow-green-600/30" id="btn-save-finish">Confirmar Término</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+
+    const now = new Date();
+    // Offset for local timezone issues with toISOString manually setting local
+    const tzoffset = now.getTimezoneOffset() * 60000;
+    const localISOTime = (new Date(now - tzoffset)).toISOString().slice(0, 16);
+    document.getElementById('finish-date').value = localISOTime;
+
+    document.getElementById('btn-save-finish').onclick = async () => {
+        const finishDate = document.getElementById('finish-date').value;
+        const comments = document.getElementById('finish-comments').value;
+        const currentUser = JSON.parse(sessionStorage.getItem('currentUser'));
+
+        const oldDetailsStr = JSON.stringify(parsedDetails);
+
+        // 1. Insert into history table if it exists
+        // (If the table doesn't exist, this might fail, but let's assume v2 setup works)
+        const { error: histErr } = await supabase.from('assignments_history').insert([{
+            unit_id: unit.id,
+            action_type: 'Viaje Terminado',
+            details: `Cliente: ${cliente} | Obs: ${comments} | Viaje: ${oldDetailsStr}`,
+            modified_by: currentUser.name,
+            timestamp: new Date(finishDate).toISOString()
+        }]);
+
+        if (histErr) {
+            console.error("No se pudo guardar en historial", histErr);
+            // Ignorar para que no bloquee la operacion principal si la tabla no está creada aún en db
+        }
+
+        // 2. Clear unit data and reset time
+        const { error } = await supabase.from('units').update({
+            status: 'Vacia',
+            details: null,
+            last_status_update: new Date().toISOString(), // Reset timer to NOW
+            last_modified_by: currentUser.name
+        }).eq('id', unit.id);
+
+        if(error) alert(error.message);
+        else {
             modal.remove();
             loadTable();
         }
