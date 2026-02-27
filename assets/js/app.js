@@ -46,10 +46,11 @@ try {
         // Role-based UI restrictions
         const role = currentUser.role;
 
-        // Torre de Control: todo excepto gastos y rh
+        // Torre de Control: panel, asignaciones, bitacora, incidencias y gestion (admin). Ocultar rest
         if (role === 'torre_control') {
             document.getElementById('nav-expenses')?.classList.add('hidden-section');
             document.getElementById('nav-observations')?.classList.add('hidden-section');
+            document.getElementById('nav-reports')?.classList.add('hidden-section');
         }
 
         // RH: solo panel(dashboard) y su seccion (observaciones)
