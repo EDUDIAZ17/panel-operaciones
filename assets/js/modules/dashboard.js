@@ -239,11 +239,18 @@ function updateTimers() {
         const status = row.dataset.status;
         const diffMs = now - timestamp;
         
-        const hours = Math.floor(diffMs / (1000 * 60 * 60));
-        const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-        const seconds = Math.floor((diffMs % (1000 * 60)) / 1000);
+        let isFuture = false;
+        let absDiffMs = diffMs;
+        if (diffMs < 0) {
+            isFuture = true;
+            absDiffMs = Math.abs(diffMs);
+        }
 
-        const timeStr = `${hours}h ${minutes}m ${seconds}s`;
+        const hours = Math.floor(absDiffMs / (1000 * 60 * 60));
+        const minutes = Math.floor((absDiffMs % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((absDiffMs % (1000 * 60)) / 1000);
+
+        const timeStr = isFuture ? `- ${hours}h ${minutes}m ${seconds}s` : `${hours}h ${minutes}m ${seconds}s`;
         
         const timeDisplay = row.querySelector('.time-display');
         const timeLabel = row.querySelector('.time-label');
@@ -251,26 +258,32 @@ function updateTimers() {
 
         if (!timeDisplay || !timeLabel) return;
 
-        const isLostTimeStatus = ['Vacia', 'En Taller', 'Sin Operador'].includes(status);
-
-        if (isLostTimeStatus) {
-            if (hours >= 24) {
-                timeDisplay.className = 'font-mono text-xl font-bold text-red-500 animate-pulse';
-                timeLabel.innerHTML = `<span class="text-red-400 text-[10px]">⚠️ PÉRDIDA: ${formatCurrency(calculateFinancialLoss(hours))}</span>`;
-                if (statusDot) statusDot.className = 'status-indicator w-3 h-3 rounded-full mr-2 bg-red-600 shadow-[0_0_10px_#ef4444]';
-            } else if (hours >= 12) {
-                timeDisplay.className = 'font-mono text-xl font-bold text-yellow-500';
-                timeLabel.innerHTML = `<span class="text-yellow-400 text-[10px]">⏱️ Tiempo Muerto</span>`;
-                if (statusDot) statusDot.className = 'status-indicator w-3 h-3 rounded-full mr-2 bg-yellow-500 shadow-[0_0_10px_#eab308]';
-            } else {
-                timeDisplay.className = 'font-mono text-xl font-bold text-white';
-                timeLabel.innerHTML = `<span class="text-gray-400 text-[10px]">Tiempo Inactivo</span>`;
-                if (statusDot) statusDot.className = 'status-indicator w-3 h-3 rounded-full mr-2 bg-gray-500';
-            }
+        if (isFuture) {
+            timeDisplay.className = 'font-mono text-xl font-bold text-purple-400';
+            timeLabel.innerHTML = `<span class="text-purple-300 text-[10px]">🗓️ Iniciará en</span>`;
+            if (statusDot) statusDot.className = 'status-indicator w-3 h-3 rounded-full mr-2 bg-purple-500 shadow-[0_0_10px_#a855f7]';
         } else {
-            timeDisplay.className = 'font-mono text-xl font-bold text-green-400';
-            timeLabel.innerHTML = `<span class="text-green-300 text-[10px]">🚛 En Ruta / Operando</span>`;
-            if (statusDot) statusDot.className = 'status-indicator w-3 h-3 rounded-full mr-2 bg-green-500 shadow-[0_0_10px_#22c55e]';
+            const isLostTimeStatus = ['Vacia', 'En Taller', 'Sin Operador'].includes(status);
+
+            if (isLostTimeStatus) {
+                if (hours >= 24) {
+                    timeDisplay.className = 'font-mono text-xl font-bold text-red-500 animate-pulse';
+                    timeLabel.innerHTML = `<span class="text-red-400 text-[10px]">⚠️ PÉRDIDA: ${formatCurrency(calculateFinancialLoss(hours))}</span>`;
+                    if (statusDot) statusDot.className = 'status-indicator w-3 h-3 rounded-full mr-2 bg-red-600 shadow-[0_0_10px_#ef4444]';
+                } else if (hours >= 12) {
+                    timeDisplay.className = 'font-mono text-xl font-bold text-yellow-500';
+                    timeLabel.innerHTML = `<span class="text-yellow-400 text-[10px]">⏱️ Tiempo Muerto</span>`;
+                    if (statusDot) statusDot.className = 'status-indicator w-3 h-3 rounded-full mr-2 bg-yellow-500 shadow-[0_0_10px_#eab308]';
+                } else {
+                    timeDisplay.className = 'font-mono text-xl font-bold text-white';
+                    timeLabel.innerHTML = `<span class="text-gray-400 text-[10px]">Tiempo Inactivo</span>`;
+                    if (statusDot) statusDot.className = 'status-indicator w-3 h-3 rounded-full mr-2 bg-gray-500';
+                }
+            } else {
+                timeDisplay.className = 'font-mono text-xl font-bold text-green-400';
+                timeLabel.innerHTML = `<span class="text-green-300 text-[10px]">🚛 En Ruta / Operando</span>`;
+                if (statusDot) statusDot.className = 'status-indicator w-3 h-3 rounded-full mr-2 bg-green-500 shadow-[0_0_10px_#22c55e]';
+            }
         }
         
         timeDisplay.textContent = timeStr;
