@@ -556,9 +556,13 @@ window.openStatusModal = (unitId) => {
             status: newStatus,
             last_modified_by: currentUser.name,
             last_status_update: new Date().toISOString()
-        }).eq('id', unitId).then(() => {
-            modal.remove();
-            loadTable();
+        }).eq('id', unitId).then(({ error }) => {
+            if (error) {
+                alert('No se pudo actualizar el estatus: ' + error.message);
+            } else {
+                modal.remove();
+                loadTable();
+            }
         });
     }
 }
