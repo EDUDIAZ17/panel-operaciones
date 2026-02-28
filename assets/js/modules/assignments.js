@@ -307,15 +307,25 @@ window.openEditModal = (unitId) => {
         const currentUser = JSON.parse(sessionStorage.getItem('currentUser'));
 
         let currentParsed = typeof unit.details === 'string' ? { raw: unit.details } : (unit.details || {});
+        let oldDetailsStr = JSON.stringify(currentParsed);
 
         const { error } = await supabase.from('units').update({
             current_operator_id: newOp,
+            last_status_update: new Date().toISOString(), // Reset timer immediately
             last_modified_by: currentUser.name,
             details: { ...currentParsed, assignment_date: newDate, route: finalRoute, cliente, origen, destino, comments } 
         }).eq('id', unitId);
 
         if(error) alert(error.message);
         else {
+            supabase.from('assignments_history').insert([{
+                unit_id: unitId,
+                action_type: 'Edición Manual',
+                details: `Cambio de detalles. Antes: ${oldDetailsStr} | Ahora: Cliente=${cliente}, Destino=${finalRoute}`,
+                modified_by: currentUser.name,
+                timestamp: new Date().toISOString()
+            }]).then(()=>{});
+
             modal.remove();
             loadTable();
         }
@@ -429,13 +439,22 @@ window.openScheduleModal = () => {
         };
 
         const { error } = await supabase.from('units').update({
+            status: 'Vacia', // Se pone en patio
             details: newDetails,
-            last_status_update: new Date().toISOString(), // Restart time to 0
+            last_status_update: new Date(date).toISOString(), // Setting timer to scheduled date for countdown
             last_modified_by: currentUser.name
         }).eq('id', unitId);
 
         if(error) alert(error.message);
         else {
+            supabase.from('assignments_history').insert([{
+                unit_id: unitId,
+                action_type: 'Viaje Programado',
+                details: `Programado para ${date} | Cliente: ${cliente} | Ruta: ${finalRoute}. Se pasó a Vacia (Patio).`,
+                modified_by: currentUser.name,
+                timestamp: new Date().toISOString()
+            }]).then(()=>{});
+
             alert("Viaje Programado exitosamente.");
             modal.remove();
             loadTable();
@@ -555,11 +574,19 @@ window.openStatusModal = (unitId) => {
          supabase.from('units').update({
             status: newStatus,
             last_modified_by: currentUser.name,
-            last_status_update: new Date().toISOString()
+            last_status_update: new Date().toISOString() // Resets timer
         }).eq('id', unitId).then(({ error }) => {
             if (error) {
                 alert('No se pudo actualizar el estatus: ' + error.message);
             } else {
+                supabase.from('assignments_history').insert([{
+                    unit_id: unitId,
+                    action_type: 'Cambio de Estatus',
+                    details: `Se cambió estatus de ${currentStatus} a ${newStatus}`,
+                    modified_by: currentUser.name,
+                    timestamp: new Date().toISOString()
+                }]).then(()=>{});
+
                 modal.remove();
                 loadTable();
             }
