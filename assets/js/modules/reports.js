@@ -66,8 +66,8 @@ export async function renderReports(container) {
                 <div class="p-4 bg-gray-50 border-b">
                     <h4 class="font-bold text-gray-700 uppercase text-sm">Desglose por Operador</h4>
                 </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left text-sm whitespace-nowrap">
+                <div class="overflow-x-auto custom-scrollbar w-full pb-4">
+                    <table class="w-full text-left text-sm whitespace-nowrap min-w-max">
                         <thead class="bg-gray-100 border-b">
                             <tr>
                                 <th class="p-4">Operador</th>

@@ -21,7 +21,8 @@ export async function renderCameras(container) {
                         </select>
                     </div>
                 </div>
-                <div class="overflow-auto flex-1 p-0">
+                </div>
+                <div class="overflow-x-auto flex-1 custom-scrollbar w-full pb-4">
                     <table class="w-full text-left border-collapse min-w-[800px]">
                         <thead class="bg-white sticky top-0 shadow-sm z-10">
                             <tr class="text-xs uppercase tracking-wider text-gray-500 border-b">

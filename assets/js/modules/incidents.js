@@ -40,7 +40,7 @@ export async function renderIncidents(container) {
                         <option value="true">Resueltas</option>
                     </select>
                 </div>
-                <div class="overflow-auto flex-1 p-0 custom-scrollbar">
+                <div class="overflow-x-auto text-sm custom-scrollbar w-full pb-4">
                     <table class="w-full text-left border-collapse min-w-[1000px]">
                         <thead class="bg-white sticky top-0 shadow-sm z-10">
                             <tr class="text-xs uppercase tracking-wider text-gray-500 border-b">
