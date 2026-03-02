@@ -2,6 +2,7 @@
 import { supabase } from '../services/supabaseClient.js';
 import { formatDate, calculateTimeElapsed, formatCurrency, calculateFinancialLoss } from '../utils/formatters.js';
 import { fetchSamsaraLocations } from '../services/samsara.js';
+import { GOOGLE_API_KEY } from '../config/config.js'; // Added import for GOOGLE_API_KEY
 
 let updateInterval; 
 let transitionInterval;
@@ -54,12 +55,45 @@ export async function renderDashboard(container) {
                 </div>
             </div>
             
-            <div class="mt-4 text-xs text-gray-500 flex gap-4">
+            <div class="mt-4 text-xs text-gray-500 flex gap-4 mb-6">
                 <span>* Semáforo Tiempos:</span>
                 <span class="text-green-600 font-bold">● En Ruta (Productivo)</span>
                 <span class="text-red-600 font-bold">● Pérdida (>24h Vacia/Taller)</span>
                 <span class="text-yellow-600 font-bold">● Atencíon (12-24h Vacia/Taller)</span>
                 <span class="ml-auto text-blue-500 font-bold italic">* Sincronizado con Samsara API</span>
+            </div>
+
+            <!-- SMART ASSISTANT & SHIFT NOTES -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                
+                <!-- Cambio de Turno -->
+                <div class="bg-gray-800/80 backdrop-blur-md rounded-xl p-5 border border-gray-700/50 shadow-xl flex flex-col">
+                    <h3 class="text-lg font-bold text-white mb-3 flex items-center gap-2">
+                        <i class="fas fa-clipboard-check text-emerald-400"></i> Notas de Cambio de Turno
+                    </h3>
+                    <p class="text-xs text-gray-400 mb-3">Deja pendientes, recados y novedades operativas para el siguiente turno.</p>
+                    <textarea id="shift-notes" class="flex-1 w-full bg-gray-900 border border-gray-700 text-white p-3 rounded-lg focus:ring-emerald-500 focus:border-emerald-500 text-sm resize-none" placeholder="Escribe aquí las novedades del turno..."></textarea>
+                    <div class="mt-3 flex justify-end">
+                        <button id="btn-save-notes" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 px-6 rounded-lg transition-colors shadow-lg shadow-emerald-500/20 text-sm flex items-center gap-2">
+                            <i class="fas fa-save"></i> Guardar Novedades
+                        </button>
+                    </div>
+                </div>
+
+                <!-- AI Assistant -->
+                <div class="bg-gray-800/80 backdrop-blur-md rounded-xl p-5 border border-purple-500/30 shadow-[0_0_15px_rgba(168,85,247,0.15)] flex flex-col relative overflow-hidden">
+                    <div class="absolute top-0 right-0 p-4 opacity-10">
+                        <i class="fas fa-robot text-8xl text-purple-400"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-white mb-3 flex items-center gap-2 relative z-10">
+                        <i class="fas fa-sparkles text-purple-400"></i> Asistente de IA (Tiempo Real)
+                    </h3>
+                    <p class="text-xs text-purple-200/60 mb-3 relative z-10">Análisis proactivo de la flota y sugerencias operativas.</p>
+                    <div id="ai-notifications" class="flex-1 overflow-y-auto pr-2 space-y-3 relative z-10 custom-scrollbar max-h-[200px]">
+                        <div class="text-center text-gray-500 mt-10"><i class="fas fa-sync fa-spin"></i> Analizando flota...</div>
+                    </div>
+                </div>
+
             </div>
         </div>
     `;
@@ -71,10 +105,18 @@ export async function renderDashboard(container) {
     document.getElementById('filter-type').addEventListener('change', () => resetAndFilter());
     document.getElementById('filter-status').addEventListener('change', () => resetAndFilter());
 
+    // Notes Listener
+    document.getElementById('btn-save-notes').addEventListener('click', saveShiftNotes);
+
+    // Initial Load of Notes
+    loadShiftNotes();
+
     // Start Loops
     startRealTimeUpdates();
     startTransitionLoop();
 }
+
+let lastSamsaraFetchTime = 0;
 
 async function fetchAndUpdate() {
     const { data: units, error } = await supabase
@@ -87,11 +129,18 @@ async function fetchAndUpdate() {
         return;
     }
 
-    // Fetch Samsara Data concurrently
-    samsaraData = await fetchSamsaraLocations();
+    // Ubicacion cache: Fetch Samsara Data only every 1 hour (3600000ms), except first time
+    const now = Date.now();
+    if (samsaraData.length === 0 || (now - lastSamsaraFetchTime > 3600000)) {
+        samsaraData = await fetchSamsaraLocations();
+        lastSamsaraFetchTime = now;
+    }
     
     window.allUnits = units.sort((a,b) => a.economic_number.localeCompare(b.economic_number, undefined, {numeric: true}));
     applyFiltersAndRender();
+    
+    // Trigger AI Analysis
+    generateAIInsights();
 }
 
 function applyFiltersAndRender() {
@@ -152,12 +201,20 @@ function renderRows(units, container) {
 
         const cliente = (typeof parsedDetails === 'object' && parsedDetails?.cliente) ? parsedDetails.cliente : '---';
 
+        let origenStr = typeof parsedDetails === 'object' ? (parsedDetails?.origen || '') : '';
+        let destinoStr = typeof parsedDetails === 'object' ? (parsedDetails?.destino || '') : '';
         let customRoute = '---';
+        
         if (typeof parsedDetails === 'object' && parsedDetails !== null) {
-            if (parsedDetails.origen && parsedDetails.destino) customRoute = `${parsedDetails.origen} - ${parsedDetails.destino}`;
+            if (origenStr && destinoStr) customRoute = `${origenStr} - ${destinoStr}`;
             else if (parsedDetails.route) customRoute = parsedDetails.route;
         } else if (typeof unit.details === 'string') {
             customRoute = unit.details;
+        }
+
+        let aiRouteBtn = '';
+        if (origenStr && destinoStr && origenStr !== '---' && destinoStr !== '---' && !samsaraVeh) {
+            aiRouteBtn = `<div class="mt-1"><button onclick="window.openAIRoute('${origenStr}', '${destinoStr}')" class="text-purple-400 hover:text-purple-300 text-[10px] font-bold transition flex justify-center items-center gap-1 w-full"><i class="fas fa-robot"></i> Ruta IA</button></div>`;
         }
 
         const city = samsaraVeh ? `<span class="text-[10px] block truncate text-gray-400">GPS Activo</span>` : '<span class="text-[10px] text-gray-600">No Signal</span>';
@@ -184,12 +241,15 @@ function renderRows(units, container) {
                 
                 <div class="col-span-1 text-gray-300 text-[10px] md:text-sm truncate pl-4">${opName}</div>
                 
-                <div class="col-span-1 text-center text-[10px] md:text-xs text-orange-400 font-mono">${customRoute}</div>
+                <div class="col-span-1 text-center text-[10px] md:text-xs text-orange-400 font-mono">
+                    ${customRoute}
+                </div>
                 <div class="col-span-1 text-center font-mono">
                     <a href="${mapsUrl}" target="_blank">
                         ${location}
                         ${city}
                     </a>
+                    ${aiRouteBtn}
                 </div>
 
                 <div class="col-span-2 text-right">
@@ -212,7 +272,7 @@ function startRealTimeUpdates() {
     updateInterval = setInterval(updateTimers, 1000);
 }
 
-let countdown = 60;
+let countdown = 10;
 function startTransitionLoop() {
     transitionInterval = setInterval(async () => {
         countdown--;
@@ -220,9 +280,9 @@ function startTransitionLoop() {
         if (refreshLabel) refreshLabel.innerText = `PROX. CAMBIO: ${countdown}s`;
 
         if (countdown <= 0) {
-            countdown = 60;
+            countdown = 10;
             currentPage++;
-            // Refresh data from DB/Samsara every minute too
+            // Refresh DB every 10s. Samsara will be bypassed via 1h cache internally
             await fetchAndUpdate();
         }
     }, 1000);
@@ -290,3 +350,106 @@ function updateTimers() {
     });
 }
 
+// --- SHIFT NOTES ---
+async function loadShiftNotes() {
+    const { data } = await supabase.from('system_settings').select('value').eq('key', 'shift_notes').single();
+    if (data && data.value) {
+        document.getElementById('shift-notes').value = data.value;
+    }
+}
+
+async function saveShiftNotes() {
+    const btn = document.getElementById('btn-save-notes');
+    const oldHtml = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+    
+    const val = document.getElementById('shift-notes').value;
+    
+    // Upsert logic using key
+    const { error } = await supabase.from('system_settings').upsert({ key: 'shift_notes', value: val, description: 'Notas de Cambio de Turno' }, { onConflict: 'key' });
+    
+    if (error) {
+        alert("Error guardando notas: " + error.message);
+    } else {
+        btn.innerHTML = '<i class="fas fa-check text-white"></i> ¡Guardado!';
+        setTimeout(() => btn.innerHTML = oldHtml, 2000);
+    }
+}
+
+// --- AI ASSISTANT LOGIC ---
+function generateAIInsights() {
+    const container = document.getElementById('ai-notifications');
+    if (!container) return;
+
+    if (!window.allUnits || window.allUnits.length === 0) {
+        container.innerHTML = '<p class="text-sm text-gray-500">No hay suficientes datos para analizar.</p>';
+        return;
+    }
+
+    const insights = [];
+    const now = new Date();
+
+    // Regla 1: Unidades inactivas por mas de 24 horas (Alerta Roja)
+    const lazyUnits = window.allUnits.filter(u => {
+        if (u.status !== 'Vacia' && u.status !== 'En Taller') return false;
+        const ms = now - new Date(u.last_status_update);
+        return ms > 24 * 60 * 60 * 1000;
+    });
+
+    if (lazyUnits.length > 0) {
+        insights.push(`
+            <div class="bg-red-900/40 border-l-4 border-red-500 p-3 rounded">
+                <div class="flex items-center gap-2 text-red-400 font-bold text-sm mb-1">
+                    <i class="fas fa-exclamation-circle"></i> Alerta de Inactividad
+                </div>
+                <p class="text-xs text-gray-300">Tienes <b>${lazyUnits.length}</b> unidades (ej. ${lazyUnits[0].economic_number}) paradas por más de 24 horas. ¡Asigna viajes para evitar pérdida financiera!</p>
+            </div>
+        `);
+    }
+
+    // Regla 2: Sugerencia de Asignación Optima
+    const vacias = window.allUnits.filter(u => u.status === 'Vacia');
+    if (vacias.length > 0) {
+        insights.push(`
+            <div class="bg-blue-900/40 border-l-4 border-blue-500 p-3 rounded">
+                <div class="flex items-center gap-2 text-blue-400 font-bold text-sm mb-1">
+                    <i class="fas fa-lightbulb"></i> Sugerencia Logística
+                </div>
+                <p class="text-xs text-gray-300">La unidad <b>${vacias[0].economic_number}</b> está disponible. Considera asignarla a las rutas de alta demanda actuales para maximizar rendimiento.</p>
+            </div>
+        `);
+    }
+
+    // Regla 3: Monitoreo de Viajes Programados proximos (menos de 2 horas)
+    const proximos = window.allUnits.filter(u => {
+        if (!u.details || typeof u.details !== 'object' || !u.details.assignment_date) return false;
+        const ad = new Date(u.details.assignment_date);
+        const diffMs = ad - now;
+        return diffMs > 0 && diffMs <= 2 * 60 * 60 * 1000; // En las proximas 2 horas
+    });
+
+    if (proximos.length > 0) {
+        insights.push(`
+            <div class="bg-purple-900/40 border-l-4 border-purple-500 p-3 rounded">
+                <div class="flex items-center gap-2 text-purple-400 font-bold text-sm mb-1">
+                    <i class="fas fa-clock"></i> Viajes Próximos
+                </div>
+                <p class="text-xs text-gray-300">La unidad <b>${proximos[0].economic_number}</b> arranca ruta en menos de 2 horas. Verifica con el operador.</p>
+            </div>
+        `);
+    }
+
+    // Si todo esta perfecto
+    if (insights.length === 0) {
+        insights.push(`
+            <div class="bg-emerald-900/40 border-l-4 border-emerald-500 p-3 rounded">
+                <div class="flex items-center gap-2 text-emerald-400 font-bold text-sm mb-1">
+                    <i class="fas fa-check-circle"></i> Operación Óptima
+                </div>
+                <p class="text-xs text-gray-300">La inteligencia artificial no detecta cuellos de botella asincrónicos en este momento. Buen trabajo.</p>
+            </div>
+        `);
+    }
+
+    container.innerHTML = insights.join('');
+}

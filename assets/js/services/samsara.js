@@ -74,17 +74,8 @@ export async function fetchSamsaraDrivers() {
 
 export async function fetchSamsaraStats(vehicleIds) {
     try {
-        const end = new Date();
-        const start = new Date(end.getTime() - 5 * 60 * 1000); 
-
         const url = new URL(`${SAMSARA_BASE_URL}/fleet/vehicles/stats`);
-        url.searchParams.append('types', 'gps');
-        url.searchParams.append('startTime', start.toISOString());
-        url.searchParams.append('endTime', end.toISOString());
-        if (vehicleIds && vehicleIds.length > 0) {
-            url.searchParams.append('vehicleIds', vehicleIds.join(','));
-        }
-
+        url.searchParams.append('types', 'obdOdometerMeters,gpsOdometerMeters,gps');
         const proxyUrl = `${SAM_CORS_PROXY}${encodeURIComponent(url.toString())}`;
         const response = await fetch(proxyUrl, {
             headers: { 'Authorization': `Bearer ${SAMSARA_API_TOKEN}` }

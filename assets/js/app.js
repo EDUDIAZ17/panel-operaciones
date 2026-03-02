@@ -7,6 +7,7 @@ import { renderObservations } from './modules/observations.js';
 import { renderCameras } from './modules/cameras.js';
 import { renderIncidents } from './modules/incidents.js';
 import { renderClientReports } from './modules/client_reports.js';
+import { renderHistoryReports } from './modules/history_reports.js';
 
 // DOM Elements
 const contentArea = document.getElementById('content-area');
@@ -57,6 +58,7 @@ try {
         // Only torre de control uses the client reports by default, hide for others unless they are admin/direccion
         if (role !== 'torre_control' && role !== 'admin') {
             document.getElementById('nav-client-reports')?.classList.add('hidden-section');
+            document.getElementById('nav-history-reports')?.classList.add('hidden-section');
         }
 
         // RH: solo panel(dashboard) y su seccion (observaciones)
@@ -157,6 +159,11 @@ function loadView(view) {
             setActiveNav('nav-client-reports');
             renderClientReports(contentArea);
             break;
+        case 'history-reports':
+            pageTitle.textContent = 'Reportes Históricos (Bitácora)';
+            setActiveNav('nav-history-reports');
+            renderHistoryReports(contentArea);
+            break;
     }
 }
 
@@ -175,6 +182,7 @@ attachNav('nav-admin', 'admin');
 attachNav('nav-cameras', 'cameras');
 attachNav('nav-incidents', 'incidents');
 attachNav('nav-client-reports', 'client-reports');
+attachNav('nav-history-reports', 'history-reports');
 
 const logoutBtn = document.getElementById('logout-btn');
 if (logoutBtn) {

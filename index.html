@@ -20,6 +20,9 @@
     <link rel="stylesheet" href="assets/css/animations.css" />
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- jsPDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
     <!-- Custom Styles for Airport Board -->
     <style>
       body {
@@ -215,6 +218,13 @@
         >
           <i class="fas fa-file-contract w-6 text-blue-400"></i>
           <span class="ml-1">Reportes Clientes</span>
+        </button>
+        <button
+          id="nav-history-reports"
+          class="nav-btn w-full text-left px-4 py-3 rounded-lg hover:bg-white/5 text-gray-300 transition-all flex items-center text-sm font-semibold tracking-wide"
+        >
+          <i class="fas fa-file-pdf w-6 text-red-400"></i>
+          <span class="ml-1">Reportes Históricos</span>
         </button>
         <button
           id="nav-admin"
