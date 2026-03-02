@@ -111,28 +111,34 @@ async function loadClientReport() {
 
     const sortedUnits = (units || []).sort((a,b) => a.economic_number.localeCompare(b.economic_number, undefined, {numeric: true}));
 
-    const activeUnits = sortedUnits.filter(u => !['Vacia', 'En Taller'].includes(u.status) || u.details?.cliente); 
+    const activeUnits = sortedUnits.filter(u => {
+        let det = u.details;
+        if (typeof det === 'string') { try { det = JSON.parse(det); } catch(e) { det = {}; } }
+        det = det || {};
+        u.details = det;
+        // Include if they have a client, or if they are in transit/loaded
+        return det.cliente || !['Vacia', 'En Taller'].includes(u.status);
+    });
     
-    // For these specific reports, we just filter those explicitly assigned to the client.
-    // If we want to show all simply to be filled out later, we can show them, but matching client is cleaner.
+    // For these specific reports, filter by the selected client and other active filters
     const filteredUnits = activeUnits.filter(u => {
-        const clienteStr = u.details?.cliente?.toUpperCase() || '';
+        const clienteStr = (u.details?.cliente || '').toUpperCase();
         
         let matchClient = false;
         if (type === 'TODOS') matchClient = true;
-        else if (type === 'Sin Asignación') matchClient = !clienteStr || clienteStr === 'SIN ASIGNACIÓN';
-        else matchClient = clienteStr.includes(type); 
+        else if (type === 'Sin Asignación') matchClient = !clienteStr || clienteStr === 'SIN ASIGNACIÓN' || clienteStr === 'SIN ASIGNACIÓN DE CLIENTE';
+        else matchClient = clienteStr.includes(type.toUpperCase()); 
 
         let matchTxt = true;
-        if(filterTxt) {
+        if (filterTxt) {
             const eco = (u.economic_number || '').toLowerCase();
             const op = (u.operators?.name || '').toLowerCase();
             matchTxt = eco.includes(filterTxt) || op.includes(filterTxt);
         }
 
         let matchStatus = true;
-        if(filterStatus) {
-            matchStatus = (u.status || '').includes(filterStatus);
+        if (filterStatus) {
+            matchStatus = (u.status || '').toLowerCase().includes(filterStatus.toLowerCase());
         }
 
         return matchClient && matchTxt && matchStatus;
