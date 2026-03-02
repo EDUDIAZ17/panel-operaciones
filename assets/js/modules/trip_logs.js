@@ -116,11 +116,20 @@ function renderTable(element, units) {
         det = det || {};
         const cp = det.checkpoints || {};
 
-        const isAssigned = (det.cliente || det.origen || det.route);
-        if(!isAssigned) return; // Only show active trips
+        const isAssigned = (det.cliente || det.origen || det.route || det.destinatario);
+        // Only show active trips or units that are loaded/in transit
+        if(!isAssigned && ['Vacia', 'En Taller', 'Sin Operador'].includes(unit.status)) return; 
 
-        const routeDisplay = (det.origen && det.destino) ? `<strong>${det.origen}</strong> &rarr; <strong>${det.destino}</strong>` : (det.route || '---');
-        const destinatarioStr = det.destinatario ? `<div><span class="text-xs bg-indigo-100 text-indigo-700 px-1 rounded font-bold">${det.destinatario}</span></div>` : '';
+        // Safely display route string
+        let routeDisplay = '---';
+        if (det.origen && det.destino) routeDisplay = `<strong>${det.origen}</strong> &rarr; <strong>${det.destino}</strong>`;
+        else if (det.route) routeDisplay = det.route;
+        
+        let destinatariosArray = [];
+        if (Array.isArray(det.destinatarios) && det.destinatarios.length > 0) destinatariosArray = det.destinatarios;
+        else if (det.destinatario) destinatariosArray = [det.destinatario];
+        
+        const destinatarioStr = destinatariosArray.map(d => `<div class="mt-1"><span class="text-[10px] bg-indigo-100 text-indigo-800 px-1.5 py-0.5 rounded font-bold">${d}</span></div>`).join('');
 
         // Helper to render input cells directly inside the table
         const renderInput = (key) => `
