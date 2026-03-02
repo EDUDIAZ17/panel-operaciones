@@ -230,11 +230,21 @@ window.openEditModal = (unitId) => {
     const locations = window.locationsData || [];
     const destinations = window.destinationsData || [];
 
-    const currentClient = typeof unit.details === 'object' ? (unit.details?.cliente || '') : '';
-    const currentOrigin = typeof unit.details === 'object' ? (unit.details?.origen || '') : '';
-    const currentDest = typeof unit.details === 'object' ? (unit.details?.destino || '') : '';
-    const currentDestinatario = typeof unit.details === 'object' ? (unit.details?.destinatario || '') : '';
-    const currentAssignDate = typeof unit.details === 'object' ? (unit.details?.assignment_date || '') : '';
+    let parsedDetails = unit.details;
+    if (typeof parsedDetails === 'string') {
+        try { parsedDetails = JSON.parse(parsedDetails); } catch(e) { parsedDetails = {}; }
+    }
+    parsedDetails = parsedDetails || {};
+
+    const currentClient = parsedDetails.cliente || '';
+    const currentOrigin = parsedDetails.origen || '';
+    const currentDest = parsedDetails.destino || '';
+    const currentDestinatario = parsedDetails.destinatario || '';
+    const currentAssignDate = parsedDetails.assignment_date || '';
+    const currentRoute = parsedDetails.route || '';
+    const currentViaje = parsedDetails.viaje || '';
+    const currentBol = parsedDetails.bol || '';
+    const currentComments = parsedDetails.comments || '';
 
     // ISO string for datetime-local input (YYYY-MM-DDTHH:MM)
     const currentIso = currentAssignDate ? new Date(currentAssignDate).toISOString().slice(0, 16) : new Date(unit.last_status_update).toISOString().slice(0, 16);
@@ -298,22 +308,22 @@ window.openEditModal = (unitId) => {
 
                 <div class="col-span-2">
                     <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1">Ruta Libre (Opcional)</label>
-                    <input type="text" id="edit-route" class="w-full border-2 border-gray-200 focus:border-blue-500 outline-none p-2 rounded-lg font-medium" value="${typeof unit.details === 'string' ? unit.details : (typeof unit.details === 'object' ? (unit.details?.route || '') : '')}" placeholder="Ej: Autopista 57">
+                    <input type="text" id="edit-route" class="w-full border-2 border-gray-200 focus:border-blue-500 outline-none p-2 rounded-lg font-medium" value="${currentRoute}" placeholder="Ej: Autopista 57">
                 </div>
 
                 <!-- Campos Específicos de Clientes (BYD / CHANGAN / ETC) -->
                 <div class="col-span-1" id="field-viaje" style="display: none;">
                     <label class="block text-xs font-bold text-teal-600 uppercase tracking-wider mb-1">Número de Viaje (CHANGAN)</label>
-                    <input type="text" id="edit-viaje" class="w-full border-2 border-teal-100 focus:border-teal-500 outline-none p-2 rounded-lg font-medium bg-teal-50" value="${typeof unit.details === 'object' ? (unit.details?.viaje || '') : ''}" placeholder="Ej: VJ-10293">
+                    <input type="text" id="edit-viaje" class="w-full border-2 border-teal-100 focus:border-teal-500 outline-none p-2 rounded-lg font-medium bg-teal-50" value="${currentViaje}" placeholder="Ej: VJ-10293">
                 </div>
                 <div class="col-span-1" id="field-bol" style="display: none;">
                     <label class="block text-xs font-bold text-blue-600 uppercase tracking-wider mb-1">BOL (BYD / OTROS)</label>
-                    <input type="text" id="edit-bol" class="w-full border-2 border-blue-100 focus:border-blue-500 outline-none p-2 rounded-lg font-medium bg-blue-50" value="${typeof unit.details === 'object' ? (unit.details?.bol || '') : ''}" placeholder="Ej: BOL-99281">
+                    <input type="text" id="edit-bol" class="w-full border-2 border-blue-100 focus:border-blue-500 outline-none p-2 rounded-lg font-medium bg-blue-50" value="${currentBol}" placeholder="Ej: BOL-99281">
                 </div>
 
                 <div class="col-span-2">
                     <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1">Observaciones</label>
-                    <textarea id="edit-comments" class="w-full border-2 border-gray-200 focus:border-blue-500 outline-none p-2 rounded-lg font-medium" rows="2">${typeof unit.details === 'object' ? (unit.details?.comments || '') : ''}</textarea>
+                    <textarea id="edit-comments" class="w-full border-2 border-gray-200 focus:border-blue-500 outline-none p-2 rounded-lg font-medium" rows="2">${currentComments}</textarea>
                 </div>
             </div>
 
