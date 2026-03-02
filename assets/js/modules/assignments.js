@@ -69,6 +69,7 @@ async function loadTable() {
     
     const { data: clients } = await supabase.from('clients').select('*').order('name');
     const { data: locations } = await supabase.from('locations').select('*').order('name');
+    const { data: destinations } = await supabase.from('destinations').select('*').order('name');
     const { data: unitStatuses } = await supabase.from('unit_statuses').select('*').order('name');
     
     // Fetch Samsara Data
@@ -84,6 +85,7 @@ async function loadTable() {
     window.operatorsData = allOps;
     window.clientsData = clients || [];
     window.locationsData = locations || [];
+    window.destinationsData = destinations || [];
     window.statusesData = unitStatuses || [];
 
     renderRows(units, allOps, samsaraData);
@@ -108,6 +110,7 @@ window.handleDynamicSelect = async (selectId, tableName) => {
 
                 if (tableName === 'clients') window.clientsData.push({name: val});
                 if (tableName === 'locations') window.locationsData.push({name: val});
+                if (tableName === 'destinations') window.destinationsData.push({name: val});
                 if (tableName === 'unit_statuses') window.statusesData.push({name: val});
                 if (tableName === 'incident_types' && window.allIncidentTypes) window.allIncidentTypes.push({name: val});
             }
@@ -222,11 +225,13 @@ window.openEditModal = (unitId) => {
     
     // Dynamically loaded generic catalogs
     const clients = window.clientsData || [];
-    const destinations = window.locationsData || [];
+    const locations = window.locationsData || [];
+    const destinations = window.destinationsData || [];
 
     const currentClient = typeof unit.details === 'object' ? (unit.details?.cliente || '') : '';
     const currentOrigin = typeof unit.details === 'object' ? (unit.details?.origen || '') : '';
     const currentDest = typeof unit.details === 'object' ? (unit.details?.destino || '') : '';
+    const currentDestinatario = typeof unit.details === 'object' ? (unit.details?.destinatario || '') : '';
     const currentAssignDate = typeof unit.details === 'object' ? (unit.details?.assignment_date || '') : '';
 
     // ISO string for datetime-local input (YYYY-MM-DDTHH:MM)
@@ -256,6 +261,7 @@ window.openEditModal = (unitId) => {
                     <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1">Cliente</label>
                     <select id="edit-client" class="w-full border-2 border-gray-200 focus:border-blue-500 outline-none p-2 rounded-lg font-medium text-blue-700" onchange="window.handleDynamicSelect('edit-client', 'clients')">
                         <option value="">Seleccionar Cliente...</option>
+                        <option value="Sin Asignación" ${currentClient === 'Sin Asignación' ? 'selected' : ''}>Sin asignación de cliente</option>
                         ${clients.map(c => `<option value="${c.name}" ${currentClient === c.name ? 'selected' : ''}>${c.name}</option>`).join('')}
                         <option value="__NEW__" class="font-bold text-green-600">+ Agregar Nuevo Cliente...</option>
                     </select>
@@ -265,17 +271,26 @@ window.openEditModal = (unitId) => {
                     <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1">Origen (Carga)</label>
                     <select id="edit-origin" class="w-full border-2 border-gray-200 focus:border-blue-500 outline-none p-2 rounded-lg font-medium" onchange="window.handleDynamicSelect('edit-origin', 'locations')">
                         <option value="">Seleccionar Origen...</option>
-                        ${destinations.map(d => `<option value="${d.name}" ${currentOrigin === d.name ? 'selected' : ''}>${d.name}</option>`).join('')}
+                        ${locations.map(d => `<option value="${d.name}" ${currentOrigin === d.name ? 'selected' : ''}>${d.name}</option>`).join('')}
                         <option value="__NEW__" class="font-bold text-green-600">+ Agregar Nuevo Origen...</option>
                     </select>
                 </div>
 
                 <div>
-                    <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1">Destino (Entrega)</label>
+                    <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1">Destino (Lugar de Entrega)</label>
                     <select id="edit-dest" class="w-full border-2 border-gray-200 focus:border-blue-500 outline-none p-2 rounded-lg font-medium" onchange="window.handleDynamicSelect('edit-dest', 'locations')">
                         <option value="">Seleccionar Destino...</option>
-                        ${destinations.map(d => `<option value="${d.name}" ${currentDest === d.name ? 'selected' : ''}>${d.name}</option>`).join('')}
+                        ${locations.map(d => `<option value="${d.name}" ${currentDest === d.name ? 'selected' : ''}>${d.name}</option>`).join('')}
                         <option value="__NEW__" class="font-bold text-green-600">+ Agregar Nuevo Destino...</option>
+                    </select>
+                </div>
+
+                <div class="col-span-2">
+                    <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1">Destinatario (Empresa/Receptor)</label>
+                    <select id="edit-destinatario" class="w-full border-2 border-gray-200 focus:border-blue-500 outline-none p-2 rounded-lg font-medium text-indigo-700" onchange="window.handleDynamicSelect('edit-destinatario', 'destinations')">
+                        <option value="">Seleccionar Destinatario...</option>
+                        ${destinations.map(d => `<option value="${d.name}" ${currentDestinatario === d.name ? 'selected' : ''}>${d.name}</option>`).join('')}
+                        <option value="__NEW__" class="font-bold text-green-600">+ Agregar Nuevo Destinatario...</option>
                     </select>
                 </div>
 
@@ -314,6 +329,7 @@ window.openEditModal = (unitId) => {
         const cliente = document.getElementById('edit-client').value;
         const origen = document.getElementById('edit-origin').value;
         const destino = document.getElementById('edit-dest').value;
+        const destinatario = document.getElementById('edit-destinatario').value;
         const route = document.getElementById('edit-route').value;
         const comments = document.getElementById('edit-comments').value;
         const bol = document.getElementById('edit-bol').value;
@@ -330,19 +346,28 @@ window.openEditModal = (unitId) => {
         let currentParsed = typeof unit.details === 'string' ? { raw: unit.details } : (unit.details || {});
         let oldDetailsStr = JSON.stringify(currentParsed);
 
+        let clientChangedReason = '';
+        if (currentParsed.cliente && cliente && currentParsed.cliente !== cliente) {
+            clientChangedReason = prompt(`Estás cambiando el cliente de ${currentParsed.cliente} a ${cliente}. Por favor, ingresa el motivo del cambio:`);
+            if (clientChangedReason === null) return; // Cancelled
+        }
+
         const { error } = await supabase.from('units').update({
             current_operator_id: newOp,
             last_status_update: new Date().toISOString(), // Reset timer immediately
             last_modified_by: currentUser.name,
-            details: { ...currentParsed, assignment_date: newDate, route: finalRoute, cliente, origen, destino, comments, bol, viaje } 
+            details: { ...currentParsed, assignment_date: newDate, route: finalRoute, cliente, destinatario, origen, destino, comments, bol, viaje } 
         }).eq('id', unitId);
 
         if(error) alert(error.message);
         else {
+            let historyDetails = `Cambio de detalles. Antes: ${oldDetailsStr} | Ahora: Cliente=${cliente}, Destino=${finalRoute}`;
+            if (clientChangedReason) historyDetails += ` | Motivo cambio cliente: ${clientChangedReason}`;
+
             supabase.from('assignments_history').insert([{
                 unit_id: unitId,
                 action_type: 'Edición Manual',
-                details: `Cambio de detalles. Antes: ${oldDetailsStr} | Ahora: Cliente=${cliente}, Destino=${finalRoute}`,
+                details: historyDetails,
                 modified_by: currentUser.name,
                 timestamp: new Date().toISOString()
             }]).then(()=>{});
@@ -421,6 +446,7 @@ window.openScheduleModal = () => {
                     <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1">Cliente</label>
                     <select id="sched-client" class="w-full border-2 border-gray-200 focus:border-purple-500 outline-none p-2 rounded-lg font-medium text-purple-700" onchange="window.handleDynamicSelect('sched-client', 'clients')">
                         <option value="">Seleccionar Cliente...</option>
+                        <option value="Sin Asignación">Sin asignación de cliente</option>
                         ${clients.map(c => `<option value="${c.name}">${c.name}</option>`).join('')}
                         <option value="__NEW__" class="font-bold text-green-600">+ Agregar Nuevo Cliente...</option>
                     </select>
@@ -430,17 +456,26 @@ window.openScheduleModal = () => {
                     <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1">Origen (Carga)</label>
                     <select id="sched-origin" class="w-full border-2 border-gray-200 focus:border-purple-500 outline-none p-2 rounded-lg font-medium" onchange="window.handleDynamicSelect('sched-origin', 'locations')">
                         <option value="">Seleccionar Origen...</option>
-                        ${destinations.map(d => `<option value="${d.name}">${d.name}</option>`).join('')}
+                        ${locations.map(d => `<option value="${d.name}">${d.name}</option>`).join('')}
                         <option value="__NEW__" class="font-bold text-green-600">+ Agregar Nuevo Origen...</option>
                     </select>
                 </div>
 
                 <div>
-                    <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1">Destino (Entrega)</label>
+                    <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1">Destino (Lugar de Entrega)</label>
                     <select id="sched-dest" class="w-full border-2 border-gray-200 focus:border-purple-500 outline-none p-2 rounded-lg font-medium" onchange="window.handleDynamicSelect('sched-dest', 'locations')">
                         <option value="">Seleccionar Destino...</option>
-                        ${destinations.map(d => `<option value="${d.name}">${d.name}</option>`).join('')}
+                        ${locations.map(d => `<option value="${d.name}">${d.name}</option>`).join('')}
                         <option value="__NEW__" class="font-bold text-green-600">+ Agregar Nuevo Destino...</option>
+                    </select>
+                </div>
+
+                <div class="col-span-2">
+                    <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1">Destinatario (Empresa/Receptor)</label>
+                    <select id="sched-destinatario" class="w-full border-2 border-gray-200 focus:border-purple-500 outline-none p-2 rounded-lg font-medium text-indigo-700" onchange="window.handleDynamicSelect('sched-destinatario', 'destinations')">
+                        <option value="">Seleccionar Destinatario...</option>
+                        ${destinations.map(d => `<option value="${d.name}">${d.name}</option>`).join('')}
+                        <option value="__NEW__" class="font-bold text-green-600">+ Agregar Nuevo Destinatario...</option>
                     </select>
                 </div>
 
@@ -464,6 +499,7 @@ window.openScheduleModal = () => {
         const cliente = document.getElementById('sched-client').value;
         const origen = document.getElementById('sched-origin').value;
         const destino = document.getElementById('sched-dest').value;
+        const destinatario = document.getElementById('sched-destinatario').value;
         const route = document.getElementById('sched-route').value;
 
         if(!date) return alert("Selecciona fecha");
@@ -481,6 +517,7 @@ window.openScheduleModal = () => {
             assignment_date: date,
             route: finalRoute,
             cliente: cliente,
+            destinatario: destinatario,
             origen: origen,
             destino: destino
         };
@@ -678,18 +715,26 @@ window.openTimersModal = (unitId) => {
                     </div>
                 </div>
 
-                <!-- Milestones -->
-                ${['llegadaCarga', 'finCarga', 'llegadaDescarga', 'finDescarga'].map(key => {
-                    const label = { 'llegadaCarga': 'Llegada a Carga', 'finCarga': 'Fin de Carga', 'llegadaDescarga': 'Llegada a Descarga', 'finDescarga': 'Fin de Descarga'};
+                <!-- Milestones / Timers -->
+                ${[
+                    {key: 'trip_load_arrival', label: 'Llegada a Carga'}, 
+                    {key: 'trip_load_start', label: 'Inicio de Carga'}, 
+                    {key: 'trip_load_end', label: 'Fin de Carga'}, 
+                    {key: 'trip_unload_arrival', label: 'Llegada a Descarga'},
+                    {key: 'trip_unload_start', label: 'Inicio de Descarga'},
+                    {key: 'trip_unload_end', label: 'Fin de Descarga'},
+                    {key: 'trip_route_start', label: 'Inicio de Ruta'},
+                    {key: 'trip_route_end', label: 'Fin de Ruta'}
+                ].map(item => {
                     return `
                         <div>
                             <div class="flex justify-between mb-1 items-end">
-                                <label class="block text-xs font-bold text-gray-700 uppercase tracking-wider">${label[key]}</label>
-                                <button onclick="document.getElementById('cp-${key}').value = (new Date(new Date() - new Date().getTimezoneOffset() * 60000)).toISOString().slice(0,16)" class="text-[10px] bg-indigo-100 text-indigo-700 hover:bg-indigo-200 px-2 py-0.5 rounded font-bold transition">
+                                <label class="block text-xs font-bold text-gray-700 uppercase tracking-wider">${item.label}</label>
+                                <button onclick="document.getElementById('cp-${item.key}').value = (new Date(new Date() - new Date().getTimezoneOffset() * 60000)).toISOString().slice(0,16)" class="text-[10px] bg-indigo-100 text-indigo-700 hover:bg-indigo-200 px-2 py-0.5 rounded font-bold transition">
                                     <i class="fas fa-clock"></i> Ahora
                                 </button>
                             </div>
-                            <input type="datetime-local" id="cp-${key}" class="w-full border-2 border-gray-200 focus:border-indigo-500 outline-none p-2 rounded-lg font-medium text-sm" value="${checkpoints[key] || ''}">
+                            <input type="datetime-local" id="cp-${item.key}" class="w-full border-2 border-gray-200 focus:border-indigo-500 outline-none p-2 rounded-lg font-medium text-sm" value="${checkpoints[item.key] || ''}">
                         </div>
                     `;
                 }).join('')}
@@ -708,10 +753,14 @@ window.openTimersModal = (unitId) => {
         parsedDetails.checkpoints = {
             odoInit: document.getElementById('cp-odo-init').value,
             odoEnd: document.getElementById('cp-odo-end').value,
-            llegadaCarga: document.getElementById('cp-llegadaCarga').value,
-            finCarga: document.getElementById('cp-finCarga').value,
-            llegadaDescarga: document.getElementById('cp-llegadaDescarga').value,
-            finDescarga: document.getElementById('cp-finDescarga').value
+            trip_load_arrival: document.getElementById('cp-trip_load_arrival').value,
+            trip_load_start: document.getElementById('cp-trip_load_start').value,
+            trip_load_end: document.getElementById('cp-trip_load_end').value,
+            trip_unload_arrival: document.getElementById('cp-trip_unload_arrival').value,
+            trip_unload_start: document.getElementById('cp-trip_unload_start').value,
+            trip_unload_end: document.getElementById('cp-trip_unload_end').value,
+            trip_route_start: document.getElementById('cp-trip_route_start').value,
+            trip_route_end: document.getElementById('cp-trip_route_end').value
         };
 
         const currentUser = JSON.parse(sessionStorage.getItem('currentUser'));
