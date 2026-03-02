@@ -145,7 +145,13 @@ function renderRows(units, allOps) {
         // Match with Samsara
         const samsaraData = window.samsaraData || [];
         const samsaraVeh = samsaraData.find(v => v.name.includes(unit.economic_number) || (unit.placas && v.name.includes(unit.placas)));
-        const locationStr = samsaraVeh ? `<div class="text-[10px] text-blue-600 font-bold"><i class="fas fa-map-marker-alt"></i> GPS: ${samsaraVeh.location.speed} km/h</div>` : '<div class="text-[10px] text-gray-400">Sin GPS</div>';
+        let locationStr = samsaraVeh ? `<div class="text-[10px] text-blue-600 font-bold"><i class="fas fa-map-marker-alt"></i> GPS: ${samsaraVeh.location.speed} km/h</div>` : '<div class="text-[10px] text-gray-400">Sin GPS</div>';
+        
+        const origenStr = typeof unit.details === 'object' ? (unit.details?.origen || '') : '';
+        const destinoStr = typeof unit.details === 'object' ? (unit.details?.destino || '') : '';
+        if (origenStr && destinoStr && origenStr !== '---' && destinoStr !== '---' && !samsaraVeh) {
+             locationStr += `<button onclick="window.openAIRoute('${origenStr}', '${destinoStr}')" class="text-purple-600 hover:text-purple-800 text-[10px] font-bold mt-1 transition flex items-center gap-1 w-max"><i class="fas fa-robot"></i> Ruta IA</button>`;
+        }
         
         let parsedDetails = unit.details;
         if (typeof parsedDetails === 'string') {
@@ -189,7 +195,10 @@ function renderRows(units, allOps) {
                         <i class="fas fa-user-edit"></i> ${unit.last_modified_by || 'Sistema'}
                     </div>
                 </td>
-                <td class="p-4 flex gap-2 w-32">
+                <td class="p-4 flex gap-2 w-max">
+                    <button class="bg-indigo-50 text-indigo-600 hover:bg-indigo-100 px-3 py-2 rounded transition" onclick="openTimersModal('${unit.id}')" title="Tiempos Logísticos">
+                        <i class="fas fa-map-marker-alt"></i>
+                    </button>
                     ${terminarViajeBtn}
                     <button class="bg-blue-50 text-blue-600 hover:bg-blue-100 px-3 py-2 rounded transition" onclick="openEditModal('${unit.id}')" title="Editar Detalles Actuales">
                         <i class="fas fa-edit"></i>
@@ -275,6 +284,16 @@ window.openEditModal = (unitId) => {
                     <input type="text" id="edit-route" class="w-full border-2 border-gray-200 focus:border-blue-500 outline-none p-2 rounded-lg font-medium" value="${typeof unit.details === 'string' ? unit.details : (typeof unit.details === 'object' ? (unit.details?.route || '') : '')}" placeholder="Ej: Autopista 57">
                 </div>
 
+                <!-- Campos Específicos de Clientes (BYD / CHANGAN / ETC) -->
+                <div class="col-span-1" id="field-viaje" style="display: none;">
+                    <label class="block text-xs font-bold text-teal-600 uppercase tracking-wider mb-1">Número de Viaje (CHANGAN)</label>
+                    <input type="text" id="edit-viaje" class="w-full border-2 border-teal-100 focus:border-teal-500 outline-none p-2 rounded-lg font-medium bg-teal-50" value="${typeof unit.details === 'object' ? (unit.details?.viaje || '') : ''}" placeholder="Ej: VJ-10293">
+                </div>
+                <div class="col-span-1" id="field-bol" style="display: none;">
+                    <label class="block text-xs font-bold text-blue-600 uppercase tracking-wider mb-1">BOL (BYD / OTROS)</label>
+                    <input type="text" id="edit-bol" class="w-full border-2 border-blue-100 focus:border-blue-500 outline-none p-2 rounded-lg font-medium bg-blue-50" value="${typeof unit.details === 'object' ? (unit.details?.bol || '') : ''}" placeholder="Ej: BOL-99281">
+                </div>
+
                 <div class="col-span-2">
                     <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1">Observaciones</label>
                     <textarea id="edit-comments" class="w-full border-2 border-gray-200 focus:border-blue-500 outline-none p-2 rounded-lg font-medium" rows="2">${typeof unit.details === 'object' ? (unit.details?.comments || '') : ''}</textarea>
@@ -297,6 +316,8 @@ window.openEditModal = (unitId) => {
         const destino = document.getElementById('edit-dest').value;
         const route = document.getElementById('edit-route').value;
         const comments = document.getElementById('edit-comments').value;
+        const bol = document.getElementById('edit-bol').value;
+        const viaje = document.getElementById('edit-viaje').value;
 
         // Auto format route if dropdowns used
         let finalRoute = route;
@@ -313,7 +334,7 @@ window.openEditModal = (unitId) => {
             current_operator_id: newOp,
             last_status_update: new Date().toISOString(), // Reset timer immediately
             last_modified_by: currentUser.name,
-            details: { ...currentParsed, assignment_date: newDate, route: finalRoute, cliente, origen, destino, comments } 
+            details: { ...currentParsed, assignment_date: newDate, route: finalRoute, cliente, origen, destino, comments, bol, viaje } 
         }).eq('id', unitId);
 
         if(error) alert(error.message);
@@ -330,6 +351,32 @@ window.openEditModal = (unitId) => {
             loadTable();
         }
     };
+
+    // Client select event for dynamic fields
+    const clientSelect = document.getElementById('edit-client');
+    const updateDynamicFields = () => {
+        const val = clientSelect.value.toUpperCase();
+        document.getElementById('field-viaje').style.display = val.includes('CHANGAN') ? 'block' : 'none';
+        document.getElementById('field-bol').style.display = val.includes('BYD') || val.includes('CHANGAN') ? 'block' : 'none';
+        
+        // Fix grid span if one is visible
+        const dispViaje = document.getElementById('field-viaje').style.display === 'block';
+        const dispBol = document.getElementById('field-bol').style.display === 'block';
+
+        if(dispViaje && dispBol) {
+            document.getElementById('field-viaje').className = "col-span-1";
+            document.getElementById('field-bol').className = "col-span-1";
+        } else if(dispViaje || dispBol) {
+            if(dispViaje) document.getElementById('field-viaje').className = "col-span-2";
+            if(dispBol) document.getElementById('field-bol').className = "col-span-2";
+        }
+    };
+    clientSelect.addEventListener('change', () => {
+        window.handleDynamicSelect('edit-client', 'clients');
+        updateDynamicFields();
+    });
+    // Trigger on load
+    updateDynamicFields();
 }
 
 window.openScheduleModal = () => {
@@ -592,6 +639,106 @@ window.openStatusModal = (unitId) => {
             }
         });
     }
+}
+
+// 4. Timers / Checkpoints Modal
+window.openTimersModal = (unitId) => {
+    const unit = window.unitsData.find(u => u.id === unitId);
+    let parsedDetails = unit.details;
+    if (typeof parsedDetails === 'string') {
+        try { parsedDetails = JSON.parse(parsedDetails); } catch(e) {}
+    }
+    
+    // Fallback if not an object
+    if (!parsedDetails || typeof parsedDetails !== 'object') {
+        parsedDetails = {};
+    }
+
+    const checkpoints = parsedDetails.checkpoints || {};
+
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 fade-in';
+    modal.innerHTML = `
+        <div class="bg-white rounded-xl p-6 w-[28rem] shadow-2xl border border-gray-100">
+            <h3 class="text-xl font-black mb-4 border-b pb-2 text-indigo-700">
+                <i class="fas fa-map-marker-alt mr-2"></i> Tiempos Logísticos: ${unit.economic_number}
+            </h3>
+            
+            <div class="space-y-4 max-h-[60vh] overflow-y-auto custom-scrollbar pr-2 mb-6">
+                
+                <!-- Odometer -->
+                <div class="grid grid-cols-2 gap-3 mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Odómetro Inicial</label>
+                        <input type="number" id="cp-odo-init" class="w-full border border-gray-300 focus:border-indigo-500 rounded p-1.5 text-sm" value="${checkpoints.odoInit !== undefined ? checkpoints.odoInit : ''}">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Odómetro Final</label>
+                        <input type="number" id="cp-odo-end" class="w-full border border-gray-300 focus:border-indigo-500 rounded p-1.5 text-sm" value="${checkpoints.odoEnd !== undefined ? checkpoints.odoEnd : ''}">
+                    </div>
+                </div>
+
+                <!-- Milestones -->
+                ${['llegadaCarga', 'finCarga', 'llegadaDescarga', 'finDescarga'].map(key => {
+                    const label = { 'llegadaCarga': 'Llegada a Carga', 'finCarga': 'Fin de Carga', 'llegadaDescarga': 'Llegada a Descarga', 'finDescarga': 'Fin de Descarga'};
+                    return `
+                        <div>
+                            <div class="flex justify-between mb-1 items-end">
+                                <label class="block text-xs font-bold text-gray-700 uppercase tracking-wider">${label[key]}</label>
+                                <button onclick="document.getElementById('cp-${key}').value = (new Date(new Date() - new Date().getTimezoneOffset() * 60000)).toISOString().slice(0,16)" class="text-[10px] bg-indigo-100 text-indigo-700 hover:bg-indigo-200 px-2 py-0.5 rounded font-bold transition">
+                                    <i class="fas fa-clock"></i> Ahora
+                                </button>
+                            </div>
+                            <input type="datetime-local" id="cp-${key}" class="w-full border-2 border-gray-200 focus:border-indigo-500 outline-none p-2 rounded-lg font-medium text-sm" value="${checkpoints[key] || ''}">
+                        </div>
+                    `;
+                }).join('')}
+                
+            </div>
+            
+            <div class="flex justify-end gap-3 pt-4 border-t">
+                <button class="px-5 py-2 font-bold text-gray-500 hover:bg-gray-100 rounded-lg transition" onclick="this.closest('.fixed').remove()">Cerrar</button>
+                <button class="px-5 py-2 font-bold bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition shadow-lg shadow-indigo-500/30" id="btn-save-checkpoints">Guardar Tiempos</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+
+    document.getElementById('btn-save-checkpoints').onclick = async () => {
+        parsedDetails.checkpoints = {
+            odoInit: document.getElementById('cp-odo-init').value,
+            odoEnd: document.getElementById('cp-odo-end').value,
+            llegadaCarga: document.getElementById('cp-llegadaCarga').value,
+            finCarga: document.getElementById('cp-finCarga').value,
+            llegadaDescarga: document.getElementById('cp-llegadaDescarga').value,
+            finDescarga: document.getElementById('cp-finDescarga').value
+        };
+
+        const currentUser = JSON.parse(sessionStorage.getItem('currentUser'));
+
+        const payload = {
+            details: parsedDetails,
+            last_modified_by: currentUser.name
+        };
+
+        const { error } = await supabase.from('units').update(payload).eq('id', unit.id);
+        
+        if (error) {
+            alert('Error al guardar tiempos: ' + error.message);
+        } else {
+            // Log to history
+            supabase.from('assignments_history').insert([{
+                unit_id: unit.id,
+                action_type: 'Registro Logístico',
+                details: `Se actualizaron los Tiempos/Checkpoints de Viaje`,
+                modified_by: currentUser.name,
+                timestamp: new Date().toISOString()
+            }]).then(()=>{});
+
+            modal.remove();
+            loadTable();
+        }
+    };
 }
 
 function filterAssignments(text) {

@@ -202,11 +202,16 @@ function openNewLogModal() {
 
     document.getElementById('log-unit').addEventListener('change', async (e) => {
         const unitId = e.target.value;
-        if (!unitId) return;
+        if (!unitId) {
+            document.getElementById('log-op').value = '';
+            return;
+        }
         try {
-            const { data } = await supabase.from('assignments').select('operator_id').eq('unit_id', unitId).eq('is_active', true).single();
-            if (data && data.operator_id) {
-                document.getElementById('log-op').value = data.operator_id;
+            const { data } = await supabase.from('units').select('current_operator_id').eq('id', unitId).single();
+            if (data && data.current_operator_id) {
+                document.getElementById('log-op').value = data.current_operator_id;
+            } else {
+                document.getElementById('log-op').value = '';
             }
         } catch (err) { console.error('Error fetching operator automatically', err); }
     });
