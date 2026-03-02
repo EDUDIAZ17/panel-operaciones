@@ -112,6 +112,8 @@ async function setupFilters() {
     const opSelect = document.getElementById('rpt-filter-op');
     const unitSelect = document.getElementById('rpt-filter-unit');
 
+    if (!opSelect || !unitSelect) return;
+
     if(ops) ops.forEach(op => {
         opSelect.innerHTML += `<option value="${op.id}">${op.name}</option>`;
     });
@@ -157,6 +159,7 @@ function renderSummary(data) {
     const tbody = document.getElementById('rpt-table-body');
     const tfoot = document.getElementById('rpt-table-foot');
     
+    if (!tbody || !tfoot) return;
     if (!data.length) {
         tbody.innerHTML = '<tr><td colspan="6" class="p-8 text-center text-gray-500">No se encontraron registros en este periodo.</td></tr>';
         tfoot.innerHTML = '';

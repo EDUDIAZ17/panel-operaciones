@@ -107,8 +107,11 @@ async function loadData() {
     window.allIncidentTypes = types || [];
 
     // Update Stats
-    document.getElementById('incidents-total').innerText = data.length;
-    document.getElementById('incidents-unresolved').innerText = `${data.filter(i => !i.resolved).length} Pendientes`;
+    const totalEl = document.getElementById('incidents-total');
+    if (totalEl) totalEl.innerText = data.length;
+    
+    const unresEl = document.getElementById('incidents-unresolved');
+    if (unresEl) unresEl.innerText = `${data.filter(i => !i.resolved).length} Pendientes`;
 
     renderTable(data);
     renderChart(data);
@@ -116,6 +119,7 @@ async function loadData() {
 
 function renderTable(data) {
     const tbody = document.getElementById('incidents-body');
+    if (!tbody) return;
     const filterStatus = document.getElementById('filter-status').value;
     const thresholds = window.currentThresholds;
 

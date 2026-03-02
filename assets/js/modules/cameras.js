@@ -59,9 +59,11 @@ async function loadFilters() {
     if (units) {
         units = units.sort((a,b) => a.economic_number.localeCompare(b.economic_number, undefined, {numeric: true}));
         const select = document.getElementById('filter-unit');
-        units.forEach(u => {
-            select.insertAdjacentHTML('beforeend', `<option value="${u.id}">${u.economic_number}</option>`);
-        });
+        if (select) {
+            units.forEach(u => {
+                select.insertAdjacentHTML('beforeend', `<option value="${u.id}">${u.economic_number}</option>`);
+            });
+        }
         window.allUnitsData = units; 
     }
     const { data: ops } = await supabase.from('operators').select('id, name').order('name');
@@ -70,8 +72,9 @@ async function loadFilters() {
 
 async function loadTable() {
     const tbody = document.getElementById('cameras-body');
-    const filterDate = document.getElementById('filter-date').value;
-    const filterUnit = document.getElementById('filter-unit').value;
+    if (!tbody) return;
+    const filterDate = document.getElementById('filter-date') ? document.getElementById('filter-date').value : '';
+    const filterUnit = document.getElementById('filter-unit') ? document.getElementById('filter-unit').value : '';
 
     let query = supabase.from('camera_logs').select('*, units(economic_number), operators(name)').order('created_at', { ascending: false });
 
