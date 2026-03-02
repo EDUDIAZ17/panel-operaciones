@@ -352,9 +352,9 @@ function updateTimers() {
 
 // --- SHIFT NOTES ---
 async function loadShiftNotes() {
-    const { data } = await supabase.from('system_settings').select('value').eq('key', 'shift_notes').single();
-    if (data && data.value) {
-        document.getElementById('shift-notes').value = data.value;
+    const { data } = await supabase.from('system_settings').select('setting_value').eq('setting_key', 'shift_notes').single();
+    if (data && data.setting_value) {
+        document.getElementById('shift-notes').value = data.setting_value;
     }
 }
 
@@ -366,7 +366,7 @@ async function saveShiftNotes() {
     const val = document.getElementById('shift-notes').value;
     
     // Upsert logic using key
-    const { error } = await supabase.from('system_settings').upsert({ key: 'shift_notes', value: val, description: 'Notas de Cambio de Turno' }, { onConflict: 'key' });
+    const { error } = await supabase.from('system_settings').upsert({ setting_key: 'shift_notes', setting_value: val, description: 'Notas de Cambio de Turno' }, { onConflict: 'setting_key' });
     
     if (error) {
         alert("Error guardando notas: " + error.message);

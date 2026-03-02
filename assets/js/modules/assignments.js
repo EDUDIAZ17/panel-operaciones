@@ -122,6 +122,8 @@ window.handleDynamicSelect = async (selectId, tableName) => {
 
 function renderRows(units, allOps) {
     const list = document.getElementById('assignments-body');
+    if (!list) return;
+
     if (units.length === 0) {
         list.innerHTML = '<tr><td colspan="5" class="p-6 text-center text-gray-500">No se encontraron unidades.</td></tr>';
         return;
