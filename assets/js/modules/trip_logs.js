@@ -110,6 +110,7 @@ function renderTable(element, units) {
             <tbody class="divide-y divide-gray-100">
     `;
 
+    let activeCount = 0;
     units.forEach(unit => {
         let det = unit.details;
         if (typeof det === 'string') { try { det = JSON.parse(det); } catch(e) { det = {}; } }
@@ -166,12 +167,13 @@ function renderTable(element, units) {
                 <td class="p-2 align-top">${renderInput('trip_route_end')}</td>
             </tr>
         `;
+        activeCount++;
     });
 
     html += `</tbody></table>`;
     
     // Check if empty after filtering
-    if(!html.includes('id="')) {
+    if(activeCount === 0) {
         element.innerHTML = '<div class="p-8 text-center text-gray-500 italic bg-gray-50 rounded-lg border border-dashed">No hay unidades en viaje activo de este tipo actualmente.</div>';
     } else {
         element.innerHTML = html;
