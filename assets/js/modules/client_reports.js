@@ -60,7 +60,7 @@ export async function renderClientReports(container) {
                     </div>
                     <span class="bg-blue-50 text-blue-700 px-3 py-1 rounded-full"><i class="fas fa-bolt mr-1"></i> Data Automática de Asignaciones</span>
                 </div>
-                <div class="overflow-auto flex-1 p-0 custom-scrollbar">
+                <div class="overflow-x-auto custom-scrollbar w-full flex-1 pb-4">
                     <table class="w-full text-left border-collapse min-w-[1400px] whitespace-nowrap" id="table-client-report">
                         <thead id="client-report-head" class="bg-white/90 backdrop-blur-sm sticky top-0 shadow-sm z-10 text-[10px] md:text-xs uppercase tracking-widest text-gray-500 border-b">
                         </thead>

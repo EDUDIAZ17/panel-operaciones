@@ -91,8 +91,9 @@ function renderTable(element, units) {
     }
 
     let html = `
-        <table class="w-full text-left border-collapse text-sm">
-            <thead class="sticky top-0 bg-white shadow-sm z-10">
+        <div class="overflow-x-auto w-full custom-scrollbar pb-4">
+            <table class="w-full text-left border-collapse text-sm min-w-max">
+                <thead class="sticky top-0 bg-white shadow-sm z-10">
                 <tr class="bg-indigo-50/50 border-b border-indigo-100">
                     <th class="p-3 font-semibold text-indigo-800">Unidad</th>
                     <th class="p-3 font-semibold text-indigo-800">Viaje / Cliente</th>
@@ -121,8 +122,8 @@ function renderTable(element, units) {
 
         // Safely display route string
         let routeDisplay = '---';
-        if (det.origen && det.destino) routeDisplay = `<strong>${det.origen}</strong> &rarr; <strong>${det.destino}</strong>`;
-        else if (det.route) routeDisplay = det.route;
+        if (det.origen && det.destino) routeDisplay = `<strong class="text-blue-900 border-b border-blue-200 pb-0.5">${det.origen}</strong> &rarr; <strong class="text-blue-900 border-b border-blue-200 pb-0.5">${det.destino}</strong>`;
+        else if (det.route) routeDisplay = `<span class="text-blue-900 font-bold">${det.route}</span>`;
         
         let destinatariosArray = [];
         if (Array.isArray(det.destinatarios) && det.destinatarios.length > 0) destinatariosArray = det.destinatarios;
@@ -166,7 +167,7 @@ function renderTable(element, units) {
         activeCount++;
     });
 
-    html += `</tbody></table>`;
+    html += `</tbody></table></div>`;
     
     // Check if empty after filtering
     if(activeCount === 0) {

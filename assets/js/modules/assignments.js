@@ -23,8 +23,8 @@ export async function renderAssignments(container) {
                 </div>
                 
                 <!-- Table -->
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse">
+                <div class="overflow-x-auto custom-scrollbar w-full pb-4">
+                    <table class="w-full text-left border-collapse min-w-max">
                         <thead>
                             <tr class="bg-gray-100 border-b">
                                 <th class="p-4 font-semibold text-gray-600 rounded-tl-lg">Unidad</th>
@@ -36,7 +36,7 @@ export async function renderAssignments(container) {
                             </tr>
                         </thead>
                         <tbody id="assignments-body">
-                             <tr><td colspan="5" class="p-8 text-center"><div class="spinner"></div> Cargando flota...</td></tr>
+                             <tr><td colspan="6" class="p-8 text-center"><div class="spinner"></div> Cargando flota...</td></tr>
                         </tbody>
                     </table>
                 </div>
