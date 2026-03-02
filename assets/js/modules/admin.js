@@ -9,6 +9,8 @@ export async function renderAdmin(container) {
                 <div class="flex gap-2">
                     <button id="tab-operators" class="px-4 py-2 bg-blue-600 text-white rounded-lg font-bold shadow-sm transition">Operadores</button>
                     <button id="tab-units" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-bold shadow-sm transition hover:bg-gray-300">Unidades</button>
+                    <button id="tab-clients" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-bold shadow-sm transition hover:bg-gray-300">Clientes</button>
+                    <button id="tab-destinations" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-bold shadow-sm transition hover:bg-gray-300">Destinatarios</button>
                 </div>
             </div>
 
@@ -83,6 +85,62 @@ export async function renderAdmin(container) {
                 </div>
             </div>
             
+            <!-- Clients Section -->
+            <div id="section-clients" class="hidden space-y-4">
+                <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-100">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-lg font-bold text-gray-700 flex items-center">
+                            <i class="fas fa-building text-purple-600 mr-2"></i> Gestión de Clientes
+                        </h3>
+                        <div class="flex gap-2">
+                            <button id="btn-new-client" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm font-bold transition flex items-center shadow-md">
+                                <i class="fas fa-plus mr-2"></i> NUEVO CLIENTE
+                            </button>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead class="bg-gray-50 border-b">
+                                <tr class="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                    <th class="px-6 py-4">ID</th>
+                                    <th class="px-6 py-4">Nombre Comercial</th>
+                                    <th class="px-6 py-4 text-right">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="admin-clients-body" class="divide-y divide-gray-100 text-sm"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Destinations Section -->
+            <div id="section-destinations" class="hidden space-y-4">
+                <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-100">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-lg font-bold text-gray-700 flex items-center">
+                            <i class="fas fa-map-marker-alt text-teal-600 mr-2"></i> Catálogo de Destinatarios
+                        </h3>
+                        <div class="flex gap-2">
+                            <button id="btn-new-destination" class="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg text-sm font-bold transition flex items-center shadow-md">
+                                <i class="fas fa-plus mr-2"></i> NUEVO DESTINATARIO
+                            </button>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead class="bg-gray-50 border-b">
+                                <tr class="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                    <th class="px-6 py-4">ID</th>
+                                    <th class="px-6 py-4">Empresa / Recepción</th>
+                                    <th class="px-6 py-4 text-right">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="admin-destinations-body" class="divide-y divide-gray-100 text-sm"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
             <div id="admin-modal-container"></div>
         </div>
     `;
@@ -90,32 +148,42 @@ export async function renderAdmin(container) {
     setupTabs();
     loadOperators();
     loadUnits();
+    loadDBCatalog('clients', 'admin-clients-body', openGenericModal);
+    loadDBCatalog('destinations', 'admin-destinations-body', openGenericModal);
     
     document.getElementById('btn-new-op').onclick = () => openOperatorModal();
     document.getElementById('btn-new-unit').onclick = () => openUnitModal();
+    document.getElementById('btn-new-client').onclick = () => openGenericModal('clients');
+    document.getElementById('btn-new-destination').onclick = () => openGenericModal('destinations');
+    
     document.getElementById('btn-sync-ops').onclick = syncOperatorsFromSamsara;
     document.getElementById('btn-sync-units').onclick = syncUnitsFromSamsara;
 }
 
 function setupTabs() {
-    const btnOps = document.getElementById('tab-operators');
-    const btnUnits = document.getElementById('tab-units');
-    const secOps = document.getElementById('section-operators');
-    const secUnits = document.getElementById('section-units');
+    const tabs = [
+        { id: 'operators', btn: 'tab-operators', sec: 'section-operators', color: 'blue' },
+        { id: 'units', btn: 'tab-units', sec: 'section-units', color: 'orange' },
+        { id: 'clients', btn: 'tab-clients', sec: 'section-clients', color: 'purple' },
+        { id: 'destinations', btn: 'tab-destinations', sec: 'section-destinations', color: 'teal' }
+    ];
 
-    btnOps.onclick = () => {
-        btnOps.className = 'px-4 py-2 bg-blue-600 text-white rounded-lg font-bold shadow-sm transition';
-        btnUnits.className = 'px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-bold shadow-sm transition hover:bg-gray-300';
-        secOps.classList.remove('hidden');
-        secUnits.classList.add('hidden');
-    };
-
-    btnUnits.onclick = () => {
-        btnUnits.className = 'px-4 py-2 bg-orange-600 text-white rounded-lg font-bold shadow-sm transition';
-        btnOps.className = 'px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-bold shadow-sm transition hover:bg-gray-300';
-        secUnits.classList.remove('hidden');
-        secOps.classList.add('hidden');
-    };
+    tabs.forEach(t => {
+        const btn = document.getElementById(t.btn);
+        btn.onclick = () => {
+            tabs.forEach(x => {
+                const b = document.getElementById(x.btn);
+                const s = document.getElementById(x.sec);
+                if (x.id === t.id) {
+                    b.className = `px-4 py-2 bg-${x.color}-600 text-white rounded-lg font-bold shadow-sm transition`;
+                    s.classList.remove('hidden');
+                } else {
+                    b.className = 'px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-bold shadow-sm transition hover:bg-gray-300';
+                    s.classList.add('hidden');
+                }
+            });
+        };
+    });
 }
 
 async function loadOperators() {
@@ -185,6 +253,36 @@ async function loadUnits() {
     );
 }
 
+// --- Catalogs ---
+async function loadDBCatalog(table, tbodyId, modalFn) {
+    const list = document.getElementById(tbodyId);
+    const { data: items } = await supabase.from(table).select('*').order('name');
+    
+    if(!items) return;
+
+    list.innerHTML = items.map(i => `
+        <tr class="hover:bg-gray-50 transition">
+            <td class="px-6 py-4 text-xs font-mono text-gray-400">#${i.id.slice(0,8)}</td>
+            <td class="px-6 py-4 font-bold text-gray-800">${i.name}</td>
+            <td class="px-6 py-4 text-right space-x-2">
+                <button class="text-blue-600 hover:bg-blue-50 p-2 rounded transition edit-item" data-id="${i.id}">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button class="text-red-500 hover:bg-red-50 p-2 rounded transition del-item" data-id="${i.id}">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </td>
+        </tr>
+    `).join('');
+
+    list.querySelectorAll('.edit-item').forEach(btn => 
+        btn.onclick = () => modalFn(table, items.find(x => x.id === btn.dataset.id))
+    );
+    list.querySelectorAll('.del-item').forEach(btn => 
+        btn.onclick = () => confirmDelete(table, btn.dataset.id, () => loadDBCatalog(table, tbodyId, modalFn))
+    );
+}
+
 // --- Modals ---
 
 function openOperatorModal(op = null) {
@@ -197,10 +295,10 @@ function openOperatorModal(op = null) {
             <div class="space-y-4">
                 <div>
                     <label class="block text-xs font-bold text-gray-500 mb-1">NOMBRE COMPLETO</label>
-                    <input type="text" id="modal-op-name" class="w-full border p-3 rounded-xl bg-gray-50" value="${op ? op.name : ''}" required>
+                    <input type="text" id="modal-op-name" class="w-full border p-3 rounded-xl bg-gray-50" value="${op ? op.name : ''}" required />
                 </div>
                 <div class="flex items-center gap-2">
-                    <input type="checkbox" id="modal-op-active" ${op ? (op.active ? 'checked' : '') : 'checked'}>
+                    <input type="checkbox" id="modal-op-active" ${op ? (op.active ? 'checked' : '') : 'checked'} />
                     <label class="text-sm font-bold text-gray-700">Operador Activo</label>
                 </div>
             </div>
@@ -240,7 +338,7 @@ function openUnitModal(unit = null) {
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs font-bold text-gray-500 mb-1">ECONÓMICO</label>
-                        <input type="text" id="modal-unit-eco" class="w-full border p-3 rounded-xl bg-gray-50" value="${unit ? unit.economic_number : ''}" required placeholder="M-101">
+                        <input type="text" id="modal-unit-eco" class="w-full border p-3 rounded-xl bg-gray-50" value="${unit ? unit.economic_number : ''}" required placeholder="M-101" />
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-gray-500 mb-1">TIPO</label>
@@ -253,7 +351,7 @@ function openUnitModal(unit = null) {
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-gray-500 mb-1">PLACAS</label>
-                    <input type="text" id="modal-unit-placas" class="w-full border p-3 rounded-xl bg-gray-50" value="${unit ? (unit.placas || '') : ''}" placeholder="ABC-1234">
+                    <input type="text" id="modal-unit-placas" class="w-full border p-3 rounded-xl bg-gray-50" value="${unit ? (unit.placas || '') : ''}" placeholder="ABC-1234" />
                 </div>
             </div>
             <div class="mt-8 flex justify-end gap-3">
@@ -283,6 +381,44 @@ function openUnitModal(unit = null) {
     };
 }
 
+function openGenericModal(table, item = null) {
+    const container = document.getElementById('admin-modal-container');
+    const modal = document.createElement('div');
+    const tName = table === 'clients' ? 'Cliente' : 'Destinatario';
+    modal.className = 'fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] fade-in';
+    modal.innerHTML = `
+        <div class="bg-white rounded-2xl p-8 w-[400px] shadow-2xl scale-in">
+            <h3 class="text-xl font-bold mb-6 text-gray-800">${item ? 'Editar' : 'Registro de'} ${tName}</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 mb-1">NOMBRE DE EMPRESA / RECIBIDOR</label>
+                    <input type="text" id="modal-item-name" class="w-full border p-3 rounded-xl bg-gray-50" value="${item ? item.name : ''}" required />
+                </div>
+            </div>
+            <div class="mt-8 flex justify-end gap-3">
+                <button class="px-6 py-2 text-gray-500 font-bold hover:bg-gray-100 rounded-xl" onclick="this.closest('.fixed').remove()">Cancelar</button>
+                <button class="px-6 py-2 bg-blue-600 text-white font-bold rounded-xl shadow-lg hover:bg-blue-700 transition" id="save-item-btn">Guardar</button>
+            </div>
+        </div>
+    `;
+    container.appendChild(modal);
+
+    document.getElementById('save-item-btn').onclick = async () => {
+        const name = document.getElementById('modal-item-name').value.trim();
+        if(!name) return;
+
+        const { error } = item 
+            ? await supabase.from(table).update({ name }).eq('id', item.id)
+            : await supabase.from(table).insert({ name });
+
+        if(error) alert(error.message);
+        else {
+            modal.remove();
+            loadDBCatalog(table, `admin-${table}-body`, openGenericModal);
+        }
+    };
+}
+
 function confirmDelete(table, id, callback) {
     const container = document.getElementById('admin-modal-container');
     const modal = document.createElement('div');
@@ -294,7 +430,7 @@ function confirmDelete(table, id, callback) {
             </div>
             <h3 class="text-xl font-bold mb-2 text-gray-800">¿Estás seguro?</h3>
             <p class="text-sm text-gray-500 mb-6 font-medium">Esta acción no se puede deshacer. Escribe "BORRAR" para confirmar.</p>
-            <input type="text" id="delete-confirm-code" class="w-full border-2 border-red-50 p-3 rounded-xl bg-red-50/50 text-center font-bold text-red-600 mb-6 placeholder-red-200" placeholder="Código de seguridad">
+            <input type="text" id="delete-confirm-code" class="w-full border-2 border-red-50 p-3 rounded-xl bg-red-50/50 text-center font-bold text-red-600 mb-6 placeholder-red-200" placeholder="Código de seguridad" />
             <div class="flex gap-3">
                 <button class="flex-1 py-3 text-gray-500 font-bold hover:bg-gray-100 rounded-xl transition" onclick="this.closest('.fixed').remove()">No, cancelar</button>
                 <button class="flex-1 py-3 bg-red-600 text-white font-bold rounded-xl shadow-lg hover:bg-red-700 transition" id="execute-delete-btn">SÍ, ELIMINAR</button>

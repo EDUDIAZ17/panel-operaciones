@@ -1,91 +1,43 @@
-// assets/js/services/samsara.js
+import { supabase } from './supabaseClient.js';
 
-const SAMSARA_API_TOKEN = '***REDACTED_SAMSARA_TOKEN***';
-const SAMSARA_BASE_URL = 'https://api.samsara.com';
-
-// Helpful for local development CORS issues (allorigins usually blocks custom headers in some configs)
-// Using corsproxy.io as it handles headers more transparently for preflights
-const SAM_CORS_PROXY = 'https://corsproxy.io/?';
-
-export async function fetchSamsaraLocations() {
-    let url = `${SAMSARA_BASE_URL}/fleet/vehicles/locations`;
-    
+/**
+ * Fetches data from the Samsara API via a secure Supabase Edge Function to prevent exposing the API token.
+ * @param {string} endpoint The Samsara API endpoint (e.g., '/fleet/vehicles')
+ */
+async function fetchFromEdgeFunction(endpoint) {
     try {
-        // Try direct first
-        const response = await fetch(url, {
-            headers: { 'Authorization': `Bearer ${SAMSARA_API_TOKEN}` }
+        const { data, error } = await supabase.functions.invoke('dynamic-endpoint', {
+            body: { endpoint }
         });
 
-        if (response.ok) {
-            const data = await response.json();
-            return data.data || [];
+        if (error) {
+            console.error('Error invoking Samsara proxy:', error);
+            throw error;
         }
-        throw new Error('Direct fetch failed');
+
+        return data?.data || [];
     } catch (error) {
-        console.warn('Direct Samsara fetch failed, attempting proxy fallback...');
-        
-        try {
-            const proxyUrl = `${SAM_CORS_PROXY}${encodeURIComponent(url)}`;
-            const proxyResponse = await fetch(proxyUrl, {
-                headers: { 'Authorization': `Bearer ${SAMSARA_API_TOKEN}` }
-            });
-            
-            if (!proxyResponse.ok) throw new Error('Proxy fetch failed');
-            const data = await proxyResponse.json();
-            return data.data || [];
-        } catch (proxyError) {
-            console.error('⛔ CORS BLOCK: No se puede acceder a Samsara.');
-            return [];
-        }
+        console.error('Failed to fetch from Samsara Edge Function:', error);
+        return [];
     }
+}
+
+export async function fetchSamsaraLocations() {
+    return await fetchFromEdgeFunction('/fleet/vehicles/locations');
 }
 
 export async function fetchSamsaraVehicles() {
-    let url = `${SAMSARA_BASE_URL}/fleet/vehicles`;
-    try {
-        const proxyUrl = `${SAM_CORS_PROXY}${encodeURIComponent(url)}`;
-        const response = await fetch(proxyUrl, {
-            headers: { 'Authorization': `Bearer ${SAMSARA_API_TOKEN}` }
-        });
-        if (!response.ok) throw new Error('Samsara API error');
-        const data = await response.json();
-        return data.data || [];
-    } catch (error) {
-        console.error('Error fetching Samsara vehicles:', error);
-        return [];
-    }
+    return await fetchFromEdgeFunction('/fleet/vehicles');
 }
 
 export async function fetchSamsaraDrivers() {
-    let url = `${SAMSARA_BASE_URL}/fleet/drivers`;
-    try {
-        const proxyUrl = `${SAM_CORS_PROXY}${encodeURIComponent(url)}`;
-        const response = await fetch(proxyUrl, {
-            headers: { 'Authorization': `Bearer ${SAMSARA_API_TOKEN}` }
-        });
-        if (!response.ok) throw new Error('Samsara API error');
-        const data = await response.json();
-        return data.data || [];
-    } catch (error) {
-        console.error('Error fetching Samsara drivers:', error);
-        return [];
-    }
+    return await fetchFromEdgeFunction('/fleet/drivers');
 }
 
 export async function fetchSamsaraStats(vehicleIds) {
-    try {
-        const url = new URL(`${SAMSARA_BASE_URL}/fleet/vehicles/stats`);
-        url.searchParams.append('types', 'obdOdometerMeters,gpsOdometerMeters,gps');
-        const proxyUrl = `${SAM_CORS_PROXY}${encodeURIComponent(url.toString())}`;
-        const response = await fetch(proxyUrl, {
-            headers: { 'Authorization': `Bearer ${SAMSARA_API_TOKEN}` }
-        });
-        if (!response.ok) throw new Error('Samsara API error');
-        const data = await response.json();
-        return data.data || [];
-    } catch (error) {
-        console.error('Error fetching Samsara stats:', error);
-        return [];
-    }
+    // Note: If you need to pass specific vehicle IDs, you can append query params
+    // to the endpoint string here or modify the edge function to accept a complete URL payload.
+    const endpoint = '/fleet/vehicles/stats?types=obdOdometerMeters,gpsOdometerMeters,gps';
+    return await fetchFromEdgeFunction(endpoint);
 }
 

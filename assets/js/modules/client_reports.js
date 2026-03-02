@@ -14,6 +14,16 @@ export async function renderClientReports(container) {
                     <i class="fas fa-layer-group text-blue-500 mr-3 text-2xl drop-shadow-sm"></i> Panel de Clientes (Torre de Control)
                 </h3>
                 <div class="flex gap-3">
+                    <input type="text" id="filter-unidad" placeholder="Buscar por Unidad / Operador..." class="border border-blue-100 p-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 min-w-[200px]" />
+                    <select id="filter-status" class="border border-blue-100 p-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                        <option value="">Todos los Estatus</option>
+                        <option value="En Patio">En Patio</option>
+                        <option value="En Taller">En Taller</option>
+                        <option value="Transito">En Tránsito</option>
+                        <option value="Cargada">Cargada</option>
+                        <option value="Vacia">Vacía</option>
+                    </select>
+
                     <select id="client-report-type" class="border border-blue-100 p-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-bold bg-gray-50 text-blue-800 shadow-sm cursor-pointer transition">
                         <option value="TODOS">TODOS LOS CLIENTES</option>
                         <option value="BYD">BYD</option>
@@ -31,6 +41,7 @@ export async function renderClientReports(container) {
                         <option value="GRUPESA">GRUPESA</option>
                         <option value="TEPA">TEPA</option>
                         <option value="PC BIOLOGICS">PC BIOLOGICS</option>
+                        <option value="Sin Asignación">Sin Asignación</option>
                     </select>
                     <button id="btn-refresh-client-report" class="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white px-4 py-2.5 rounded-xl shadow-lg hover:shadow-blue-500/30 transition-all font-bold group" title="Actualizar Datos">
                         <i class="fas fa-sync-alt group-hover:rotate-180 transition-transform duration-500"></i>
@@ -63,6 +74,10 @@ export async function renderClientReports(container) {
     `;
 
     document.getElementById('client-report-type').addEventListener('change', loadClientReport);
+    document.getElementById('filter-status').addEventListener('change', loadClientReport);
+    document.getElementById('filter-unidad').addEventListener('keyup', (e) => {
+        if(e.key === 'Enter') loadClientReport();
+    });
     document.getElementById('btn-refresh-client-report').addEventListener('click', loadClientReport);
     document.getElementById('btn-print-client-report').addEventListener('click', generatePDF);
 
@@ -71,6 +86,9 @@ export async function renderClientReports(container) {
 
 async function loadClientReport() {
     const type = document.getElementById('client-report-type').value;
+    const filterTxt = document.getElementById('filter-unidad').value.toLowerCase();
+    const filterStatus = document.getElementById('filter-status').value;
+
     const thead = document.getElementById('client-report-head');
     const tbody = document.getElementById('client-report-body');
     const title = document.getElementById('client-report-title');
@@ -99,8 +117,25 @@ async function loadClientReport() {
     // If we want to show all simply to be filled out later, we can show them, but matching client is cleaner.
     const filteredUnits = activeUnits.filter(u => {
         const clienteStr = u.details?.cliente?.toUpperCase() || '';
-        if (type === 'TODOS') return true;
-        return clienteStr.includes(type); 
+        
+        let matchClient = false;
+        if (type === 'TODOS') matchClient = true;
+        else if (type === 'Sin Asignación') matchClient = !clienteStr || clienteStr === 'SIN ASIGNACIÓN';
+        else matchClient = clienteStr.includes(type); 
+
+        let matchTxt = true;
+        if(filterTxt) {
+            const eco = (u.economic_number || '').toLowerCase();
+            const op = (u.operators?.name || '').toLowerCase();
+            matchTxt = eco.includes(filterTxt) || op.includes(filterTxt);
+        }
+
+        let matchStatus = true;
+        if(filterStatus) {
+            matchStatus = (u.status || '').includes(filterStatus);
+        }
+
+        return matchClient && matchTxt && matchStatus;
     });
 
     currentFilteredUnits = filteredUnits;

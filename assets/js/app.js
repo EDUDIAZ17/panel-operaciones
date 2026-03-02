@@ -8,6 +8,7 @@ import { renderCameras } from './modules/cameras.js';
 import { renderIncidents } from './modules/incidents.js';
 import { renderClientReports } from './modules/client_reports.js';
 import { renderHistoryReports } from './modules/history_reports.js';
+import { renderTripLogs } from './modules/trip_logs.js';
 
 // DOM Elements
 const contentArea = document.getElementById('content-area');
@@ -59,6 +60,7 @@ try {
         if (role !== 'torre_control' && role !== 'admin') {
             document.getElementById('nav-client-reports')?.classList.add('hidden-section');
             document.getElementById('nav-history-reports')?.classList.add('hidden-section');
+            document.getElementById('nav-trip-logs')?.classList.add('hidden-section');
         }
 
         // RH: solo panel(dashboard) y su seccion (observaciones)
@@ -124,6 +126,11 @@ function loadView(view) {
             setActiveNav('nav-assignments');
             renderAssignments(contentArea);
             break;
+        case 'trip-logs':
+            pageTitle.textContent = 'Bitácora de Viajes (Logística)';
+            setActiveNav('nav-trip-logs');
+            renderTripLogs(contentArea);
+            break;
         case 'expenses':
             pageTitle.textContent = 'Reporte de Gastos';
             setActiveNav('nav-expenses');
@@ -175,6 +182,7 @@ const attachNav = (id, view) => {
 
 attachNav('nav-dashboard', 'dashboard');
 attachNav('nav-assignments', 'assignments');
+attachNav('nav-trip-logs', 'trip-logs');
 attachNav('nav-expenses', 'expenses');
 attachNav('nav-reports', 'reports');
 attachNav('nav-observations', 'observations');
