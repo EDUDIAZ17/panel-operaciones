@@ -179,7 +179,8 @@ async function loadClientReport() {
         } else {
             filteredUnits.forEach(u => {
                 const destino = u.details?.destino || '<span class="text-gray-300">---</span>';
-                const fProg = u.details?.scheduled_trip ? formatCP(u.details.scheduled_trip) : '<span class="text-gray-300">---</span>';
+                const scheduledDate = u.details?.scheduled_trip || u.details?.assignment_date;
+                const fProg = scheduledDate ? formatCP(scheduledDate) : '<span class="text-gray-300">---</span>';
                 const cp = u.details?.checkpoints || {};
                 
                 const fCarga = cp.finCarga ? formatCP(cp.finCarga) : (cp.llegadaCarga ? formatCP(cp.llegadaCarga) : '<span class="text-gray-300">---</span>');
@@ -224,10 +225,16 @@ async function loadClientReport() {
                 else if(u.status === 'En Taller') statusClass = "bg-red-100 text-red-700 border border-red-200 shadow-sm animate-pulse";
                 else if(u.status === 'Vacia') statusClass = "bg-yellow-100 text-yellow-700 border border-yellow-200 shadow-sm";
 
+                const editBtn = ['admin', 'torre_control', 'operaciones'].includes(window.userRole) ? `<button onclick="window.openClientReportEdit('${u.id}')" title="Editar Detalles" class="text-blue-500 hover:text-blue-700 ml-2 transition drop-shadow-sm"><i class="fas fa-edit"></i></button>` : '';
                 html += `
                     <tr class="hover:bg-blue-50/30 transition-colors group">
-                        <td class="p-4 border-r border-gray-100 font-black text-gray-800 bg-white group-hover:bg-blue-50/50 sticky left-0 z-10 transition-colors">${u.economic_number}</td>
-                        <td class="p-4 text-gray-400 font-mono text-xs">---</td>
+                        <td class="p-4 border-r border-gray-100 font-black text-gray-800 bg-white group-hover:bg-blue-50/50 sticky left-0 z-10 transition-colors">
+                            <div class="flex items-center justify-between">
+                                <span>${u.economic_number}</span>
+                                ${editBtn}
+                            </div>
+                        </td>
+                        <td class="p-4 text-gray-700 font-mono font-bold text-xs">${u.details?.bol || u.details?.viaje || '---'}</td>
                         <td class="p-4 font-bold text-gray-600 text-sm">${destino}</td>
                         <td class="p-4 text-sm">${fProg}</td>
                         <td class="p-4 text-sm">${fCarga}</td>
@@ -267,7 +274,7 @@ async function loadClientReport() {
                 const fCarga = cp.finCarga ? formatCP(cp.finCarga) : (cp.llegadaCarga ? formatCP(cp.llegadaCarga) : '<span class="text-gray-300">---</span>');
                 
                 const cliente = u.details?.cliente || 'CHANGAN';
-                const viaje = u.details?.viaje || '<span class="text-gray-300">---</span>';
+                const viaje = u.details?.viaje || u.details?.bol || '<span class="text-gray-300">---</span>';
                 const origen = u.details?.origen || '<span class="text-gray-300">---</span>';
                 const destino = u.details?.destino || '<span class="text-gray-300">---</span>';
                 const eta = u.details?.eta ? formatCP(u.details.eta) : '<span class="text-gray-300">---</span>';
@@ -308,9 +315,16 @@ async function loadClientReport() {
                 else if(u.status === 'En Taller') statusClass = "bg-red-100 text-red-700 border border-red-200 shadow-sm animate-pulse";
                 else if(u.status === 'Vacia') statusClass = "bg-yellow-100 text-yellow-700 border border-yellow-200 shadow-sm";
 
+                const editBtn = ['admin', 'torre_control', 'operaciones'].includes(window.userRole) ? `<button onclick="window.openClientReportEdit('${u.id}')" title="Editar Detalles" class="text-teal-600 hover:text-teal-800 ml-2 transition drop-shadow-sm"><i class="fas fa-edit"></i></button>` : '';
+
                  html += `
                     <tr class="hover:bg-teal-50/30 transition-colors group">
-                        <td class="p-4 border-r border-gray-100 font-black text-gray-800 bg-white group-hover:bg-teal-50/50 sticky left-0 z-10 transition-colors shadow-sm">${u.economic_number}</td>
+                        <td class="p-4 border-r border-gray-100 font-black text-gray-800 bg-white group-hover:bg-teal-50/50 sticky left-0 z-10 transition-colors shadow-sm">
+                            <div class="flex items-center justify-between">
+                                <span>${u.economic_number}</span>
+                                ${editBtn}
+                            </div>
+                        </td>
                         <td class="p-4 font-bold text-gray-600 text-sm">${opName}</td>
                         <td class="p-4 text-sm">${fCarga}</td>
                         <td class="p-4 font-bold text-teal-700 text-sm tracking-wide">${cliente}</td>
@@ -375,9 +389,16 @@ async function loadClientReport() {
                 else if(u.status === 'En Taller') statusClass = "bg-red-100 text-red-700 border border-red-200 shadow-sm animate-pulse";
                 else if(u.status === 'Vacia') statusClass = "bg-yellow-100 text-yellow-700 border border-yellow-200 shadow-sm";
 
+                const editBtn = ['admin', 'torre_control', 'operaciones'].includes(window.userRole) ? `<button onclick="window.openClientReportEdit('${u.id}')" title="Editar Detalles" class="text-blue-500 hover:text-blue-700 ml-2 transition drop-shadow-sm"><i class="fas fa-edit"></i></button>` : '';
+
                  html += `
                     <tr class="hover:bg-gray-50/30 transition-colors group">
-                        <td class="p-4 border-r border-gray-100 font-black text-gray-800 bg-white group-hover:bg-gray-50/50 sticky left-0 z-10 shadow-sm">${u.economic_number}</td>
+                        <td class="p-4 border-r border-gray-100 font-black text-gray-800 bg-white group-hover:bg-gray-50/50 sticky left-0 z-10 shadow-sm">
+                            <div class="flex items-center justify-between">
+                                <span>${u.economic_number}</span>
+                                ${editBtn}
+                            </div>
+                        </td>
                         <td class="p-4 text-gray-600 font-mono text-xs"><b>${u.type}</b> / ${placas}</td>
                         <td class="p-4 font-bold text-gray-600 text-sm">${opName}</td>
                         <td class="p-4 font-bold text-gray-800 text-sm tracking-wide">${cliente}</td>
@@ -417,6 +438,21 @@ window.openAIRoute = async (origen, destino) => {
         confirmButtonText: '<i class="fas fa-map"></i> Entendido',
         confirmButtonColor: '#8b5cf6'
     });
+};
+
+window.openClientReportEdit = (id) => {
+    // Navigate to assignments to make sure DOM and functions are loaded
+    const navBtn = document.getElementById('nav-assignments');
+    if(navBtn) navBtn.click();
+    
+    // Wait for render, then open modal
+    setTimeout(() => {
+        if(typeof window.openEditModal === 'function') {
+            window.openEditModal(id);
+        } else {
+            alert('El módulo de asignaciones aún está cargando, intente nuevamente en unos segundos.');
+        }
+    }, 400);
 };
 
 function generatePDF() {
