@@ -30,12 +30,14 @@ function loadUsers() {
 
 export function authenticate(email, password) {
     const users = loadUsers();
+    const normalizedEmail = email.toLowerCase().trim();
+
     // Special check for master admin to ensure access even if LS is cleared
-    if(email === MASTER_ADMIN.email && password === MASTER_ADMIN.password) {
+    if(normalizedEmail === MASTER_ADMIN.email && password === MASTER_ADMIN.password) {
         return { name: MASTER_ADMIN.name, email: MASTER_ADMIN.email, role: MASTER_ADMIN.role, isMaster: true };
     }
 
-    const user = users.find(u => u.email === email && u.password === password);
+    const user = users.find(u => u.email.toLowerCase() === normalizedEmail && u.password === password);
     if (user) {
         return { name: user.name, email: user.email, role: user.role };
     }
@@ -44,13 +46,19 @@ export function authenticate(email, password) {
 
 export function registerUser(userData) {
     const users = loadUsers();
+    const normalizedEmail = userData.email.toLowerCase().trim();
     
-    // Check if user exists
-    if (users.find(u => u.email === userData.email)) {
+    // Check if user exists (case-insensitive)
+    if (users.find(u => u.email.toLowerCase() === normalizedEmail)) {
         return false;
     }
 
-    users.push(userData);
+    const newUser = {
+        ...userData,
+        email: normalizedEmail
+    };
+
+    users.push(newUser);
     localStorage.setItem('appUsers', JSON.stringify(users));
     return true;
 }
