@@ -71,24 +71,24 @@ export function renderExpenses(container) {
                     <div class="border-t pt-4">
                         <h4 class="text-sm font-bold text-gray-500 mb-2 uppercase">Gastos Fijos</h4>
                         <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
-                            <div><label class="text-xs">Casetas</label><input type="number" id="exp-tolls" class="w-full border p-2 rounded fixed-cost" placeholder="$0"></div>
-                            <div><label class="text-xs">Combustible</label><input type="number" id="exp-fuel" class="w-full border p-2 rounded fixed-cost" placeholder="$0"></div>
-                            <div><label class="text-xs">Guía / Tránsito</label><input type="number" id="exp-guide" class="w-full border p-2 rounded fixed-cost" placeholder="$0"></div>
-                            <div><label class="text-xs">Sanitarias</label><input type="number" id="exp-sanitary" class="w-full border p-2 rounded fixed-cost" placeholder="$0"></div>
-                            <div><label class="text-xs">Báscula</label><input type="number" id="exp-scale" class="w-full border p-2 rounded fixed-cost" placeholder="$0"></div>
-                            <div><label class="text-xs">Pensiones</label><input type="number" id="exp-pensions" class="w-full border p-2 rounded fixed-cost" placeholder="$0"></div>
-                            <div><label class="text-xs">Estadías</label><input type="number" id="exp-stays" class="w-full border p-2 rounded fixed-cost" placeholder="$0"></div>
+                            <div><label class="block text-xs font-bold text-gray-700 mb-1">Casetas</label><input type="number" id="exp-tolls" class="w-full border border-gray-300 p-2 rounded fixed-cost focus:border-indigo-500 outline-none" placeholder="$0"></div>
+                            <div><label class="block text-xs font-bold text-gray-700 mb-1">Combustible</label><input type="number" id="exp-fuel" class="w-full border border-gray-300 p-2 rounded fixed-cost focus:border-indigo-500 outline-none" placeholder="$0"></div>
+                            <div><label class="block text-xs font-bold text-gray-700 mb-1">Guía / Tránsito</label><input type="number" id="exp-guide" class="w-full border border-gray-300 p-2 rounded fixed-cost focus:border-indigo-500 outline-none" placeholder="$0"></div>
+                            <div><label class="block text-xs font-bold text-gray-700 mb-1">Sanitarias</label><input type="number" id="exp-sanitary" class="w-full border border-gray-300 p-2 rounded fixed-cost focus:border-indigo-500 outline-none" placeholder="$0"></div>
+                            <div><label class="block text-xs font-bold text-gray-700 mb-1">Báscula</label><input type="number" id="exp-scale" class="w-full border border-gray-300 p-2 rounded fixed-cost focus:border-indigo-500 outline-none" placeholder="$0"></div>
+                            <div><label class="block text-xs font-bold text-gray-700 mb-1">Pensiones</label><input type="number" id="exp-pensions" class="w-full border border-gray-300 p-2 rounded fixed-cost focus:border-indigo-500 outline-none" placeholder="$0"></div>
+                            <div><label class="block text-xs font-bold text-gray-700 mb-1">Estadías</label><input type="number" id="exp-stays" class="w-full border border-gray-300 p-2 rounded fixed-cost focus:border-indigo-500 outline-none" placeholder="$0"></div>
                             
                             <div class="col-span-1">
-                                <label class="text-xs">Mantenimiento</label>
-                                <input type="number" id="exp-maintenance" class="w-full border p-2 rounded fixed-cost" placeholder="$0">
-                                <textarea id="exp-maintenance-obs" class="w-full border mt-1 p-1 text-[10px] rounded" placeholder="Observaciones Manto."></textarea>
+                                <label class="block text-xs font-bold text-gray-700 mb-1">Mantenimiento</label>
+                                <input type="number" id="exp-maintenance" class="w-full border border-gray-300 p-2 rounded fixed-cost focus:border-indigo-500 outline-none" placeholder="$0">
+                                <textarea id="exp-maintenance-obs" class="w-full border border-gray-300 mt-1 p-2 text-[10px] rounded focus:border-indigo-500 outline-none text-gray-700" placeholder="Observaciones Manto."></textarea>
                             </div>
                             
                             <div class="col-span-1">
-                                <label class="text-xs">Otros</label>
-                                <input type="number" id="exp-other" class="w-full border p-2 rounded fixed-cost" placeholder="$0">
-                                <textarea id="exp-other-obs" class="w-full border mt-1 p-1 text-[10px] rounded" placeholder="Observaciones Otros"></textarea>
+                                <label class="block text-xs font-bold text-gray-700 mb-1">Otros</label>
+                                <input type="number" id="exp-other" class="w-full border border-gray-300 p-2 rounded fixed-cost focus:border-indigo-500 outline-none" placeholder="$0">
+                                <textarea id="exp-other-obs" class="w-full border border-gray-300 mt-1 p-2 text-[10px] rounded focus:border-indigo-500 outline-none text-gray-700" placeholder="Observaciones Otros"></textarea>
                             </div>
                         </div>
                     </div>
