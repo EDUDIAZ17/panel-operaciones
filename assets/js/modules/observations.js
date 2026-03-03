@@ -26,6 +26,7 @@ export async function renderObservations(container) {
 
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <!-- Register Form -->
+                ${['rh', 'admin', 'torre_control'].includes(window.userRole) ? `
                 <div class="bg-white p-6 rounded-lg shadow-lg border border-gray-100">
                     <h3 class="text-lg font-bold text-gray-800 mb-6 flex items-center">
                         <i class="fas fa-plus-circle text-blue-600 mr-2"></i> Nueva Incidencia
@@ -61,9 +62,10 @@ export async function renderObservations(container) {
                         </button>
                     </form>
                 </div>
+                ` : ''}
 
                 <!-- List & Filters -->
-                <div class="lg:col-span-2 bg-white rounded-lg shadow-lg border border-gray-100 overflow-hidden flex flex-col">
+                <div class="${['rh', 'admin', 'torre_control'].includes(window.userRole) ? 'lg:col-span-2' : 'col-span-full'} bg-white rounded-lg shadow-lg border border-gray-100 overflow-hidden flex flex-col">
                     <div class="p-4 bg-gray-50 border-b flex flex-wrap gap-4 items-center justify-between">
                         <h3 class="text-sm font-bold text-gray-700 uppercase tracking-wider">Historial Operativo</h3>
                         <div class="flex gap-2">
@@ -87,7 +89,9 @@ export async function renderObservations(container) {
         </div>
     `;
 
-    setupObsForm();
+    if (['rh', 'admin', 'torre_control'].includes(window.userRole)) {
+        setupObsForm();
+    }
     loadIncidences();
     
     document.getElementById('btn-refresh-obs').onclick = loadIncidences;

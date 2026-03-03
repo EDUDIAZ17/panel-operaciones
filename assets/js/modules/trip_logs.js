@@ -131,12 +131,15 @@ function renderTable(element, units) {
         
         const destinatarioStr = destinatariosArray.map(d => `<div class="mt-1"><span class="text-[10px] bg-indigo-100 text-indigo-800 px-1.5 py-0.5 rounded font-bold">${d}</span></div>`).join('');
 
+        const canEdit = ['admin', 'torre_control', 'operaciones'].includes(window.userRole);
+
         // Helper to render input cells directly inside the table
         const renderInput = (key) => `
             <input type="datetime-local" 
                 class="w-full text-[11px] p-1 border rounded focus:ring-2 focus:ring-blue-500 outline-none ${cp[key] ? 'bg-blue-50 border-blue-200 font-bold text-blue-900' : 'bg-transparent border-gray-400 text-gray-800'}" 
                 value="${cp[key] || ''}" 
-                onchange="window.saveCheckpoint('${unit.id}', '${key}', this.value)">
+                onchange="window.saveCheckpoint('${unit.id}', '${key}', this.value)"
+                ${canEdit ? '' : 'disabled'}>
         `;
 
         html += `

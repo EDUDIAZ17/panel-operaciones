@@ -5,6 +5,8 @@ import { fetchSamsaraLocations } from '../services/samsara.js';
 window.openHistoryModal = openHistoryModal;
 
 export async function renderAssignments(container) {
+    const canEdit = ['admin', 'torre_control', 'operaciones'].includes(window.userRole);
+
     container.innerHTML = `
         <div id="view-assignments" class="p-6 fade-in">
             <div class="bg-white rounded-lg shadow p-6">
@@ -12,12 +14,14 @@ export async function renderAssignments(container) {
                 <div class="flex flex-col md:flex-row justify-between mb-6 items-center gap-4">
                     <h3 class="text-xl font-bold text-gray-800">Control de Asignaciones y Programación</h3>
                     <div class="flex gap-2 flex-wrap">
+                        ${canEdit ? `
                         <button id="btn-schedule" class="bg-purple-600 text-white px-4 py-2 rounded shadow hover:bg-purple-700 transition">
                             <i class="fas fa-calendar-plus mr-2"></i> Programar Viaje
                         </button>
                         <button id="btn-observations" class="bg-yellow-500 text-white px-4 py-2 rounded shadow hover:bg-yellow-600 transition">
                             <i class="fas fa-exclamation-triangle mr-2"></i> Observaciones RH
                         </button>
+                        ` : ''}
                         <input type="text" placeholder="Buscar unidad..." class="border p-2 rounded min-w-[200px]" id="assign-search">
                     </div>
                 </div>
@@ -46,13 +50,18 @@ export async function renderAssignments(container) {
         </div>
     `;
 
-    document.getElementById('btn-observations').onclick = () => {
-        // Find the sidebar button and click it to change view
-        const navBtn = document.getElementById('nav-observations');
-        if (navBtn) navBtn.click();
-        else alert("La sección de Observaciones no está disponible.");
-    };
-    document.getElementById('btn-schedule').onclick = () => openScheduleModal();
+    const btnObs = document.getElementById('btn-observations');
+    if (btnObs) {
+        btnObs.onclick = () => {
+            const navBtn = document.getElementById('nav-observations');
+            if (navBtn) navBtn.click();
+            else alert("La sección de Observaciones no está disponible.");
+        };
+    }
+    
+    const btnSchedule = document.getElementById('btn-schedule');
+    if (btnSchedule) btnSchedule.onclick = () => openScheduleModal();
+
     document.getElementById('assign-search').addEventListener('keyup', (e) => filterAssignments(e.target.value));
     
     loadTable();
@@ -175,6 +184,8 @@ function renderRows(units, allOps) {
 
         let terminarViajeBtn = hasTrip ? `<button class="bg-green-50 text-green-600 hover:bg-green-100 px-3 py-2 rounded transition" onclick="openFinishTripModal('${unit.id}')" title="Terminar Viaje"><i class="fas fa-flag-checkered"></i></button>` : '';
 
+        const canEdit = ['admin', 'torre_control', 'operaciones'].includes(window.userRole);
+
         html += `
             <tr class="border-b hover:bg-gray-50 transition items-center">
                 <td class="p-4">
@@ -185,7 +196,7 @@ function renderRows(units, allOps) {
                     <div class="font-medium text-gray-700">${opName}</div>
                 </td>
                 <td class="p-4">
-                    <span class="px-3 py-1 rounded-full text-xs font-bold ${statusColor} text-center block w-max shadow-sm cursor-pointer hover:opacity-80 transition" onclick="openStatusModal('${unit.id}')">
+                    <span class="px-3 py-1 rounded-full text-xs font-bold ${statusColor} text-center block w-max shadow-sm ${canEdit ? 'cursor-pointer hover:opacity-80' : ''} transition" ${canEdit ? `onclick="openStatusModal('${unit.id}')"` : ''}>
                         ${unit.status}
                     </span>
                     ${scheduleBadge}
@@ -204,10 +215,12 @@ function renderRows(units, allOps) {
                     <button class="bg-indigo-50 text-indigo-600 hover:bg-indigo-100 px-3 py-2 rounded transition" onclick="openTimersModal('${unit.id}')" title="Tiempos Logísticos">
                         <i class="fas fa-map-marker-alt"></i>
                     </button>
-                    ${terminarViajeBtn}
+                    ${canEdit ? terminarViajeBtn : ''}
+                    ${canEdit ? `
                     <button class="bg-blue-50 text-blue-600 hover:bg-blue-100 px-3 py-2 rounded transition" onclick="openEditModal('${unit.id}')" title="Editar Detalles Actuales">
                         <i class="fas fa-edit"></i>
                     </button>
+                    ` : ''}
                     <button class="bg-gray-50 text-gray-600 hover:bg-gray-100 px-3 py-2 rounded transition" onclick="openHistoryModal('${unit.id}')" title="Historial">
                         <i class="fas fa-history"></i>
                     </button>

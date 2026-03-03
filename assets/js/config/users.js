@@ -1,5 +1,6 @@
 // config/users.js
 // CONFIGURACIÓN DE USUARIOS
+import { supabase } from '../services/supabaseClient.js';
 
 // Hardcoded Master Admin
 const MASTER_ADMIN = {
@@ -9,56 +10,42 @@ const MASTER_ADMIN = {
     role: 'admin' // Admin gets all access
 };
 
-// Initial system users
-const DEFAULT_USERS = [
-    MASTER_ADMIN,
-    {
-        email: 'rh@alexatransportes.com.mx',
-        password: 'rh',
-        name: 'Recursos Humanos',
-        role: 'rh'
-    }
-];
-
-// Load users from LocalStorage or initialize with defaults
-function loadUsers() {
-    const saved = localStorage.getItem('appUsers');
-    if (saved) return JSON.parse(saved);
-    localStorage.setItem('appUsers', JSON.stringify(DEFAULT_USERS));
-    return DEFAULT_USERS;
-}
-
-export function authenticate(email, password) {
-    const users = loadUsers();
+export async function authenticate(email, password) {
     const normalizedEmail = email.toLowerCase().trim();
 
-    // Special check for master admin to ensure access even if LS is cleared
+    // Special check for master admin to ensure access even if LS/DB is cleared
     if(normalizedEmail === MASTER_ADMIN.email && password === MASTER_ADMIN.password) {
         return { name: MASTER_ADMIN.name, email: MASTER_ADMIN.email, role: MASTER_ADMIN.role, isMaster: true };
     }
 
-    const user = users.find(u => u.email.toLowerCase() === normalizedEmail && u.password === password);
-    if (user) {
+    const { data: user, error } = await supabase
+        .from('app_users')
+        .select('*')
+        .eq('email', normalizedEmail)
+        .eq('password', password)
+        .single();
+        
+    if (user && !error) {
         return { name: user.name, email: user.email, role: user.role };
     }
     return null;
 }
 
-export function registerUser(userData) {
-    const users = loadUsers();
+export async function registerUser(userData) {
     const normalizedEmail = userData.email.toLowerCase().trim();
     
-    // Check if user exists (case-insensitive)
-    if (users.find(u => u.email.toLowerCase() === normalizedEmail)) {
+    const { error } = await supabase
+        .from('app_users')
+        .insert({
+            email: normalizedEmail,
+            name: userData.name,
+            password: userData.password,
+            role: userData.role
+        });
+
+    if (error) {
+        console.error("Error registering user:", error);
         return false;
     }
-
-    const newUser = {
-        ...userData,
-        email: normalizedEmail
-    };
-
-    users.push(newUser);
-    localStorage.setItem('appUsers', JSON.stringify(users));
     return true;
 }
