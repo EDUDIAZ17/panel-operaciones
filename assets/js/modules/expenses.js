@@ -246,6 +246,9 @@ function calculate() {
 }
 
 async function saveAndSend() {
+    // Truco para iOS: abrir la ventana síncronamente en el momento del click, antes de cualquier await.
+    const waWindow = window.open('', '_blank');
+
     const calcs = calculate();
     const opSelect = document.getElementById('exp-operator');
     const opName = opSelect.options[opSelect.selectedIndex].text;
@@ -310,7 +313,12 @@ async function saveAndSend() {
     msg += `*${formatCurrency(calcs.grandTotal)}*\n`;
     msg += `----------------------------------`;
 
-    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+    const waUrl = `https://wa.me/?text=${encodeURIComponent(msg)}`;
+    if (waWindow) {
+        waWindow.location.href = waUrl;
+    } else {
+        window.location.href = waUrl;
+    }
 }
 
 async function generateAIReport() {
@@ -369,9 +377,14 @@ function showExpenseDetail(ex) {
                         <h2 class="text-3xl font-black text-gray-900 tracking-tight">Detalle de Gasto</h2>
                         <p class="text-gray-500 font-medium">${new Date(ex.created_at).toLocaleString('es-MX')}</p>
                     </div>
-                    <button onclick="this.closest('.fixed').remove()" class="bg-white p-3 rounded-full shadow-sm hover:bg-gray-100 transition">
-                        <i class="fas fa-times text-gray-400"></i>
-                    </button>
+                    <div class="flex items-center gap-3">
+                        <button onclick="window.deleteSingleExpense('${ex.id}')" class="bg-red-50 text-red-600 px-4 py-2 rounded-full shadow-sm hover:bg-red-100 transition font-bold text-sm border border-red-200">
+                            <i class="fas fa-trash-alt mr-1"></i> Borrar
+                        </button>
+                        <button onclick="this.closest('.fixed').remove()" class="bg-white p-3 rounded-full shadow-sm hover:bg-gray-100 transition">
+                            <i class="fas fa-times text-gray-400"></i>
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Cabecera Principal -->
@@ -432,3 +445,26 @@ function showExpenseDetail(ex) {
     `;
     container.appendChild(modal);
 }
+
+// Hook Global para borrar gastos individualmente
+window.deleteSingleExpense = async (id) => {
+    const password = prompt("Ingresa la contraseña para borrar este registro:");
+    if (password !== 'edu17') {
+        alert("Contraseña incorrecta.");
+        return;
+    }
+
+    if (confirm("¿Estás seguro de querer borrar este gasto en específico? Esta acción es irreversible.")) {
+        const { error } = await supabase.from('expenses').delete().eq('id', id);
+        if (error) {
+            alert("Error al borrar el gasto: " + error.message);
+        } else {
+            alert("Gasto borrado correctamente.");
+            document.getElementById('expense-modal-container').innerHTML = ''; // Cierra el modal
+            // Usamos un pequeño delay o recargamos para que se actualice la lista
+            setTimeout(() => {
+                document.getElementById('nav-expenses').click();
+            }, 300);
+        }
+    }
+};
