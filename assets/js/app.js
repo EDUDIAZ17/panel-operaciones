@@ -48,50 +48,46 @@ try {
 
         // Role-based UI restrictions
         const role = currentUser.role;
+        window.userRole = role; // Export role to window so other modules can handle granular element visibility (e.g. hiding edit buttons)
 
-        // Torre de Control: panel, asignaciones, bitacora, incidencias y gestion (admin). Ocultar rest
-        if (role === 'torre_control') {
+        const allNavs = [
+            'nav-assignments', 'nav-trip-logs', 'nav-expenses', 'nav-reports', 
+            'nav-client-reports', 'nav-history-reports', 'nav-observations', 
+            'nav-cameras', 'nav-incidents', 'nav-admin'
+        ]; // nav-dashboard is always visible to everyone
+
+        if (role === 'mantenimiento') {
+            allNavs.forEach(nav => {
+                if(nav !== 'nav-expenses') document.getElementById(nav)?.classList.add('hidden-section');
+            });
+        } 
+        else if (role === 'direccion_general') {
+            document.getElementById('nav-admin')?.classList.add('hidden-section');
+            // Can see the rest, editing will be disabled within modules
+        } 
+        else if (role === 'rh') {
+            allNavs.forEach(nav => {
+                if(nav !== 'nav-observations') document.getElementById(nav)?.classList.add('hidden-section');
+            });
+        } 
+        else if (role === 'operaciones') {
+            allNavs.forEach(nav => {
+                if(nav !== 'nav-assignments' && nav !== 'nav-expenses') document.getElementById(nav)?.classList.add('hidden-section');
+            });
+        } 
+        else if (role === 'otros_usuarios') {
+            allNavs.forEach(nav => {
+                document.getElementById(nav)?.classList.add('hidden-section');
+            });
+        } 
+        else if (role === 'torre_control') {
+            // Torre de Control view logic remains as requested ("torre de control esta bien con lo que tiene")
             document.getElementById('nav-expenses')?.classList.add('hidden-section');
             document.getElementById('nav-observations')?.classList.add('hidden-section');
             document.getElementById('nav-reports')?.classList.add('hidden-section');
-        }
-
-        // Only torre de control uses the client reports by default, hide for others unless they are admin/direccion
-        if (role !== 'torre_control' && role !== 'admin') {
-            document.getElementById('nav-client-reports')?.classList.add('hidden-section');
-            document.getElementById('nav-history-reports')?.classList.add('hidden-section');
-            document.getElementById('nav-trip-logs')?.classList.add('hidden-section');
-        }
-
-        // RH: solo panel(dashboard) y su seccion (observaciones)
-        if (role === 'rh') {
-            document.getElementById('nav-assignments')?.classList.add('hidden-section');
-            document.getElementById('nav-expenses')?.classList.add('hidden-section');
-            document.getElementById('nav-reports')?.classList.add('hidden-section');
-            document.getElementById('nav-admin')?.classList.add('hidden-section');
-        }
-
-        // Direccion general: panel (dashboard), gastos, graficos (reportes)
-        if (role === 'direccion_general') {
-            document.getElementById('nav-assignments')?.classList.add('hidden-section');
-            document.getElementById('nav-observations')?.classList.add('hidden-section');
-            document.getElementById('nav-admin')?.classList.add('hidden-section');
-        }
-
-        // Otros usuarios: puro panel (dashboard)
-        if (role === 'otros_usuarios') {
-            document.getElementById('nav-assignments')?.classList.add('hidden-section');
-            document.getElementById('nav-expenses')?.classList.add('hidden-section');
-            document.getElementById('nav-observations')?.classList.add('hidden-section');
-            document.getElementById('nav-reports')?.classList.add('hidden-section');
-            document.getElementById('nav-admin')?.classList.add('hidden-section');
-        }
-
-        // Operaciones: panel, asignaciones, gastos. (Ocultamos RH, reportes, admin por defecto a menos que se solicite distinto, pero según prompt: "operaciones acceso a panel, asignaciones y a gastos")
-        if (role === 'operaciones') {
-            document.getElementById('nav-observations')?.classList.add('hidden-section');
-            document.getElementById('nav-reports')?.classList.add('hidden-section');
-            document.getElementById('nav-admin')?.classList.add('hidden-section');
+        } 
+        else if (role === 'admin') {
+            // Everything is visible
         }
     }
 } catch (e) {

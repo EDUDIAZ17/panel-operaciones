@@ -288,41 +288,53 @@
       });
 
       // Login
-      document.getElementById("login-form").addEventListener("submit", (e) => {
-        e.preventDefault();
-        const email = document.getElementById("email").value;
-        const password = document.getElementById("password").value;
+      document
+        .getElementById("login-form")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const email = document.getElementById("email").value;
+          const password = document.getElementById("password").value;
+          const submitBtn = e.target.querySelector('button[type="submit"]');
 
-        const user = authenticate(email, password);
+          submitBtn.disabled = true;
+          submitBtn.textContent = "Conectando...";
 
-        if (user) {
-          // Save session
-          sessionStorage.setItem("currentUser", JSON.stringify(user));
-          window.location.href = "index.html";
-        } else {
-          const err = document.getElementById("error-msg");
-          err.style.display = "block";
-          err.classList.add("shake");
-          setTimeout(() => err.classList.remove("shake"), 500);
-        }
-      });
+          const user = await authenticate(email, password);
+
+          if (user) {
+            // Save session
+            sessionStorage.setItem("currentUser", JSON.stringify(user));
+            window.location.href = "index.html";
+          } else {
+            const err = document.getElementById("error-msg");
+            err.style.display = "block";
+            err.classList.add("shake");
+            setTimeout(() => err.classList.remove("shake"), 500);
+            submitBtn.disabled = false;
+            submitBtn.textContent = "Iniciar Sesión";
+          }
+        });
 
       // Register
       document
         .getElementById("register-form")
-        .addEventListener("submit", (e) => {
+        .addEventListener("submit", async (e) => {
           e.preventDefault();
           const name = document.getElementById("reg-name").value;
           const email = document.getElementById("reg-email").value;
           const password = document.getElementById("reg-password").value;
           const role = document.getElementById("reg-role").value;
+          const submitBtn = e.target.querySelector('button[type="submit"]');
 
-          if (!email.endsWith("@alexatransportes.com.mx")) {
+          if (!email.toLowerCase().endsWith("@alexatransportes.com.mx")) {
             alert("Solo se permiten correos @alexatransportes.com.mx");
             return;
           }
 
-          const success = registerUser({ name, email, password, role });
+          submitBtn.disabled = true;
+          submitBtn.textContent = "Registrando...";
+
+          const success = await registerUser({ name, email, password, role });
 
           if (success) {
             alert("Cuenta creada exitosamente. Ahora puedes iniciar sesión.");
@@ -330,9 +342,11 @@
           } else {
             const err = document.getElementById("reg-error-msg");
             err.textContent =
-              "El correo ya está registrado u ocurrió un error.";
+              "El correo ya está registrado u ocurrió un error de conexión.";
             err.style.display = "block";
           }
+          submitBtn.disabled = false;
+          submitBtn.textContent = "Registrarme";
         });
     </script>
   </body>
