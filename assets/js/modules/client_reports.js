@@ -441,18 +441,152 @@ window.openAIRoute = async (origen, destino) => {
 };
 
 window.openClientReportEdit = (id) => {
-    // Navigate to assignments to make sure DOM and functions are loaded
-    const navBtn = document.getElementById('nav-assignments');
-    if(navBtn) navBtn.click();
+    const u = currentFilteredUnits.find(unit => unit.id === id);
+    if (!u) return;
+
+    const details = u.details || {};
+    const cp = details.checkpoints || {};
+
+    const bol = details.bol || details.viaje || '';
+    const origin = details.origen || '';
+    const dest = details.destino || '';
+    const fProg = details.scheduled_trip || details.assignment_date || '';
+    const fpETA = details.eta || '';
+    const comments = details.comments || '';
+
+    let container = document.getElementById('cr-modal-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'cr-modal-container';
+        document.body.appendChild(container);
+    }
+
+    container.innerHTML = `
+        <div class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4 fade-in">
+            <div class="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl scale-in">
+                <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-blue-50 rounded-t-2xl">
+                    <h3 class="text-xl font-black text-blue-900"><i class="fas fa-edit text-blue-500 mr-2"></i> Editar Datos de Reporte - ${u.economic_number}</h3>
+                    <button onclick="document.getElementById('cr-modal-container').innerHTML=''" class="text-gray-400 hover:text-red-500 transition"><i class="fas fa-times text-xl"></i></button>
+                </div>
+                <div class="p-6 space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-black text-gray-500 mb-1 uppercase tracking-wider">BOL / Viaje</label>
+                            <input type="text" id="cr-edit-bol" value="${bol}" class="w-full border border-blue-100 rounded-xl p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-black text-gray-500 mb-1 uppercase tracking-wider">Origen</label>
+                            <input type="text" id="cr-edit-origen" value="${origin}" class="w-full border border-blue-100 rounded-xl p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-black text-gray-500 mb-1 uppercase tracking-wider">Destino</label>
+                            <input type="text" id="cr-edit-destino" value="${dest}" class="w-full border border-blue-100 rounded-xl p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-black text-gray-500 mb-1 uppercase tracking-wider">Estatus</label>
+                            <select id="cr-edit-status" class="w-full border border-blue-100 rounded-xl p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none font-bold">
+                                <option value="En Patio" ${u.status==='En Patio'?'selected':''}>En Patio</option>
+                                <option value="Transito" ${u.status.includes('Transito')?'selected':''}>Transito</option>
+                                <option value="Cargada" ${u.status==='Cargada'?'selected':''}>Cargada</option>
+                                <option value="Vacia" ${u.status==='Vacia'?'selected':''}>Vacia</option>
+                                <option value="En Taller" ${u.status==='En Taller'?'selected':''}>En Taller</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <h4 class="text-xs font-black text-blue-500 uppercase mt-6 mb-2 border-b border-blue-100 pb-2">Tiempos y Fechas (Sincroniza con Bitácora)</h4>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-gray-50 p-3 rounded-xl border border-gray-100">
+                            <label class="block text-[10px] font-bold text-gray-500 mb-1 uppercase">Fecha Programada</label>
+                            <input type="datetime-local" id="cr-edit-fprog" value="${fProg ? new Date(new Date(fProg).getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().slice(0,16) : ''}" class="w-full bg-white border border-gray-200 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                        </div>
+                        <div class="bg-gray-50 p-3 rounded-xl border border-gray-100">
+                            <label class="block text-[10px] font-bold text-gray-500 mb-1 uppercase">Llegada a Carga</label>
+                            <input type="datetime-local" id="cr-edit-llegadac" value="${cp.llegadaCarga ? new Date(new Date(cp.llegadaCarga).getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().slice(0,16) : ''}" class="w-full bg-white border border-gray-200 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                        </div>
+                        <div class="bg-gray-50 p-3 rounded-xl border border-gray-100">
+                            <label class="block text-[10px] font-bold text-gray-500 mb-1 uppercase">Fin Carga / Ins. Ruta</label>
+                            <input type="datetime-local" id="cr-edit-finc" value="${cp.finCarga ? new Date(new Date(cp.finCarga).getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().slice(0,16) : ''}" class="w-full bg-white border border-gray-200 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                        </div>
+                        <div class="bg-gray-50 p-3 rounded-xl border border-gray-100">
+                            <label class="block text-[10px] font-bold text-gray-500 mb-1 uppercase">ETA (Estimado Llegada)</label>
+                            <input type="datetime-local" id="cr-edit-eta" value="${fpETA ? new Date(new Date(fpETA).getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().slice(0,16) : ''}" class="w-full bg-white border border-gray-200 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                        </div>
+                        <div class="bg-gray-50 p-3 rounded-xl border border-gray-100 col-span-2">
+                            <label class="block text-[10px] font-bold text-gray-500 mb-1 uppercase">Fin Descarga (Entrega Final)</label>
+                            <input type="datetime-local" id="cr-edit-find" value="${cp.finDescarga ? new Date(new Date(cp.finDescarga).getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().slice(0,16) : ''}" class="w-full bg-white border border-gray-200 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                        </div>
+                    </div>
+
+                    <div class="mt-4">
+                        <label class="block text-xs font-black text-gray-500 mb-1 uppercase">Observaciones del Reporte</label>
+                        <textarea id="cr-edit-comments" rows="2" class="w-full border border-blue-100 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none">${comments}</textarea>
+                    </div>
+
+                    <div class="mt-8 flex justify-end gap-3 pt-4 border-t border-gray-100">
+                        <button onclick="document.getElementById('cr-modal-container').innerHTML=''" class="px-5 py-2.5 bg-gray-100 text-gray-700 font-bold rounded-xl hover:bg-gray-200 transition">Cancelar</button>
+                        <button onclick="window.saveClientReportEdit('${id}')" id="cr-btn-save" class="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black rounded-xl hover:from-blue-700 hover:to-indigo-700 transition shadow-lg shadow-blue-500/30 flex items-center">
+                            <i class="fas fa-save mr-2"></i> Guardar Modificaciones
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+};
+
+window.saveClientReportEdit = async (id) => {
+    const u = currentFilteredUnits.find(unit => unit.id === id);
+    if (!u) return;
     
-    // Wait for render, then open modal
-    setTimeout(() => {
-        if(typeof window.openEditModal === 'function') {
-            window.openEditModal(id);
-        } else {
-            alert('El módulo de asignaciones aún está cargando, intente nuevamente en unos segundos.');
-        }
-    }, 400);
+    const btn = document.getElementById('cr-btn-save');
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Guardando...';
+    btn.disabled = true;
+
+    try {
+        const details = u.details || {};
+        const cp = details.checkpoints || {};
+
+        details.bol = document.getElementById('cr-edit-bol').value;
+        details.viaje = details.bol; 
+        details.origen = document.getElementById('cr-edit-origen').value;
+        details.destino = document.getElementById('cr-edit-destino').value;
+        details.scheduled_trip = document.getElementById('cr-edit-fprog').value;
+        details.eta = document.getElementById('cr-edit-eta').value;
+        details.comments = document.getElementById('cr-edit-comments').value;
+
+        cp.llegadaCarga = document.getElementById('cr-edit-llegadac').value;
+        cp.finCarga = document.getElementById('cr-edit-finc').value;
+        cp.finDescarga = document.getElementById('cr-edit-find').value;
+
+        details.checkpoints = cp;
+        const newStatus = document.getElementById('cr-edit-status').value;
+
+        // Si se limpió un date, lo pasamos como null para que no rompa el parsing
+        if(!details.scheduled_trip) delete details.scheduled_trip;
+        if(!details.eta) delete details.eta;
+        if(!cp.llegadaCarga) delete cp.llegadaCarga;
+        if(!cp.finCarga) delete cp.finCarga;
+        if(!cp.finDescarga) delete cp.finDescarga;
+
+        const { error } = await supabase.from('units').update({
+            details: details,
+            status: newStatus,
+            last_status_update: new Date().toISOString()
+        }).eq('id', id);
+
+        if (error) throw error;
+
+        Swal.fire({ icon: 'success', title: 'Guardado', text: 'Datos actualizados correctamente.', timer: 1500, showConfirmButton: false });
+        document.getElementById('cr-modal-container').innerHTML = '';
+        
+        document.getElementById('btn-refresh-client-report').click();
+
+    } catch (e) {
+        Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo guardar: ' + e.message });
+        btn.innerHTML = '<i class="fas fa-save mr-2"></i> Guardar Modificaciones';
+        btn.disabled = false;
+    }
 };
 
 function generatePDF() {

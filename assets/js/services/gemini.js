@@ -89,28 +89,10 @@ export async function analyzeExpensesWithAI(expensesData) {
     `;
 
     const modelsToTry = [
-        'gemini-1.5-flash-latest', 
-        'gemini-1.5-flash',
-        'gemini-2.5-flash',
-        'gemini-2.5-flash-lite',
-        'gemini-2.5-pro',
         'gemini-2.0-flash',
-        'gemini-2.0-flash-lite',
-        'gemini-2.0-pro',
-        'gemini-2.0-flash-exp',
-        'gemini-2.0-pro-exp',
-        'gemini-2.5-flash-exp',
-        'gemini-2.5-pro-exp',
-        'gemini-2.5-flash-lite-exp',
-        'gemini-2.5-pro-lite-exp',
-        'gemini-2.5-flash-lite-preview-09-2025',
-        'gemini-2.5-pro-preview-09-2025',
-        'gemini-2.5-flash-lite-preview-09-2025',
-        'gemini-2.5-pro-preview-09-2025',
-        'gemini-2.5-flash-lite-preview-09-2025',
-        'gemini-2.5-pro-preview-09-2025',
-        'gemini-pro', 
-        'gemini-1.0-pro'
+        'gemini-1.5-flash',
+        'gemini-1.5-pro',
+        'gemini-2.0-pro-exp'
     ];
     let lastError = null;
 

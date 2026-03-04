@@ -262,13 +262,16 @@ async function saveAndSend() {
         return;
     }
 
+    const currentUserParams = JSON.parse(sessionStorage.getItem('currentUser')) || {};
+    const recordedBy = currentUserParams.name || 'Sistema';
+
     // Save to DB
     const { error } = await supabase.from('expenses').insert({
         operator_id: opSelect.value,
         unit_id: unitSelect.value,
         route,
         total_amount: calcs.grandTotal,
-        details: { ...calcs, date, unitEco, opName },
+        details: { ...calcs, date, unitEco, opName, recordedBy },
         created_at: new Date().toISOString()
     });
 
@@ -313,13 +316,67 @@ async function saveAndSend() {
     msg += `*${formatCurrency(calcs.grandTotal)}*\n`;
     msg += `----------------------------------`;
 
-    const waUrl = `https://wa.me/?text=${encodeURIComponent(msg)}`;
-    if (waWindow) {
-        waWindow.location.href = waUrl;
-    } else {
-        window.location.href = waUrl;
-    }
+    window.shareToWhatsApp(msg);
+    if(waWindow) waWindow.close(); // Close the blank window as we use the new URL scheme
 }
+
+window.shareToWhatsApp = async (msg) => {
+    // Intentar copiar al portapapeles primero (crucial para iPhone)
+    try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(msg);
+        }
+    } catch(e) { console.warn("Clipboard api failed", e); }
+    
+    // Intentar abrir con el esquema de app nativo primero
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    
+    if (isMobile) {
+        window.location.href = `whatsapp://send?text=${encodeURIComponent(msg)}`;
+        // Fallback porsi no tiene whatsapp instalado
+        setTimeout(() => {
+            window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+        }, 1200);
+    } else {
+        window.open(`https://web.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank');
+    }
+};
+
+window.rebuildWAMessage = (details, totalAmount, dateStr) => {
+    let msg = `*REPORTE DE GASTOS - LOGISTICS*\n\n`;
+    msg += `*Operador:* ${details.opName || '---'}\n`;
+    msg += `*Unidad:* ${details.unitEco || '---'}\n`;
+    msg += `*Trayecto:* ${details.trip_type || 'N/A'}\n`;
+    msg += `*Fecha:* ${details.date || dateStr}\n`;
+    msg += `*Ruta:* ${details.route || '---'}\n`;
+    msg += `----------------------------------\n`;
+    
+    msg += `*CALCULOS VARIABLES:*\n`;
+    msg += `- Alimentos: ${details.km || 0}km x $0.45 = *$${formatCurrency(details.totalFood || 0).replace('$', '')}*\n`;
+    msg += `- Maniobras: ${details.units || 0}uds x $45 = *$${formatCurrency(details.totalManeuver || 0).replace('$', '')}*\n\n`;
+    
+    msg += `*GASTOS FIJOS (DESGLOSE):*\n`;
+    Object.keys(details).forEach(k => {
+        if (!['km', 'units', 'opName', 'unitEco', 'totalFood', 'totalManeuver', 'grandTotal', 'balance', 'balance_obs', 'trip_type', 'maintenance_obs', 'other_obs', 'date', 'recordedBy', 'route'].includes(k) && typeof details[k] === 'number' && details[k] > 0) {
+            const label = k.replace('exp-', '').toUpperCase();
+            msg += `- ${label}: *$${details[k].toLocaleString('es-MX', {minimumFractionDigits: 2})}*\n`;
+            if (k === 'exp-maintenance' && details.maintenance_obs) msg += `  (Obs: ${details.maintenance_obs})\n`;
+            if (k === 'exp-other' && details.other_obs) msg += `  (Obs: ${details.other_obs})\n`;
+        }
+    });
+    
+    if (details.balance !== 0 && details.balance !== undefined) {
+        msg += `\n*SALDO PENDIENTE ANTERIOR:* $${(details.balance || 0).toLocaleString('es-MX', {minimumFractionDigits: 2})}\n`;
+        if (details.balance < 0) msg += `*EL OPERADOR DEBE A LA EMPRESA*\n`;
+        if (details.balance_obs) msg += `Motivo: ${details.balance_obs}\n`;
+    }
+
+    msg += `----------------------------------\n`;
+    msg += `*TOTAL A DEPOSITAR:*\n`;
+    msg += `*${formatCurrency(totalAmount)}*\n`;
+    msg += `----------------------------------`;
+    return msg;
+};
 
 async function generateAIReport() {
     const div = document.getElementById('ai-result');
@@ -367,6 +424,9 @@ function showExpenseDetail(ex) {
     const container = document.getElementById('expense-modal-container');
     const details = ex.details || {};
     
+    const waMsgText = rebuildWAMessage(details, ex.total_amount, new Date(ex.created_at).toLocaleDateString());
+    window.currentWAMsg = waMsgText; // Guardar temporalmente para el boton de copiar
+
     const modal = document.createElement('div');
     modal.className = 'fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-[100] p-4 fade-in';
     modal.innerHTML = `
@@ -375,7 +435,7 @@ function showExpenseDetail(ex) {
                 <div class="flex justify-between items-start mb-8">
                     <div>
                         <h2 class="text-3xl font-black text-gray-900 tracking-tight">Detalle de Gasto</h2>
-                        <p class="text-gray-500 font-medium">${new Date(ex.created_at).toLocaleString('es-MX')}</p>
+                        <p class="text-gray-500 font-medium">${new Date(ex.created_at).toLocaleString('es-MX')} <span class="text-gray-400 text-xs ml-2">Registrado por: <b>${details.recordedBy || 'Sistema'}</b></span></p>
                     </div>
                     <div class="flex items-center gap-3">
                         <button onclick="window.deleteSingleExpense('${ex.id}')" class="bg-red-50 text-red-600 px-4 py-2 rounded-full shadow-sm hover:bg-red-100 transition font-bold text-sm border border-red-200">
@@ -437,6 +497,15 @@ function showExpenseDetail(ex) {
                         <div class="mt-8 pt-6 border-t border-dashed border-gray-200 flex justify-between items-center">
                             <span class="text-lg font-black text-gray-900 uppercase">Total Depositado</span>
                             <span class="text-3xl font-black text-green-600">${formatCurrency(ex.total_amount)}</span>
+                        </div>
+                        
+                        <div class="mt-8 flex gap-3 justify-end">
+                            <button onclick="navigator.clipboard.writeText(window.currentWAMsg).then(()=>alert('Copiado al portapapeles'))" class="bg-gray-100 text-gray-700 px-5 py-2.5 rounded-xl font-bold hover:bg-gray-200 transition flex items-center gap-2">
+                                <i class="fas fa-copy"></i> Copiar Texto
+                            </button>
+                            <button onclick="window.shareToWhatsApp(window.currentWAMsg)" class="bg-[#25D366] text-white px-5 py-2.5 rounded-xl font-bold hover:bg-[#1ebe5d] transition shadow-lg shadow-[#25D366]/30 flex items-center gap-2">
+                                <i class="fab fa-whatsapp text-lg"></i> Enviar a WhatsApp
+                            </button>
                         </div>
                     </div>
                 </div>
