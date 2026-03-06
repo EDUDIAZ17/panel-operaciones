@@ -69,10 +69,6 @@ window.openAIRoute = async (origen, destino) => {
 };
 
 export async function analyzeExpensesWithAI(expensesData) {
-    if (!GOOGLE_API_KEY) {
-        throw new Error('API Key de Google no configurada');
-    }
-
     // Sanitize and simplify data to prevent context overloads or complex JSON parsing errors
     const simplifiedData = expensesData.map(e => ({
         fecha: e.created_at.split('T')[0],
