@@ -102,11 +102,14 @@ export async function renderDashboard(container) {
     await fetchAndUpdate();
 
     // Attach Filter Listeners
-    document.getElementById('filter-type').addEventListener('change', () => resetAndFilter());
-    document.getElementById('filter-status').addEventListener('change', () => resetAndFilter());
+    const filterType = document.getElementById('filter-type');
+    const filterStatus = document.getElementById('filter-status');
+    if (filterType) filterType.addEventListener('change', () => resetAndFilter());
+    if (filterStatus) filterStatus.addEventListener('change', () => resetAndFilter());
 
     // Notes Listener
-    document.getElementById('btn-save-notes').addEventListener('click', saveShiftNotes);
+    const btnSaveNotes = document.getElementById('btn-save-notes');
+    if (btnSaveNotes) btnSaveNotes.addEventListener('click', saveShiftNotes);
 
     // Initial Load of Notes
     loadShiftNotes();
