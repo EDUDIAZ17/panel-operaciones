@@ -7,3 +7,6 @@ export const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 
 // Google Gemini API Key
 export const GOOGLE_API_KEY = 'AIzaSyCNsVJcWSvJ6AiZiLNIS9ZgLvZse9XLbOc';
+
+// Google Maps API Key
+export const GOOGLE_MAPS_API_KEY = 'AIzaSyA8zeZMOUAubwBztV8PF6TagtZ1gxA2lDs';
