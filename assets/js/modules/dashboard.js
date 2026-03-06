@@ -352,7 +352,7 @@ function updateTimers() {
 
 // --- SHIFT NOTES ---
 async function loadShiftNotes() {
-    const { data } = await supabase.from('system_settings').select('setting_value').eq('setting_key', 'shift_notes').single();
+    const { data } = await supabase.from('system_settings').select('setting_value').eq('setting_key', 'shift_notes').maybeSingle();
     if (data && data.setting_value) {
         document.getElementById('shift-notes').value = data.setting_value;
     }
