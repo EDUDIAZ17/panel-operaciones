@@ -16,21 +16,40 @@ export async function getHeavyVehicleRouteWithAI(origen, destino) {
         Devuelve SOLO la descripción de la ruta en un formato HTML limpio y moderno usando <div class="space-y-2">, <strong>, y un par de <li>. No uses bloques de markdown (como \`\`\`html). Manténlo muy breve, 1 o 2 párrafos máximos.
     `;
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GOOGLE_API_KEY}`;
-    
-    try {
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-        });
-        const data = await response.json();
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-        return text ? text.replace(/\`\`\`html/g, '').replace(/\`\`\`/g, '') : "No se pudo generar ruta.";
-    } catch (e) {
-        console.error("Error en AI Route:", e);
-        return "Ruta Inteligente no disponible en este momento.";
+    const modelsToTry = [
+        'gemini-2.5-flash',
+        'gemini-2.0-flash',
+        'gemini-2.5-pro',
+        'gemini-2.5-pro-exp'
+    ];
+    let lastError = null;
+
+    for (const model of modelsToTry) {
+        try {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GOOGLE_API_KEY}`;
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+            });
+            const data = await response.json();
+            
+            if (!response.ok) {
+                console.warn(`Model ${model} failed for route:`, data);
+                lastError = new Error(data.error?.message || 'Error desconocido');
+                continue;
+            }
+
+            const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (text) return text.replace(/\`\`\`html/g, '').replace(/\`\`\`/g, '');
+        } catch (e) {
+            console.warn(`Fetch error for model ${model} in routing:`, e);
+            lastError = e;
+        }
     }
+    
+    console.error("All Gemini models failed for routing. Last error:", lastError);
+    return "Ruta Inteligente no disponible en este momento. Intente más tarde.";
 }
 
 window.openAIRoute = async (origen, destino) => {
@@ -89,10 +108,10 @@ export async function analyzeExpensesWithAI(expensesData) {
     `;
 
     const modelsToTry = [
-        'gemini-2.0-flash',
-        'gemini-1.5-flash',
-        'gemini-1.5-pro',
-        'gemini-2.0-pro-exp'
+        'gemini-2.5-flash',
+        'gemini-3.0-flash',
+        'gemini-2.5-pro',
+        'gemini-2.5-pro-exp'
     ];
     let lastError = null;
 

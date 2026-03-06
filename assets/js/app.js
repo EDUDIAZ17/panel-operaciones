@@ -9,6 +9,8 @@ import { renderIncidents } from './modules/incidents.js';
 import { renderClientReports } from './modules/client_reports.js';
 import { renderHistoryReports } from './modules/history_reports.js';
 import { renderTripLogs } from './modules/trip_logs.js';
+import { renderPayrollMap } from './modules/payroll_map.js';
+import { supabase } from './services/supabaseClient.js';
 
 // DOM Elements
 const contentArea = document.getElementById('content-area');
@@ -37,6 +39,7 @@ try {
                 'torre_control': 'Torre de Control',
                 'rh': 'Recursos Humanos',
                 'direccion_general': 'Dirección General',
+                'contabilidad': 'Contabilidad',
                 'otros_usuarios': 'Usuario General',
                 'admin': 'Admin'
             };
@@ -53,7 +56,7 @@ try {
         const allNavs = [
             'nav-assignments', 'nav-trip-logs', 'nav-expenses', 'nav-reports', 
             'nav-client-reports', 'nav-history-reports', 'nav-observations', 
-            'nav-cameras', 'nav-incidents', 'nav-admin'
+            'nav-cameras', 'nav-incidents', 'nav-admin', 'nav-payroll-map'
         ]; // nav-dashboard is always visible to everyone
 
         if (role === 'mantenimiento') {
@@ -67,7 +70,7 @@ try {
         } 
         else if (role === 'rh') {
             allNavs.forEach(nav => {
-                if(nav !== 'nav-observations') document.getElementById(nav)?.classList.add('hidden-section');
+                if(nav !== 'nav-observations' && nav !== 'nav-payroll-map') document.getElementById(nav)?.classList.add('hidden-section');
             });
         } 
         else if (role === 'operaciones') {
@@ -85,7 +88,13 @@ try {
             document.getElementById('nav-expenses')?.classList.add('hidden-section');
             document.getElementById('nav-observations')?.classList.add('hidden-section');
             document.getElementById('nav-reports')?.classList.add('hidden-section');
+            document.getElementById('nav-payroll-map')?.classList.add('hidden-section');
         } 
+        else if (role === 'contabilidad') {
+            allNavs.forEach(nav => {
+                if(nav !== 'nav-expenses' && nav !== 'nav-reports') document.getElementById(nav)?.classList.add('hidden-section');
+            });
+        }
         else if (role === 'admin') {
             // Everything is visible
         }
@@ -167,8 +176,52 @@ function loadView(view) {
             setActiveNav('nav-history-reports');
             renderHistoryReports(contentArea);
             break;
+        case 'payroll-map':
+            pageTitle.textContent = 'Mapa de Nóminas (Recursos Humanos)';
+            setActiveNav('nav-payroll-map');
+            renderPayrollMap(contentArea);
+            break;
     }
 }
+
+// RH Notification Badge Logic
+async function checkRHNotifications() {
+    const currentUser = JSON.parse(sessionStorage.getItem('currentUser'));
+    if (!currentUser || currentUser.role !== 'rh') return;
+
+    try {
+        const { count, error } = await supabase
+            .from('observations')
+            .select('*', { count: 'exact', head: true });
+            
+        if (!error && count !== null) {
+            const lastSeenCount = parseInt(localStorage.getItem('last_seen_obs_count') || '0');
+            const navBtn = document.getElementById('nav-observations');
+            
+            // Remove existing badge if any
+            const existingBadge = navBtn.querySelector('.rh-badge');
+            if (existingBadge) existingBadge.remove();
+
+            if (count > lastSeenCount) {
+                // Add badge
+                const badge = document.createElement('span');
+                badge.className = 'rh-badge ml-auto bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.6)]';
+                badge.innerText = 'NUEVO';
+                navBtn.appendChild(badge);
+            }
+            
+            // When RH clicks the observations tab, update the last seen count and remove badge
+            navBtn.addEventListener('click', () => {
+                localStorage.setItem('last_seen_obs_count', count.toString());
+                const b = navBtn.querySelector('.rh-badge');
+                if (b) b.remove();
+            });
+        }
+    } catch (err) {
+        console.warn('Could not fetch notifications:', err);
+    }
+}
+checkRHNotifications();
 
 // Event Listeners
 const attachNav = (id, view) => {
@@ -187,6 +240,7 @@ attachNav('nav-cameras', 'cameras');
 attachNav('nav-incidents', 'incidents');
 attachNav('nav-client-reports', 'client-reports');
 attachNav('nav-history-reports', 'history-reports');
+attachNav('nav-payroll-map', 'payroll-map');
 
 const logoutBtn = document.getElementById('logout-btn');
 if (logoutBtn) {

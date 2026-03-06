@@ -18,11 +18,15 @@
     />
     <!-- Custom Styles -->
     <link rel="stylesheet" href="assets/css/animations.css" />
+    <!-- Google Maps API -->
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA8zeZMOUAubwBztV8PF6TagtZ1gxA2lDs&libraries=places,geometry"></script>
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- jsPDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <!-- SheetJS (Excel) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <!-- Custom Styles for Airport Board -->
@@ -218,6 +222,13 @@
           <span class="ml-1">Incidencias RH</span>
         </button>
         <button
+          id="nav-payroll-map"
+          class="nav-btn w-full text-left px-4 py-3 rounded-lg hover:bg-white/5 text-gray-300 transition-all flex items-center text-sm font-semibold tracking-wide"
+        >
+          <i class="fas fa-map-marked-alt w-6 text-indigo-400"></i>
+          <span class="ml-1">Mapa Nóminas RH</span>
+        </button>
+        <button
           id="nav-cameras"
           class="nav-btn w-full text-left px-4 py-3 rounded-lg hover:bg-white/5 text-gray-300 transition-all flex items-center text-sm font-semibold tracking-wide"
         >
@@ -346,10 +357,28 @@
         </div>
 
         <!-- Other views are generated dynamicall by JS -->
+        <div
+          id="section-expenses"
+          class="section-content hidden-section h-full overflow-y-auto"
+        ></div>
+        <div
+          id="section-observations"
+          class="section-content hidden-section h-full overflow-y-auto"
+        ></div>
+        <div
+          id="section-payroll-map"
+          class="section-content hidden-section h-full overflow-y-auto"
+        ></div>
+        <div
+          id="section-cameras"
+          class="section-content hidden-section h-full overflow-y-auto"
+        ></div>
       </div>
     </main>
 
     <!-- Main Entry Point -->
+    <script type="module" src="assets/js/modules/admin.js"></script>
+    <script type="module" src="assets/js/modules/payroll_map.js"></script>
     <script type="module" src="assets/js/app.js"></script>
     <style>
       /* Custom Scrollbar */

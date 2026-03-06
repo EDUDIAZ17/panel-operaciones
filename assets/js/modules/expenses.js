@@ -118,9 +118,14 @@ export function renderExpenses(container) {
             <div class="max-w-4xl mx-auto bg-white rounded-lg shadow-lg p-8 mt-6 relative">
                 <div class="flex justify-between items-center mb-4">
                     <h3 class="text-lg font-bold text-gray-800">📜 Historial Reciente</h3>
-                    <button id="btn-clear-history" class="text-xs text-red-500 hover:text-red-700 font-bold border border-red-200 px-2 py-1 rounded transition">
-                        <i class="fas fa-trash-alt mr-1"></i> LIMPIAR HISTORIAL
-                    </button>
+                    <div class="space-x-2">
+                        <button id="btn-export-excel" class="text-xs text-green-700 hover:text-green-900 font-bold border border-green-300 px-3 py-1 rounded transition bg-green-50 hover:bg-green-100 hidden">
+                            <i class="fas fa-file-excel mr-1"></i> EXCEL (TODOS)
+                        </button>
+                        <button id="btn-clear-history" class="text-xs text-red-500 hover:text-red-700 font-bold border border-red-200 px-2 py-1 rounded transition">
+                            <i class="fas fa-trash-alt mr-1"></i> LIMPIAR
+                        </button>
+                    </div>
                 </div>
                 <div class="overflow-x-auto border rounded-lg">
                     <table class="w-full text-left text-sm">
@@ -157,6 +162,12 @@ export function renderExpenses(container) {
     document.getElementById('btn-send-wa').addEventListener('click', saveAndSend);
     document.getElementById('btn-ai-report').addEventListener('click', generateAIReport);
     document.getElementById('btn-clear-history').addEventListener('click', clearExpenseHistory);
+    
+    const currentUser = JSON.parse(sessionStorage.getItem('currentUser'));
+    if (currentUser && ['admin', 'torre_control', 'contabilidad', 'direccion_general'].includes(currentUser.role)) {
+        document.getElementById('btn-export-excel').classList.remove('hidden');
+        document.getElementById('btn-export-excel').addEventListener('click', exportExcelExpenses);
+    }
 }
 
 async function loadOperators() {
@@ -316,11 +327,10 @@ async function saveAndSend() {
     msg += `*${formatCurrency(calcs.grandTotal)}*\n`;
     msg += `----------------------------------`;
 
-    window.shareToWhatsApp(msg);
-    if(waWindow) waWindow.close(); // Close the blank window as we use the new URL scheme
+    window.shareToWhatsApp(msg, waWindow);
 }
 
-window.shareToWhatsApp = async (msg) => {
+window.shareToWhatsApp = async (msg, preOpenedWindow = null) => {
     // Intentar copiar al portapapeles primero (crucial para iPhone)
     try {
         if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -332,13 +342,19 @@ window.shareToWhatsApp = async (msg) => {
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
     
     if (isMobile) {
+        if (preOpenedWindow) preOpenedWindow.close(); // No lo necesitamos en móvil nativo directo
         window.location.href = `whatsapp://send?text=${encodeURIComponent(msg)}`;
         // Fallback porsi no tiene whatsapp instalado
         setTimeout(() => {
-            window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+            window.location.href = `https://wa.me/?text=${encodeURIComponent(msg)}`;
         }, 1200);
     } else {
-        window.open(`https://web.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank');
+        const url = `https://web.whatsapp.com/send?text=${encodeURIComponent(msg)}`;
+        if (preOpenedWindow) {
+            preOpenedWindow.location.href = url;
+        } else {
+            window.open(url, '_blank');
+        }
     }
 };
 
