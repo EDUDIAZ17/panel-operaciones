@@ -9,4 +9,4 @@ export const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 export const GOOGLE_API_KEY = ''; 
 
 // Google Maps API Key
-export const GOOGLE_MAPS_API_KEY = 'AIzaSyA8zeZMOUAubwBztV8PF6TagtZ1gxA2lDs';
+export const GOOGLE_MAPS_API_KEY = 'AIzaSyBiaioYABgNrwIm-j_H1VuPk2SN7CsbbFY';
