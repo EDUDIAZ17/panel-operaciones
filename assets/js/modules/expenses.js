@@ -166,7 +166,7 @@ export function renderExpenses(container) {
     const currentUser = JSON.parse(sessionStorage.getItem('currentUser'));
     if (currentUser && ['admin', 'torre_control', 'contabilidad', 'direccion_general'].includes(currentUser.role)) {
         document.getElementById('btn-export-excel').classList.remove('hidden');
-        document.getElementById('btn-export-excel').addEventListener('click', exportExcelExpenses);
+        document.getElementById('btn-export-excel').addEventListener('click', window.exportExcelExpenses);
     }
 }
 
@@ -355,6 +355,98 @@ window.shareToWhatsApp = async (msg, preOpenedWindow = null) => {
         } else {
             window.open(url, '_blank');
         }
+    }
+};
+
+window.exportExcelExpenses = async () => {
+    Swal.fire({
+        title: 'Generando Excel...',
+        text: 'Obteniendo historial completo, por favor espera.',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+    });
+
+    try {
+        const { data: expenses, error } = await supabase
+            .from('expenses')
+            .select('id, created_at, operator_id, unit_id, route, total_amount, details, operators(name), units(economic_number)')
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        if (!expenses || expenses.length === 0) {
+            Swal.fire('Atención', 'No hay datos de gastos para exportar.', 'info');
+            return;
+        }
+
+        // Prepare data for Excel
+        const excelData = expenses.map(ex => {
+            const date = new Date(ex.created_at).toLocaleDateString('es-MX', {day:'2-digit', month:'2-digit', year:'numeric'});
+            const det = ex.details || {};
+            
+            return {
+                'ID Gasto': ex.id,
+                'Fecha': det.date || date,
+                'Registrado Por': det.recordedBy || 'N/A',
+                'Operador': ex.operators?.name || det.opName || '---',
+                'Unidad': ex.units?.economic_number || det.unitEco || '---',
+                'Ruta': ex.route,
+                'Trayecto': det.trip_type || '',
+                'Kilómetros': det.km || 0,
+                'Monto Alimentos': det.totalFood || 0,
+                'Unidades Maniobra': det.units || 0,
+                'Monto Maniobras': det.totalManeuver || 0,
+                'Casetas': det.tolls || 0,
+                'Combustible': det.fuel || 0,
+                'Guía/Tránsito': det.guide || 0,
+                'Sanitarias': det.sanitary || 0,
+                'Báscula': det.scale || 0,
+                'Pensiones': det.pensions || 0,
+                'Estadías': det.stays || 0,
+                'Mantenimiento': det.maintenance || 0,
+                'Obs. Mantenimiento': det.maintenance_obs || '',
+                'Otros Gastos': det.other || 0,
+                'Obs. Otros': det.other_obs || '',
+                'Saldo Anterior': det.balance || 0,
+                'Obs. Saldo': det.balance_obs || '',
+                'Total Depósito': ex.total_amount
+            };
+        });
+
+        // Create a new workbook and add the worksheet
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.json_to_sheet(excelData);
+
+        // Auto-size columns slightly
+        const colWidths = [
+            { wch: 38 }, // ID
+            { wch: 12 }, // Fecha
+            { wch: 25 }, // Registrado
+            { wch: 30 }, // Operador
+            { wch: 15 }, // Unidad
+            { wch: 30 }, // Ruta
+            { wch: 15 }, // Trayecto
+            { wch: 12 }, { wch: 15 }, // KM/Alimentos
+            { wch: 12 }, { wch: 15 }, // Unidades/Maniobras
+            { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, // Fijos
+            { wch: 15 }, { wch: 30 }, // Manto
+            { wch: 15 }, { wch: 30 }, // Otros
+            { wch: 15 }, { wch: 30 }, // Saldo
+            { wch: 15 }  // Total
+        ];
+        ws['!cols'] = colWidths;
+
+        XLSX.utils.book_append_sheet(wb, ws, "Gastos Alexa");
+        
+        // Generate Excel file and trigger download
+        const fileName = `Reporte_Gastos_Transportes_Alexa_${new Date().toISOString().split('T')[0]}.xlsx`;
+        XLSX.writeFile(wb, fileName);
+        
+        Swal.close();
+
+    } catch (err) {
+        console.error("Error exporting to Excel:", err);
+        Swal.fire('Error', 'Hubo un problema al generar el Excel', 'error');
     }
 };
 
