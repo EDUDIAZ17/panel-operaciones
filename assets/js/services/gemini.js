@@ -1,8 +1,6 @@
-import { GOOGLE_API_KEY } from '../config/config.js';
+import { supabase } from './supabaseClient.js';
 
 export async function getHeavyVehicleRouteWithAI(origen, destino) {
-    if (!GOOGLE_API_KEY) throw new Error('API Key de Google no configurada');
-
     const prompt = `
         Actúa como un despachador logístico experto en México. 
         Necesitamos la mejor ruta sugerida para un tractocamión con FULL remolque (doble remolque articulado, carga pesada) que viaja desde: "${origen}" hacia "${destino}".
@@ -24,21 +22,17 @@ export async function getHeavyVehicleRouteWithAI(origen, destino) {
 
     for (const model of modelsToTry) {
         try {
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GOOGLE_API_KEY}`;
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+            const { data, error } = await supabase.functions.invoke('gemini-proxy', {
+                body: { model, prompt }
             });
-            const data = await response.json();
             
-            if (!response.ok) {
-                console.warn(`Model ${model} failed for route:`, data);
-                lastError = new Error(data.error?.message || 'Error desconocido');
+            if (error) {
+                console.warn(`Model ${model} failed for route via proxy:`, error);
+                lastError = error;
                 continue;
             }
 
-            const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+            const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
             if (text) return text.replace(/\`\`\`html/g, '').replace(/\`\`\`/g, '');
         } catch (e) {
             console.warn(`Fetch error for model ${model} in routing:`, e);
@@ -46,8 +40,8 @@ export async function getHeavyVehicleRouteWithAI(origen, destino) {
         }
     }
     
-    console.error("All Gemini models failed for routing. Last error:", lastError);
-    return "Ruta Inteligente no disponible en este momento. Intente más tarde.";
+    console.error("All Gemini models failed. Last error:", lastError);
+    throw lastError;
 }
 
 window.openAIRoute = async (origen, destino) => {
@@ -113,25 +107,17 @@ export async function analyzeExpensesWithAI(expensesData) {
 
     for (const model of modelsToTry) {
         try {
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GOOGLE_API_KEY}`;
-            
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    contents: [{ parts: [{ text: prompt }] }]
-                })
+            const { data, error } = await supabase.functions.invoke('gemini-proxy', {
+                body: { model, prompt }
             });
-
-            const data = await response.json();
             
-            if (!response.ok) {
-                console.warn(`Model ${model} failed:`, data);
-                lastError = new Error(data.error?.message || 'Error desconocido');
-                continue; // Try next model
+            if (error) {
+                console.warn(`Model ${model} failed via proxy:`, error);
+                lastError = error;
+                continue;
             }
 
-            const textOption = data.candidates?.[0]?.content?.parts?.[0]?.text;
+            const textOption = data?.candidates?.[0]?.content?.parts?.[0]?.text;
             return textOption || "El modelo no generó una respuesta.";
             
         } catch (error) {
