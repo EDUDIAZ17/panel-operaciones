@@ -76,7 +76,7 @@ let chartInstance = null;
 
 async function loadData() {
     const tbody = document.getElementById('incidents-body');
-    const { data: thresholdsObj } = await supabase.from('system_settings').select('setting_value').eq('setting_key', 'traffic_light_thresholds').single();
+    const { data: thresholdsObj } = await supabase.from('system_settings').select('setting_value').eq('setting_key', 'traffic_light_thresholds').maybeSingle();
     
     // Default config if DB empty
     let thresholds = { yellow: 1, red: 2 };

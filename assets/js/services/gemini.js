@@ -18,9 +18,7 @@ export async function getHeavyVehicleRouteWithAI(origen, destino) {
 
     const modelsToTry = [
         'gemini-2.5-flash',
-        'gemini-2.0-flash',
-        'gemini-2.5-pro',
-        'gemini-2.5-pro-exp'
+        'gemini-2.5-pro'
     ];
     let lastError = null;
 
@@ -109,9 +107,7 @@ export async function analyzeExpensesWithAI(expensesData) {
 
     const modelsToTry = [
         'gemini-2.5-flash',
-        'gemini-3.0-flash',
-        'gemini-2.5-pro',
-        'gemini-2.5-pro-exp'
+        'gemini-2.5-pro'
     ];
     let lastError = null;
 
