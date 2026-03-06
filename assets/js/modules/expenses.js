@@ -276,6 +276,44 @@ async function saveAndSend() {
     const currentUserParams = JSON.parse(sessionStorage.getItem('currentUser')) || {};
     const recordedBy = currentUserParams.name || 'Sistema';
 
+    // Check for Duplicates (1 hour window)
+    const oneHourAgo = new Date(Date.now() - 3600000).toISOString();
+    
+    // Omit wait if it's not needed, but here we query Supabase
+    const { data: duplicates } = await supabase.from('expenses')
+        .select('id, created_at')
+        .eq('operator_id', opSelect.value)
+        .eq('unit_id', unitSelect.value)
+        .eq('route', route)
+        .eq('total_amount', calcs.grandTotal)
+        .gte('created_at', oneHourAgo);
+
+    if (duplicates && duplicates.length > 0) {
+        waWindow.close(); // Close the preemptive window we opened
+        const result = await Swal.fire({
+            title: '¡Posible Gasto Duplicado!',
+            html: `Se ha detectado un gasto idéntico registrado en la última hora por <b>${formatCurrency(calcs.grandTotal)}</b>.<br><br>¿Deseas registrar este duplicado o prefieres ir al historial para reenviar el de hace rato?`,
+            icon: 'warning',
+            showCancelButton: true,
+            showDenyButton: true,
+            confirmButtonText: 'Sí, Duplicarlo',
+            denyButtonText: 'Ir al Historial',
+            cancelButtonText: 'Cancelar'
+        });
+
+        if (result.isDenied) {
+            document.getElementById('view-expenses').scrollIntoView({ behavior: 'smooth' });
+            return;
+        } else if (!result.isConfirmed) {
+            return; // Cancelled
+        }
+        // If confirmed, continue with saving and we need a new window for WA
+        window.open('', '_blank'); // Actually, since it's async now, browser might block this.
+        // Let's just alert that it will open directly, or we handle it gracefully later.
+    }
+
+    let currentWaWindow = duplicates && duplicates.length > 0 ? null : waWindow; // If duplicated, we closed the sync window, so we'll have to rely on standard popup (might be blocked on iOS but user consented)
+
     // Save to DB
     const { error } = await supabase.from('expenses').insert({
         operator_id: opSelect.value,
@@ -327,7 +365,16 @@ async function saveAndSend() {
     msg += `*${formatCurrency(calcs.grandTotal)}*\n`;
     msg += `----------------------------------`;
 
-    window.shareToWhatsApp(msg, waWindow);
+    window.shareToWhatsApp(msg, currentWaWindow);
+    
+    // Reset Form
+    document.querySelectorAll('#expenses-form input[type="number"], #expenses-form textarea').forEach(inp => inp.value = '');
+    document.getElementById('exp-route').value = '';
+    document.getElementById('exp-date').valueAsDate = new Date();
+    document.getElementById('res-food').innerText = '$0.00';
+    document.getElementById('res-maneuver').innerText = '$0.00';
+    document.getElementById('final-total').innerText = '$0.00';
+    document.getElementById('balance-warning').classList.add('hidden');
 }
 
 window.shareToWhatsApp = async (msg, preOpenedWindow = null) => {
