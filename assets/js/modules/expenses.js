@@ -126,10 +126,12 @@ export function renderExpenses(container) {
                             <i class="fas fa-trash-alt mr-1"></i> LIMPIAR
                         </button>
                     </div>
+                <div class="mb-4">
+                    <input type="text" id="expenses-filter" class="w-full p-2 border rounded text-sm focus:ring-emerald-500" placeholder="Buscar por ruta, operador, unidad o monto...">
                 </div>
-                <div class="overflow-x-auto border rounded-lg">
-                    <table class="w-full text-left text-sm">
-                        <thead class="bg-gray-50 border-b">
+                <div class="max-h-[500px] overflow-y-auto custom-scrollbar border rounded-lg">
+                    <table class="w-full text-left text-sm relative">
+                        <thead class="bg-gray-50 border-b sticky top-0 z-10">
                             <tr class="text-gray-500 font-bold">
                                 <th class="p-4">Fecha</th>
                                 <th class="p-4">Operador</th>
@@ -162,6 +164,7 @@ export function renderExpenses(container) {
     document.getElementById('btn-send-wa').addEventListener('click', saveAndSend);
     document.getElementById('btn-ai-report').addEventListener('click', generateAIReport);
     document.getElementById('btn-clear-history').addEventListener('click', clearExpenseHistory);
+    document.getElementById('expenses-filter').addEventListener('keyup', filterExpenseHistory);
     
     const currentUser = JSON.parse(sessionStorage.getItem('currentUser'));
     if (currentUser && ['admin', 'torre_control', 'contabilidad', 'direccion_general'].includes(currentUser.role)) {
@@ -188,10 +191,41 @@ async function loadExpenseHistory() {
         .from('expenses')
         .select(`*, operators(name), units(economic_number)`)
         .order('created_at', { ascending: false })
-        .limit(10);
+        .limit(1000); // Increased limit to show "all" with scrollbar without completely crashing on massive datasets
 
     if (error) {
         tbody.innerHTML = `<tr><td colspan="5" class="p-3 text-red-500">Error: ${error.message}</td></tr>`;
+        return;
+    }
+
+    window.allExpensesHistory = expenses || [];
+    renderExpenseHistory(window.allExpensesHistory);
+}
+
+function filterExpenseHistory() {
+    const term = document.getElementById('expenses-filter').value.toLowerCase();
+    if (!term) {
+        renderExpenseHistory(window.allExpensesHistory);
+        return;
+    }
+
+    const filtered = window.allExpensesHistory.filter(ex => {
+        const opName = (ex.operators?.name || ex.details?.opName || '').toLowerCase();
+        const unitEco = (ex.units?.economic_number || ex.details?.unitEco || '').toLowerCase();
+        const route = (ex.route || '').toLowerCase();
+        const total = (ex.total_amount || '').toString();
+        const dateStr = new Date(ex.created_at).toLocaleDateString('es-MX').toLowerCase();
+        
+        return opName.includes(term) || unitEco.includes(term) || route.includes(term) || total.includes(term) || dateStr.includes(term);
+    });
+
+    renderExpenseHistory(filtered);
+}
+
+function renderExpenseHistory(expenses) {
+    const tbody = document.getElementById('expenses-history-body');
+    if (expenses.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-gray-400">No se encontraron resultados</td></tr>`;
         return;
     }
 
@@ -204,7 +238,7 @@ async function loadExpenseHistory() {
                 <td class="p-4 text-gray-600 font-medium">${new Date(ex.created_at).toLocaleDateString('es-MX', {day:'2-digit', month:'short', year:'numeric'})}</td>
                 <td class="p-4 font-bold text-gray-800">${opName}</td>
                 <td class="p-4 text-blue-600 font-mono font-bold">${unitEco}</td>
-                <td class="p-4 text-gray-600 italic">${ex.route}</td>
+                <td class="p-4 text-gray-600 italic truncate max-w-[150px]">${ex.route}</td>
                 <td class="p-4 text-right font-mono text-green-600 font-bold text-lg">${formatCurrency(ex.total_amount)}</td>
             </tr>
         `;
