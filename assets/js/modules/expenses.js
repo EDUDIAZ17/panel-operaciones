@@ -402,7 +402,7 @@ async function saveAndSend() {
     window.shareToWhatsApp(msg, currentWaWindow);
     
     // Reset Form
-    document.querySelectorAll('#expenses-form input[type="number"], #expenses-form textarea').forEach(inp => inp.value = '');
+    document.querySelectorAll('#expense-form input[type="number"], #expense-form textarea').forEach(inp => inp.value = '');
     document.getElementById('exp-route').value = '';
     document.getElementById('exp-date').valueAsDate = new Date();
     document.getElementById('res-food').innerText = '$0.00';
@@ -430,7 +430,7 @@ window.shareToWhatsApp = async (msg, preOpenedWindow = null) => {
             window.location.href = `https://wa.me/?text=${encodeURIComponent(msg)}`;
         }, 1200);
     } else {
-        const url = `https://web.whatsapp.com/send?text=${encodeURIComponent(msg)}`;
+        const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`;
         if (preOpenedWindow) {
             preOpenedWindow.location.href = url;
         } else {
@@ -545,12 +545,23 @@ window.rebuildWAMessage = (details, totalAmount, dateStr) => {
     msg += `- Maniobras: ${details.units || 0}uds x $45 = *$${formatCurrency(details.totalManeuver || 0).replace('$', '')}*\n\n`;
     
     msg += `*GASTOS FIJOS (DESGLOSE):*\n`;
-    Object.keys(details).forEach(k => {
-        if (!['km', 'units', 'opName', 'unitEco', 'totalFood', 'totalManeuver', 'grandTotal', 'balance', 'balance_obs', 'trip_type', 'maintenance_obs', 'other_obs', 'date', 'recordedBy', 'route'].includes(k) && typeof details[k] === 'number' && details[k] > 0) {
-            const label = k.replace('exp-', '').toUpperCase();
-            msg += `- ${label}: *$${details[k].toLocaleString('es-MX', {minimumFractionDigits: 2})}*\n`;
-            if (k === 'exp-maintenance' && details.maintenance_obs) msg += `  (Obs: ${details.maintenance_obs})\n`;
-            if (k === 'exp-other' && details.other_obs) msg += `  (Obs: ${details.other_obs})\n`;
+    const labelMapping = {
+        tolls: 'Casetas',
+        fuel: 'Combustible',
+        guide: 'Guía / Tránsito',
+        sanitary: 'Sanitarias',
+        scale: 'Báscula',
+        pensions: 'Pensiones',
+        stays: 'Estadías',
+        maintenance: 'Mantenimiento',
+        other: 'Otros'
+    };
+
+    ['tolls', 'fuel', 'guide', 'sanitary', 'scale', 'pensions', 'stays', 'maintenance', 'other'].forEach(k => {
+        if (details[k] > 0) {
+            msg += `- ${labelMapping[k]}: *$${details[k].toLocaleString('es-MX', {minimumFractionDigits: 2})}*\n`;
+            if (k === 'maintenance' && details.maintenance_obs) msg += `  (Obs: ${details.maintenance_obs})\n`;
+            if (k === 'other' && details.other_obs) msg += `  (Obs: ${details.other_obs})\n`;
         }
     });
     
