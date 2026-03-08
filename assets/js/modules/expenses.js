@@ -115,35 +115,44 @@ export function renderExpenses(container) {
             </div>
 
             <!-- HISTORY SECTION -->
-            <div class="max-w-4xl mx-auto bg-white rounded-lg shadow-lg p-8 mt-6 relative">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-lg font-bold text-gray-800">📜 Historial Reciente</h3>
-                    <div class="space-x-2">
-                        <button id="btn-export-excel" class="text-xs text-green-700 hover:text-green-900 font-bold border border-green-300 px-3 py-1 rounded transition bg-green-50 hover:bg-green-100 hidden">
-                            <i class="fas fa-file-excel mr-1"></i> EXCEL (TODOS)
+            <div class="max-w-4xl mx-auto bg-white rounded-lg shadow-lg p-6 md:p-8 mt-6 relative">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 border-b pb-4">
+                    <h3 class="text-xl font-bold text-gray-800"><i class="fas fa-history text-indigo-500 mr-2"></i> Historial Reciente</h3>
+                    <div class="flex flex-wrap gap-2">
+                        <button id="btn-export-excel" class="text-xs bg-green-50 text-green-700 hover:bg-green-100 font-bold border border-green-300 px-4 py-2 rounded-lg transition hidden flex items-center shadow-sm">
+                            <i class="fas fa-file-excel mr-2"></i> EXCEL (TODOS)
                         </button>
-                        <button id="btn-clear-history" class="text-xs text-red-500 hover:text-red-700 font-bold border border-red-200 px-2 py-1 rounded transition">
-                            <i class="fas fa-trash-alt mr-1"></i> LIMPIAR
+                        <button id="btn-clear-history" class="text-xs bg-red-50 text-red-600 hover:bg-red-100 font-bold border border-red-200 px-4 py-2 rounded-lg transition flex items-center shadow-sm">
+                            <i class="fas fa-trash-alt mr-2"></i> LIMPIAR
                         </button>
                     </div>
-                <div class="mb-4">
-                    <input type="text" id="expenses-filter" class="w-full p-2 border rounded text-sm focus:ring-emerald-500" placeholder="Buscar por ruta, operador, unidad o monto...">
                 </div>
-                <div class="max-h-[500px] overflow-y-auto custom-scrollbar border rounded-lg">
-                    <table class="w-full text-left text-sm relative">
-                        <thead class="bg-gray-50 border-b sticky top-0 z-10">
-                            <tr class="text-gray-500 font-bold">
-                                <th class="p-4">Fecha</th>
-                                <th class="p-4">Operador</th>
-                                <th class="p-4">Unidad</th>
-                                <th class="p-4">Ruta</th>
-                                <th class="p-4 text-right">Total</th>
-                            </tr>
-                        </thead>
-                        <tbody id="expenses-history-body">
-                            <tr><td colspan="5" class="p-4 text-center text-gray-400">Cargando historial...</td></tr>
-                        </tbody>
-                    </table>
+
+                <!-- Buscador / Filtro Principal -->
+                <div class="bg-gray-50 p-4 rounded-xl border mb-6 shadow-inner">
+                    <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2"><i class="fas fa-search"></i> Búsqueda Rápida Multisectorial</label>
+                    <input type="text" id="expenses-filter" class="w-full p-3 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition shadow-sm" placeholder="🔍 Buscar por nombre de ruta, operador, número de unidad o cantidad total...">
+                    <p class="text-[10px] text-gray-400 mt-2 px-1">Escribe cualquier texto y la tabla se filtrará en tiempo real.</p>
+                </div>
+
+                <!-- Tabla de Resultados -->
+                <div class="border rounded-xl bg-white shadow-sm overflow-hidden">
+                    <div class="max-h-[500px] overflow-x-auto overflow-y-auto custom-scrollbar">
+                        <table class="w-full text-left text-sm whitespace-nowrap">
+                            <thead class="bg-gray-100 border-b sticky top-0 z-10 shadow-sm text-xs uppercase tracking-wider">
+                                <tr class="text-gray-600 font-bold">
+                                    <th class="p-4"><i class="far fa-calendar-alt mr-1"></i> Fecha</th>
+                                    <th class="p-4"><i class="fas fa-truck mr-1"></i> Unidad</th>
+                                    <th class="p-4"><i class="fas fa-user-tie mr-1"></i> Operador</th>
+                                    <th class="p-4"><i class="fas fa-route mr-1"></i> Ruta</th>
+                                    <th class="p-4 text-right"><i class="fas fa-money-bill-wave mr-1"></i> Total</th>
+                                </tr>
+                            </thead>
+                            <tbody id="expenses-history-body" class="divide-y divide-gray-50">
+                                <tr><td colspan="5" class="p-6 text-center text-gray-400 font-medium">Cargando historial de gastos...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
             
@@ -234,12 +243,14 @@ function renderExpenseHistory(expenses) {
         const unitEco = ex.units?.economic_number || ex.details?.unitEco || '---';
 
         return `
-            <tr class="border-b hover:bg-green-50 cursor-pointer transition expense-row" data-id="${ex.id}">
-                <td class="p-4 text-gray-600 font-medium">${new Date(ex.created_at).toLocaleDateString('es-MX', {day:'2-digit', month:'short', year:'numeric'})}</td>
-                <td class="p-4 font-bold text-gray-800">${opName}</td>
-                <td class="p-4 text-blue-600 font-mono font-bold">${unitEco}</td>
-                <td class="p-4 text-gray-600 italic truncate max-w-[150px]">${ex.route}</td>
-                <td class="p-4 text-right font-mono text-green-600 font-bold text-lg">${formatCurrency(ex.total_amount)}</td>
+            <tr class="border-b hover:bg-indigo-50 cursor-pointer transition expense-row group" data-id="${ex.id}">
+                <td class="p-4 text-gray-500 font-medium text-xs whitespace-nowrap">${new Date(ex.created_at).toLocaleDateString('es-MX', {day:'2-digit', month:'short', year:'numeric'})}</td>
+                <td class="p-4">
+                    <span class="bg-gray-100 text-gray-700 font-mono font-bold px-2 py-1 rounded shadow-sm text-xs group-hover:bg-indigo-100 group-hover:text-indigo-800 transition-colors">${unitEco}</span>
+                </td>
+                <td class="p-4 font-bold text-gray-800 text-xs">${opName}</td>
+                <td class="p-4 text-gray-600 truncate max-w-[150px] md:max-w-xs text-xs" title="${ex.route}">${ex.route}</td>
+                <td class="p-4 text-right font-mono text-green-600 font-bold text-base md:text-lg whitespace-nowrap">${formatCurrency(ex.total_amount)}</td>
             </tr>
         `;
     }).join('');
