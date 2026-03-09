@@ -263,6 +263,9 @@ async function loadHistoryData() {
                 if (!dtStr) return '---';
                 return new Date(dtStr).toLocaleString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'});
             };
+            
+            // Re-stringify row to pass to modal
+            const rowDataStr = encodeURIComponent(JSON.stringify(row));
 
             tr.innerHTML = `
                 <td class="px-5 py-4 whitespace-nowrap text-gray-500 text-xs font-bold">${formatDate(row.timestamp)}</td>
@@ -280,6 +283,11 @@ async function loadHistoryData() {
                     <div class="mt-1"><span class="text-gray-400 border-b border-gray-100 pb-0.5">Entrega:</span> <br><b>${formatShort(cp.trip_unload_end || cp.finDescarga)}</b></div>
                 </td>
                 <td class="px-5 py-4 text-xs text-gray-600 truncate max-w-[200px]" title="${commentTxt}">${commentTxt || '<i class="text-gray-300">Ninguna</i>'}</td>
+                <td class="px-5 py-4 text-center">
+                    <button onclick="window.openTripDetailsModal('${rowDataStr}')" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-600 px-3 py-1.5 rounded font-bold text-xs transition shadow-sm border border-indigo-200">
+                        <i class="fas fa-search-plus mr-1"></i> Ver Desglose
+                    </button>
+                </td>
             `;
         }
         
@@ -309,6 +317,7 @@ function updateTableHeaders() {
                 <th class="px-5 py-4 font-black">Ruta (Origen/Destino)</th>
                 <th class="px-5 py-4 font-black text-center">Tiempos Registrados</th>
                 <th class="px-5 py-4 font-black">Observaciones</th>
+                <th class="px-5 py-4 font-black text-center">Detalles</th>
             </tr>
         `;
     }
@@ -428,3 +437,143 @@ function generatePDF() {
     const logoUrl = './logo/logo.png';
     getBase64Image(logoUrl, buildPdf);
 }
+
+window.openTripDetailsModal = (encodedRowData) => {
+    const row = JSON.parse(decodeURIComponent(encodedRowData));
+    
+    let parsed = {};
+    let commentTxt = '';
+    let clientTxt = '---';
+    try {
+        const parts = (row.details || '').split('| Viaje: ');
+        if (parts.length > 1) parsed = JSON.parse(parts[1].trim());
+        const p1 = parts[0].split('| Obs: ');
+        if (p1.length > 1) commentTxt = p1[1].trim();
+        const p0 = p1[0].split('Cliente: ');
+        if (p0.length > 1) clientTxt = p0[1].trim();
+    } catch(e) {}
+    
+    const cp = parsed.checkpoints || {};
+    const asDateStr = (raw) => raw ? new Date(raw).toLocaleString() : '<span class="text-gray-300 italic">No registrado</span>';
+    
+    // Checkpoints en orden logico
+    const steps = [
+        { label: 'Fecha de Programación', val: parsed.scheduled_trip || parsed.assignment_date },
+        { label: 'Llegada a Carga', val: cp.trip_load_arrival || cp.llegadaCarga },
+        { label: 'Fin de Carga / Ins. Ruta', val: cp.trip_load_end || cp.finCarga },
+        { label: 'Inicio de Ruta (Punta a Punta)', val: cp.trip_route_start },
+        { label: 'Llegada a Descarga (ETA Cumplido)', val: cp.trip_unload_arrival },
+        { label: 'Fin de Ruta (Punta a Punta)', val: cp.trip_route_end },
+        { label: 'Fin de Descarga (Entrega Final)', val: cp.trip_unload_end || cp.finDescarga },
+        { label: 'Cierre de Viaje en Sistema', val: row.timestamp }
+    ];
+
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 fade-in';
+    
+    let stepsHtml = '';
+    steps.forEach((step, idx) => {
+        const isLast = idx === steps.length - 1;
+        const colorClass = step.val ? 'bg-indigo-500' : 'bg-gray-200';
+        const textClass = step.val ? 'text-gray-800 font-bold' : 'text-gray-400';
+        
+        stepsHtml += `
+            <div class="flex relative pb-4">
+                ${!isLast ? '<div class="absolute top-4 left-2.5 -ml-px h-full w-0.5 bg-gray-200" aria-hidden="true"></div>' : ''}
+                <div class="relative flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full ${colorClass} mt-0.5 shadow ring-4 ring-white"></div>
+                <div class="ml-4 min-w-0 flex-1">
+                    <p class="text-[10px] uppercase font-bold text-gray-500 tracking-wider">${step.label}</p>
+                    <p class="text-sm ${textClass} mt-0.5">${asDateStr(step.val)}</p>
+                </div>
+            </div>
+        `;
+    });
+
+    modal.innerHTML = `
+        <div class="bg-white rounded-2xl w-full max-w-2xl shadow-2xl border border-gray-100 flex flex-col max-h-[90vh] overflow-hidden">
+            
+            <!-- Header -->
+            <div class="bg-gradient-to-r from-slate-800 to-slate-900 p-6 flex justify-between items-start">
+                <div>
+                    <h3 class="text-xl font-black text-white flex items-center gap-2">
+                        <i class="fas fa-route text-indigo-400"></i> Desglose Detallado de Viaje
+                    </h3>
+                    <div class="flex gap-4 mt-3">
+                        <span class="bg-slate-700/50 text-slate-200 px-3 py-1 rounded-lg text-xs font-bold font-mono">ECO: ${row.units?.economic_number || 'N/A'}</span>
+                        <span class="bg-indigo-500/20 text-indigo-300 px-3 py-1 rounded-lg text-xs font-bold border border-indigo-500/30">BOL/VJ: ${parsed.viaje || parsed.bol || 'N/A'}</span>
+                    </div>
+                </div>
+                <button onclick="this.closest('.fixed').remove()" class="text-white/50 hover:text-white transition-colors">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+
+            <!-- Body Container (Scrollable) -->
+            <div class="flex-1 overflow-y-auto custom-scrollbar p-6 bg-slate-50">
+                
+                <div class="grid grid-cols-2 gap-4 mb-8 bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
+                    <div>
+                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Cliente</p>
+                        <p class="font-black text-gray-800">${clientTxt}</p>
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Destinatario</p>
+                        <p class="font-bold text-gray-700">${parsed.destinatario || '---'}</p>
+                    </div>
+                    <div class="col-span-2 border-t pt-3 mt-1">
+                        <div class="flex items-center gap-3">
+                            <div class="flex-1">
+                                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Origen</p>
+                                <p class="font-bold text-orange-600 truncate" title="${parsed.origen || '---'}">${parsed.origen || '---'}</p>
+                            </div>
+                            <i class="fas fa-arrow-right text-gray-300"></i>
+                            <div class="flex-1 text-right">
+                                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Destino</p>
+                                <p class="font-bold text-blue-600 truncate" title="${parsed.destino || '---'}">${parsed.destino || '---'}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <!-- Timeline -->
+                    <div>
+                        <h4 class="text-sm font-black text-slate-800 border-b pb-2 mb-4 flex items-center gap-2">
+                            <i class="fas fa-history text-slate-400"></i> Cronología del Viaje
+                        </h4>
+                        <div class="pl-2">
+                            ${stepsHtml}
+                        </div>
+                    </div>
+
+                    <!-- Extra Info -->
+                    <div class="flex flex-col gap-4">
+                        <div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                            <h4 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 border-b border-gray-50 pb-2">Odómetro Registrado</h4>
+                            <div class="grid grid-cols-2 gap-2 text-sm">
+                                <div><span class="text-gray-500">Inicial:</span> <br><b>${cp.odoInit ? cp.odoInit + ' km' : '---'}</b></div>
+                                <div><span class="text-gray-500">Final:</span> <br><b>${cp.odoEnd ? cp.odoEnd + ' km' : '---'}</b></div>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-yellow-50/50 p-4 rounded-xl border border-yellow-100 shadow-sm flex-1">
+                            <h4 class="text-xs font-black text-yellow-600 uppercase tracking-widest mb-2 border-b border-yellow-200/50 pb-2">Observaciones de Término</h4>
+                            <p class="text-sm text-gray-700 italic leading-relaxed">${commentTxt || 'Sin observaciones registradas al momento del cierre.'}</p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Footer -->
+            <div class="bg-white border-t p-4 flex justify-between items-center text-xs text-gray-500">
+                <span><i class="fas fa-user-check mr-1"></i> Cerrado por: <b>${row.modified_by || 'Sistema'}</b></span>
+                <button onclick="this.closest('.fixed').remove()" class="bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-2 px-6 rounded-lg transition-colors">
+                    Cerrar Detalle
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+};
