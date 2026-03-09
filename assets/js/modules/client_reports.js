@@ -6,6 +6,40 @@ let currentFilteredUnits = [];
 let currentType = 'BYD';
 let currentSamsaraData = [];
 
+const geoCache = new Map();
+
+async function reverseGeocodeStatic(lat, lng, elementId) {
+    const key = `${lat.toFixed(3)},${lng.toFixed(3)}`;
+    if (geoCache.has(key)) {
+        const el = document.getElementById(elementId);
+        if (el) el.innerText = geoCache.get(key);
+        return;
+    }
+
+    if (!window.google || !window.google.maps || !window.google.maps.Geocoder) return;
+
+    const geocoder = new window.google.maps.Geocoder();
+    try {
+        geocoder.geocode({ location: { lat, lng } }, (results, status) => {
+            if (status === "OK" && results[0]) {
+                let shortAddress = results[0].formatted_address.split(',').slice(0, 2).join(', ');
+                const localityMatch = results.find(r => r.types.includes('locality') || r.types.includes('sublocality') || r.types.includes('route'));
+                if (localityMatch) shortAddress = localityMatch.formatted_address.split(',')[0];
+
+                geoCache.set(key, shortAddress);
+                const el = document.getElementById(elementId);
+                if (el) el.innerText = shortAddress;
+            } else {
+                geoCache.set(key, 'GPS Activo');
+                const el = document.getElementById(elementId);
+                if (el) el.innerText = 'GPS Activo';
+            }
+        });
+    } catch(e) {
+        console.error("Geocoding Error", e);
+    }
+}
+
 export async function renderClientReports(container) {
     container.innerHTML = `
         <div id="view-client-reports" class="p-6 fade-in h-full flex flex-col gap-6">
@@ -177,7 +211,7 @@ async function loadClientReport() {
         if (filteredUnits.length === 0) {
             html = `<tr><td colspan="11" class="p-12 text-center text-gray-500 italic">No hay unidades asignadas al cliente BYD activamente.</td></tr>`;
         } else {
-            filteredUnits.forEach(u => {
+            filteredUnits.forEach((u, idx) => {
                 const destino = u.details?.destino || '<span class="text-gray-300">---</span>';
                 const scheduledDate = u.details?.scheduled_trip || u.details?.assignment_date;
                 const fProg = scheduledDate ? formatCP(scheduledDate) : '<span class="text-gray-300">---</span>';
@@ -207,16 +241,17 @@ async function loadClientReport() {
                     }
                 }
 
+                let geoId = `geo-cr-${u.id}`;
                 let ubicacion = '';
                 if (samsaraVeh) {
-                    ubicacion = `<div class="flex flex-col items-center gap-1">
-                        <a href="https://www.google.com/maps?q=${samsaraVeh.location.latitude},${samsaraVeh.location.longitude}" target="_blank" class="text-blue-500 hover:text-blue-700 hover:underline font-bold flex items-center justify-center gap-1 transition"><i class="fas fa-location-arrow text-blue-400"></i> Localizar</a>
+                    ubicacion = `<div class="flex flex-col items-center gap-1 w-full max-w-[140px] mx-auto">
+                        <div id="${geoId}" class="text-[10px] font-bold text-gray-700 bg-gray-100/80 px-2 py-1 rounded-md border border-gray-200 shadow-sm text-center w-full truncate whitespace-normal leading-tight min-h-[32px] flex items-center justify-center break-words" title="GPS: ${samsaraVeh.location.latitude}, ${samsaraVeh.location.longitude}">Analizando Zona...</div>
                         <div class="text-[10px] bg-blue-50 text-blue-800 px-2 py-0.5 rounded-full border border-blue-100">${kmTraveled}</div>
                     </div>`;
+                    setTimeout(() => reverseGeocodeStatic(samsaraVeh.location.latitude, samsaraVeh.location.longitude, geoId), idx * 150);
                 } else {
                     ubicacion = `<div class="flex flex-col items-center gap-1">
-                        <button onclick="window.openAIRoute('${u.details?.origen || ''}', '${u.details?.destino || ''}')" class="text-purple-600 hover:text-purple-800 hover:underline font-bold flex items-center justify-center gap-1 transition"><i class="fas fa-robot"></i> Ruta IA</button>
-                        <span class="text-[10px] bg-red-50 text-red-600 px-2 py-0.5 rounded-full border border-red-100"><i class="fas fa-signal-slash mr-1"></i> Sin GPS</span>
+                        <div class="text-[10px] bg-red-50 text-red-600 px-2 py-1 rounded-md border border-red-100 font-bold"><i class="fas fa-signal-slash mr-1"></i> Sin GPS</div>
                     </div>`;
                 }
 
@@ -268,7 +303,7 @@ async function loadClientReport() {
         if (filteredUnits.length === 0) {
             html = `<tr><td colspan="11" class="p-12 text-center text-gray-500 italic">No hay unidades asignadas al cliente CHANGAN activamente.</td></tr>`;
         } else {
-            filteredUnits.forEach(u => {
+            filteredUnits.forEach((u, idx) => {
                 const opName = u.operators?.name || '<span class="text-gray-400 italic">Sin Asignar</span>';
                 const cp = u.details?.checkpoints || {};
                 const fCarga = cp.trip_load_end ? formatCP(cp.trip_load_end) : (cp.trip_load_arrival ? formatCP(cp.trip_load_arrival) : '<span class="text-gray-300">---</span>');
@@ -297,16 +332,17 @@ async function loadClientReport() {
                     }
                 }
 
+                let geoId = `geo-cr-${u.id}`;
                 let ubicacion = '';
                 if (samsaraVeh) {
-                    ubicacion = `<div class="flex flex-col items-center gap-1">
-                        <a href="https://www.google.com/maps?q=${samsaraVeh.location.latitude},${samsaraVeh.location.longitude}" target="_blank" class="text-teal-600 hover:text-teal-700 hover:underline font-bold flex items-center justify-center gap-1 transition"><i class="fas fa-location-arrow text-teal-400"></i> Localizar</a>
+                    ubicacion = `<div class="flex flex-col items-center gap-1 w-full max-w-[140px] mx-auto">
+                        <div id="${geoId}" class="text-[10px] font-bold text-gray-700 bg-gray-100/80 px-2 py-1 rounded-md border border-gray-200 shadow-sm text-center w-full truncate whitespace-normal leading-tight min-h-[32px] flex items-center justify-center break-words" title="GPS: ${samsaraVeh.location.latitude}, ${samsaraVeh.location.longitude}">Analizando Zona...</div>
                         <div class="text-[10px] bg-teal-50 text-teal-800 px-2 py-0.5 rounded-full border border-teal-100">${kmTraveled}</div>
                     </div>`;
+                    setTimeout(() => reverseGeocodeStatic(samsaraVeh.location.latitude, samsaraVeh.location.longitude, geoId), idx * 150);
                 } else {
                     ubicacion = `<div class="flex flex-col items-center gap-1">
-                        <button onclick="window.openAIRoute('${origen}', '${destino}')" class="text-purple-600 hover:text-purple-800 hover:underline font-bold flex items-center justify-center gap-1 transition"><i class="fas fa-robot"></i> Ruta IA</button>
-                        <span class="text-[10px] bg-red-50 text-red-600 px-2 py-0.5 rounded-full border border-red-100"><i class="fas fa-signal-slash mr-1"></i> Sin GPS</span>
+                        <div class="text-[10px] bg-red-50 text-red-600 px-2 py-1 rounded-md border border-red-100 font-bold"><i class="fas fa-signal-slash mr-1"></i> Sin GPS</div>
                     </div>`;
                 }
 
@@ -358,7 +394,7 @@ async function loadClientReport() {
         if (filteredUnits.length === 0) {
             html = `<tr><td colspan="9" class="p-12 text-center text-gray-500 italic">No hay unidades asignadas a este cliente (${type}) activamente.</td></tr>`;
         } else {
-            filteredUnits.forEach(u => {
+            filteredUnits.forEach((u, idx) => {
                 const opName = u.operators?.name || '<span class="text-gray-400 italic">Sin Asignar</span>';
                 const placas = u.placas || '---';
                 const cliente = u.details?.cliente || '---';
@@ -371,16 +407,17 @@ async function loadClientReport() {
                 const currentOdo = samsaraSt ? (samsaraSt.obdOdometerMeters?.value || samsaraSt.gpsOdometerMeters?.value || 0) : 0;
                 let kmTraveled = currentOdo ? `<span class="font-bold text-gray-500" title="Odómetro Total">${(currentOdo / 1000).toFixed(0)} km (Total)</span>` : '<span class="text-gray-400 italic text-xs">N/A</span>';
 
+                let geoId = `geo-cr-${u.id}`;
                 let ubicacion = '';
                 if (samsaraVeh) {
-                    ubicacion = `<div class="flex flex-col items-center gap-1">
-                        <a href="https://www.google.com/maps?q=${samsaraVeh.location.latitude},${samsaraVeh.location.longitude}" target="_blank" class="text-blue-500 hover:text-blue-700 hover:underline font-bold flex items-center justify-center gap-1 transition"><i class="fas fa-location-arrow text-blue-400"></i> Localizar</a>
+                    ubicacion = `<div class="flex flex-col items-center gap-1 w-full max-w-[140px] mx-auto">
+                        <div id="${geoId}" class="text-[10px] font-bold text-gray-700 bg-gray-100/80 px-2 py-1 rounded-md border border-gray-200 shadow-sm text-center w-full truncate whitespace-normal leading-tight min-h-[32px] flex items-center justify-center break-words" title="GPS: ${samsaraVeh.location.latitude}, ${samsaraVeh.location.longitude}">Analizando Zona...</div>
                         <div class="text-[10px] bg-blue-50 text-blue-800 px-2 py-0.5 rounded-full border border-blue-100">${kmTraveled}</div>
                     </div>`;
+                    setTimeout(() => reverseGeocodeStatic(samsaraVeh.location.latitude, samsaraVeh.location.longitude, geoId), idx * 150);
                 } else {
                     ubicacion = `<div class="flex flex-col items-center gap-1">
-                        <button onclick="window.openAIRoute('${origen}', '${destino}')" class="text-purple-600 hover:text-purple-800 hover:underline font-bold flex items-center justify-center gap-1 transition"><i class="fas fa-robot"></i> Ruta IA</button>
-                        <span class="text-[10px] bg-red-50 text-red-600 px-2 py-0.5 rounded-full border border-red-100"><i class="fas fa-signal-slash mr-1"></i> Sin GPS</span>
+                        <div class="text-[10px] bg-red-50 text-red-600 px-2 py-1 rounded-md border border-red-100 font-bold"><i class="fas fa-signal-slash mr-1"></i> Sin GPS</div>
                     </div>`;
                 }
 

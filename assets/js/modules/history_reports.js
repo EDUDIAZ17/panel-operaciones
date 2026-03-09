@@ -474,15 +474,15 @@ window.openTripDetailsModal = (encodedRowData) => {
     let stepsHtml = '';
     steps.forEach((step, idx) => {
         const isLast = idx === steps.length - 1;
-        const colorClass = step.val ? 'bg-indigo-500' : 'bg-gray-200';
-        const textClass = step.val ? 'text-gray-800 font-bold' : 'text-gray-400';
+        const colorClass = step.val ? 'bg-indigo-600' : 'bg-gray-300';
+        const textClass = step.val ? 'text-gray-900 font-black' : 'text-gray-600 font-bold';
         
         stepsHtml += `
             <div class="flex relative pb-4">
                 ${!isLast ? '<div class="absolute top-4 left-2.5 -ml-px h-full w-0.5 bg-gray-200" aria-hidden="true"></div>' : ''}
                 <div class="relative flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full ${colorClass} mt-0.5 shadow ring-4 ring-white"></div>
                 <div class="ml-4 min-w-0 flex-1">
-                    <p class="text-[10px] uppercase font-bold text-gray-500 tracking-wider">${step.label}</p>
+                    <p class="text-[10px] uppercase font-bold text-gray-600 tracking-wider">${step.label}</p>
                     <p class="text-sm ${textClass} mt-0.5">${asDateStr(step.val)}</p>
                 </div>
             </div>
@@ -513,23 +513,23 @@ window.openTripDetailsModal = (encodedRowData) => {
                 
                 <div class="grid grid-cols-2 gap-4 mb-8 bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
                     <div>
-                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Cliente</p>
-                        <p class="font-black text-gray-800">${clientTxt}</p>
+                        <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Cliente</p>
+                        <p class="font-black text-gray-900">${clientTxt}</p>
                     </div>
                     <div>
-                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Destinatario</p>
-                        <p class="font-bold text-gray-700">${parsed.destinatario || '---'}</p>
+                        <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Destinatario</p>
+                        <p class="font-bold text-gray-900">${parsed.destinatario || '---'}</p>
                     </div>
                     <div class="col-span-2 border-t pt-3 mt-1">
                         <div class="flex items-center gap-3">
                             <div class="flex-1">
-                                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Origen</p>
-                                <p class="font-bold text-orange-600 truncate" title="${parsed.origen || '---'}">${parsed.origen || '---'}</p>
+                                <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Origen</p>
+                                <p class="font-bold text-orange-700 truncate" title="${parsed.origen || '---'}">${parsed.origen || '---'}</p>
                             </div>
                             <i class="fas fa-arrow-right text-gray-300"></i>
                             <div class="flex-1 text-right">
-                                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Destino</p>
-                                <p class="font-bold text-blue-600 truncate" title="${parsed.destino || '---'}">${parsed.destino || '---'}</p>
+                                <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Destino</p>
+                                <p class="font-bold text-blue-700 truncate" title="${parsed.destino || '---'}">${parsed.destino || '---'}</p>
                             </div>
                         </div>
                     </div>
@@ -538,8 +538,8 @@ window.openTripDetailsModal = (encodedRowData) => {
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <!-- Timeline -->
                     <div>
-                        <h4 class="text-sm font-black text-slate-800 border-b pb-2 mb-4 flex items-center gap-2">
-                            <i class="fas fa-history text-slate-400"></i> Cronología del Viaje
+                        <h4 class="text-sm font-black text-slate-900 border-b pb-2 mb-4 flex items-center gap-2">
+                            <i class="fas fa-history text-slate-500"></i> Cronología del Viaje
                         </h4>
                         <div class="pl-2">
                             ${stepsHtml}
@@ -549,16 +549,16 @@ window.openTripDetailsModal = (encodedRowData) => {
                     <!-- Extra Info -->
                     <div class="flex flex-col gap-4">
                         <div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
-                            <h4 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 border-b border-gray-50 pb-2">Odómetro Registrado</h4>
+                            <h4 class="text-xs font-black text-slate-500 uppercase tracking-widest mb-2 border-b border-gray-50 pb-2">Odómetro Registrado</h4>
                             <div class="grid grid-cols-2 gap-2 text-sm">
-                                <div><span class="text-gray-500">Inicial:</span> <br><b>${cp.odoInit ? cp.odoInit + ' km' : '---'}</b></div>
-                                <div><span class="text-gray-500">Final:</span> <br><b>${cp.odoEnd ? cp.odoEnd + ' km' : '---'}</b></div>
+                                <div><span class="text-gray-600 font-bold">Inicial:</span> <br><b class="text-gray-900">${cp.odoInit ? cp.odoInit + ' km' : '---'}</b></div>
+                                <div><span class="text-gray-600 font-bold">Final:</span> <br><b class="text-gray-900">${cp.odoEnd ? cp.odoEnd + ' km' : '---'}</b></div>
                             </div>
                         </div>
                         
                         <div class="bg-yellow-50/50 p-4 rounded-xl border border-yellow-100 shadow-sm flex-1">
-                            <h4 class="text-xs font-black text-yellow-600 uppercase tracking-widest mb-2 border-b border-yellow-200/50 pb-2">Observaciones de Término</h4>
-                            <p class="text-sm text-gray-700 italic leading-relaxed">${commentTxt || 'Sin observaciones registradas al momento del cierre.'}</p>
+                            <h4 class="text-xs font-black text-yellow-700 uppercase tracking-widest mb-2 border-b border-yellow-300/50 pb-2">Observaciones de Término</h4>
+                            <p class="text-sm text-gray-900 font-medium italic leading-relaxed">${commentTxt || 'Sin observaciones registradas al momento del cierre.'}</p>
                         </div>
                     </div>
                 </div>

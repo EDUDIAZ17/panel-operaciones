@@ -186,8 +186,15 @@ function renderRows(units, allOps) {
 
         const canEdit = ['admin', 'torre_control', 'operaciones'].includes(window.userRole);
 
+        let rowClasses = 'border-b transition items-center';
+        if (hasTrip) {
+            rowClasses += ' bg-yellow-50 hover:bg-yellow-100 border-l-4 border-l-yellow-400';
+        } else {
+            rowClasses += ' hover:bg-gray-50';
+        }
+
         html += `
-            <tr class="border-b hover:bg-gray-50 transition items-center">
+            <tr class="${rowClasses}">
                 <td class="p-4">
                     <div class="font-bold text-gray-800 text-lg">${unit.economic_number}</div>
                     <div class="text-xs text-gray-500">${unit.type} • ${unit.placas || 'S/P'}</div>
@@ -619,6 +626,33 @@ window.openFinishTripModal = (unitId) => {
         const finishDate = document.getElementById('finish-date').value;
         const comments = document.getElementById('finish-comments').value;
         const currentUser = JSON.parse(sessionStorage.getItem('currentUser'));
+
+        const checkpoints = parsedDetails.checkpoints || {};
+        const requiredCPs = [
+            'trip_load_arrival', 'trip_load_start', 'trip_load_end', 
+            'trip_unload_arrival', 'trip_unload_start', 'trip_unload_end',
+            'trip_route_start', 'trip_route_end'
+        ];
+
+        let missing = [];
+        for (const cp of requiredCPs) {
+            if (!checkpoints[cp]) {
+                missing.push(cp);
+            }
+        }
+
+        if(!parsedDetails.cliente || !parsedDetails.origen || !parsedDetails.destino) {
+             missing.push('Datos Básicos (Cliente, Origen, Destino)');
+        }
+
+        if (missing.length > 0) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Datos Incompletos',
+                text: 'Para terminar el viaje debes llenar todos los datos logísticos y tiempos. Faltan campos por completar.',
+            });
+            return;
+        }
 
         const oldDetailsStr = JSON.stringify(parsedDetails);
 
