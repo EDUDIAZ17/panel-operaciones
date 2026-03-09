@@ -50,17 +50,19 @@ export function renderPayrollMap(container) {
                         <div class="pt-2 border-t mt-3 border-gray-100">
                             <label class="block text-sm font-semibold text-gray-700 mb-2">Liquidación del Operador</label>
                             
+                            <select id="map-trip-condition" class="w-full border border-gray-300 rounded-lg p-2 text-xs shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white mb-2 text-gray-600">
+                                <option value="5.00">Estándar: Unidad Cargada ($5.00/km)</option>
+                                <option value="3.00">Estándar: Unidad Vacía ($3.00/km)</option>
+                            </select>
+
                             <div class="grid grid-cols-2 gap-3 mb-2">
                                 <div>
-                                    <label class="block text-xs font-semibold text-gray-600 mb-1">Costo Base por KM</label>
-                                    <select id="map-rate-type" class="w-full border border-gray-300 rounded-lg p-2 text-sm shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
-                                        <option value="5.00">Unidad Cargada ($5.00/km)</option>
-                                        <option value="3.00">Unidad Vacía ($3.00/km)</option>
-                                    </select>
+                                    <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Nómina ($ / KM)</label>
+                                    <input type="number" id="map-rate-nomina" value="5.00" step="0.01" class="w-full border border-gray-300 rounded-lg p-2 text-sm shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white font-bold text-indigo-700">
                                 </div>
                                 <div>
-                                    <label class="block text-xs font-semibold text-gray-600 mb-1">Alimentos Fijos</label>
-                                    <input type="text" disabled value="$0.45 / km" class="w-full border border-gray-200 bg-gray-50 rounded-lg p-2 text-sm shadow-sm text-gray-500 cursor-not-allowed">
+                                    <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Alimentos ($ / KM)</label>
+                                    <input type="number" id="map-rate-alimentos" value="0.45" step="0.01" class="w-full border border-gray-300 rounded-lg p-2 text-sm shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white font-bold text-amber-600">
                                 </div>
                             </div>
                         </div>
@@ -135,8 +137,14 @@ export function renderPayrollMap(container) {
     bindWaypointLogic();
     
     document.getElementById('btn-calc-route').addEventListener('click', calculateMapRoute);
-    document.getElementById('map-rate-type').addEventListener('change', updatePayroll);
+    document.getElementById('map-rate-nomina').addEventListener('input', updatePayroll);
+    document.getElementById('map-rate-alimentos').addEventListener('input', updatePayroll);
     document.getElementById('btn-ai-restrictions').addEventListener('click', checkAIRestrictions);
+    
+    document.getElementById('map-trip-condition').addEventListener('change', (e) => {
+        document.getElementById('map-rate-nomina').value = e.target.value;
+        updatePayroll();
+    });
 }
 
 window.removeWaypoint = (btn) => {
@@ -373,8 +381,8 @@ function updatePayroll() {
     if (!kmSpan.dataset.km) return;
     
     const km = parseFloat(kmSpan.dataset.km);
-    const nominaRate = parseFloat(document.getElementById('map-rate-type').value) || 3.00; // Vacía por default
-    const alimentosRate = 0.45; // Fijo
+    const nominaRate = parseFloat(document.getElementById('map-rate-nomina').value) || 0;
+    const alimentosRate = parseFloat(document.getElementById('map-rate-alimentos').value) || 0;
     
     const nominaTotal = km * nominaRate;
     const alimentosTotal = km * alimentosRate;
