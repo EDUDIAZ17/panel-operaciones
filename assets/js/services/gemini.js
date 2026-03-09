@@ -126,3 +126,51 @@ export async function analyzeExpensesWithAI(expensesData) {
     console.error("All Gemini models failed. Last error:", lastError);
     throw lastError;
 }
+
+export async function estimateTollsWithAI(origen, destino, paradas = []) {
+    let paradasText = '';
+    if (paradas.length > 0) {
+        paradasText = ` haciendo paradas intermedias en: ${paradas.join(', ')}`;
+    }
+
+    const prompt = `
+        Actúa como un analista logístico experto en rutas terrestres de México.
+        Necesitamos **ESTIMAR EL COSTO TOTAL APROXIMADO DE CASETAS/PEAJES** para un **Tractocamión T3-S2-R4 (Doble Remolque / Full)** 
+        que viaja desde "${origen}" hacia "${destino}"${paradasText}.
+
+        Reglas:
+        1. Considera solo rutas de autopistas de cuota (Federales).
+        2. Proporciona solo la estimación numérica en MXN (Pesos Mexicanos) de las casetas.
+        3. Formato requerido: Devuelve el resultado en un bloque de HTML simple, resaltando el costo total y dando un brevísimo desglose de 1 a 2 líneas de los principales tramos de cobro.
+        4. Sé directo, sin introducciones ni conclusiones largas. Usa la etiqueta <b> para resaltar el monto final (ej. <b>$4,500.00 MXN</b>).
+    `;
+
+    const modelsToTry = [
+        'gemini-2.5-flash',
+        'gemini-2.5-pro'
+    ];
+    let lastError = null;
+
+    for (const model of modelsToTry) {
+        try {
+            const { data, error } = await supabase.functions.invoke('gemini-proxy', {
+                body: { model, prompt }
+            });
+            
+            if (error) {
+                console.warn(`Model ${model} failed via proxy for tolls:`, error);
+                lastError = error;
+                continue;
+            }
+
+            const textOption = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (textOption) return textOption.replace(/\`\`\`html/g, '').replace(/\`\`\`/g, '');
+        } catch (error) {
+            console.warn(`Fetch error for model ${model} for tolls:`, error);
+            lastError = error;
+        }
+    }
+    
+    console.error("All Gemini models failed for tolls. Last error:", lastError);
+    throw lastError;
+}

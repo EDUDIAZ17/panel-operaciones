@@ -1,10 +1,11 @@
 import { supabase } from '../services/supabaseClient.js';
 import { GOOGLE_MAPS_API_KEY } from '../config/config.js';
-import { getHeavyVehicleRouteWithAI } from '../services/gemini.js';
+import { getHeavyVehicleRouteWithAI, estimateTollsWithAI } from '../services/gemini.js';
 
 let map = null;
 let directionsService = null;
 let directionsRenderer = null;
+let waypointCount = 0;
 
 export function renderPayrollMap(container) {
     container.innerHTML = `
@@ -24,11 +25,28 @@ export function renderPayrollMap(container) {
                             <label class="block text-sm font-semibold text-gray-700 mb-1">Origen (Ciudad/Estado)</label>
                             <input type="text" id="map-origen" class="w-full border border-gray-300 rounded-lg p-2.5 shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition" placeholder="Ej: Celaya, GTO">
                         </div>
+                        
+                        <div id="waypoints-container" class="space-y-2">
+                            <!-- Paradas dinámicas aquí -->
+                        </div>
+                        <button id="btn-add-waypoint" class="text-indigo-600 text-xs font-bold hover:text-indigo-800 flex items-center gap-1 transition-colors w-max"><i class="fas fa-plus-circle"></i> Agregar Parada Segura</button>
+
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-1">Destino (Ciudad/Estado)</label>
                             <input type="text" id="map-destino" class="w-full border border-gray-300 rounded-lg p-2.5 shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition" placeholder="Ej: Nuevo Laredo, TAMPS">
                         </div>
                         
+                        <div class="grid grid-cols-2 gap-3 pt-2">
+                             <div>
+                                 <label class="block text-xs font-semibold text-gray-700 mb-1" title="Velocidad Promedio">Velocidad (km/h)</label>
+                                 <input type="number" id="map-speed" value="70" class="w-full border border-gray-300 rounded-lg p-2 shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                             </div>
+                             <div>
+                                 <label class="block text-xs font-semibold text-gray-700 mb-1" title="Tiempo total en Paradas">Tiempo Paradas (h)</label>
+                                 <input type="number" id="map-stop-time" value="0.0" step="0.5" class="w-full border border-gray-300 rounded-lg p-2 shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                             </div>
+                        </div>
+
                         <div class="pt-2">
                             <label class="block text-sm font-semibold text-gray-700 mb-1">Tipo de Unidad</label>
                             <select id="map-unit-type" class="w-full border border-gray-300 rounded-lg p-2.5 shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
@@ -38,8 +56,8 @@ export function renderPayrollMap(container) {
                             </select>
                         </div>
                         
-                        <button id="btn-calc-route" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-lg shadow-md transition transform hover:-translate-y-0.5 mt-4 flex justify-center items-center gap-2">
-                            <i class="fas fa-route"></i> CALCULAR RUTA Y DISTANCIA
+                        <button id="btn-calc-route" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-lg shadow-md transition transform hover:-translate-y-0.5 mt-2 flex justify-center items-center gap-2">
+                            <i class="fas fa-route"></i> CALCULAR LOGÍSTICA
                         </button>
                     </div>
 
@@ -48,32 +66,42 @@ export function renderPayrollMap(container) {
                         
                         <div class="grid grid-cols-2 gap-3 mb-4">
                             <div class="bg-blue-50 p-3 rounded-lg border border-blue-100">
-                                <p class="text-xs text-blue-600 font-bold uppercase">Distancia</p>
+                                <p class="text-[10px] text-blue-600 font-bold uppercase tracking-wider">Distancia</p>
                                 <p id="res-distance" class="text-xl font-black text-blue-800">-- km</p>
                             </div>
-                            <div class="bg-emerald-50 p-3 rounded-lg border border-emerald-100">
-                                <p class="text-xs text-emerald-600 font-bold uppercase">Tiempo Est.</p>
+                            <div class="bg-emerald-50 p-3 rounded-lg border border-emerald-100 relative group cursor-help">
+                                <p class="text-[10px] text-emerald-600 font-bold uppercase tracking-wider">Tiempo Estimado</p>
                                 <p id="res-time" class="text-xl font-black text-emerald-800">-- h</p>
+                                <!-- Tooltip con el desglose del tiempo -->
+                                <div id="res-time-breakdown" class="hidden group-hover:block absolute z-50 bg-gray-900 text-white text-[10px] p-2 rounded -top-16 left-0 w-max shadow-lg leading-relaxed"></div>
                             </div>
+                        </div>
+
+                        <div class="bg-orange-50 p-3 rounded-lg border border-orange-100 mb-4 flex items-center justify-between">
+                             <div class="flex-1">
+                                 <p class="text-[10px] text-orange-600 font-bold uppercase tracking-wider mb-1">Costo Aprox. de Peajes (SCT)</p>
+                                 <p id="res-tolls" class="text-xs font-medium text-orange-800"><i class="fas fa-sync fa-spin"></i> Estimando con IA...</p>
+                             </div>
+                             <i class="fas fa-robot text-orange-300 text-3xl ml-2"></i>
                         </div>
 
                         <div class="bg-gray-50 border p-4 rounded-lg mb-4 space-y-3">
                             <h4 class="text-sm font-bold text-gray-700 uppercase"><i class="fas fa-calculator text-gray-400"></i> Proyección de Nómina</h4>
                             <div>
-                                <p class="text-xs text-gray-500">Tarifa por KM Sugerida</p>
+                                <p class="text-xs text-gray-500 font-bold">Tarifa por KM Sugerida</p>
                                 <div class="flex items-center gap-2 mt-1">
                                     <span class="text-gray-500">$</span>
-                                    <input type="number" id="rate-per-km" class="w-20 border rounded p-1 text-sm font-bold text-right outline-none focus:border-indigo-500" value="0.45" step="0.01">
+                                    <input type="number" id="rate-per-km" class="w-full border rounded p-1.5 text-sm font-bold bg-white text-right outline-none focus:border-indigo-500" value="0.45" step="0.01">
                                 </div>
                             </div>
-                            <div class="pt-2 border-t">
-                                <p class="text-xs text-gray-500">Total Nómina (Viáticos/Comisión)</p>
+                            <div class="pt-2 border-t mt-2">
+                                <p class="text-xs text-gray-500 font-bold">Total Nómina (Viáticos/Comisión)</p>
                                 <p id="res-payroll" class="text-2xl font-black text-gray-800">$0.00</p>
                             </div>
                         </div>
 
                         <button id="btn-ai-restrictions" class="w-full border-2 border-purple-500 text-purple-700 bg-purple-50 hover:bg-purple-100 font-bold py-2.5 rounded-lg transition flex justify-center items-center gap-2 text-sm">
-                            <i class="fas fa-robot"></i> Consultar Restricciones IA SCT
+                            <i class="fas fa-robot"></i> Rúta IA Sugerida y Restricciones
                         </button>
                     </div>
                 </div>
@@ -91,10 +119,39 @@ export function renderPayrollMap(container) {
     `;
 
     initMap();
+    bindWaypointLogic();
     
     document.getElementById('btn-calc-route').addEventListener('click', calculateMapRoute);
     document.getElementById('rate-per-km').addEventListener('change', updatePayroll);
     document.getElementById('btn-ai-restrictions').addEventListener('click', checkAIRestrictions);
+}
+
+window.removeWaypoint = (btn) => {
+    btn.parentElement.remove();
+};
+
+function bindWaypointLogic() {
+    const btnAdd = document.getElementById('btn-add-waypoint');
+    const container = document.getElementById('waypoints-container');
+    
+    btnAdd.addEventListener('click', () => {
+        waypointCount++;
+        const id = `waypoint-${waypointCount}`;
+        const div = document.createElement('div');
+        div.className = 'flex items-center gap-2 mt-2 fade-in';
+        div.innerHTML = `
+            <div class="flex-1 relative">
+                <input type="text" id="${id}" class="waypoint-input w-full border border-indigo-200 rounded-lg p-2 pl-8 shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none text-sm bg-indigo-50/30" placeholder="Ej: San Luis Potosí, SLP">
+                <i class="fas fa-map-pin absolute left-3 top-2.5 text-indigo-400"></i>
+            </div>
+            <button class="text-red-400 hover:text-red-600 transition" onclick="window.removeWaypoint(this)" title="Eliminar Parada"><i class="fas fa-times-circle text-lg mt-1"></i></button>
+        `;
+        container.appendChild(div);
+        
+        if (window.google && window.google.maps && window.google.maps.places) {
+            new google.maps.places.Autocomplete(document.getElementById(id), { componentRestrictions: { country: 'mx' }});
+        }
+    });
 }
 
 function initMap() {
@@ -143,37 +200,84 @@ function calculateMapRoute() {
         return;
     }
 
+    const speedKmH = parseFloat(document.getElementById('map-speed').value) || 70;
+    const stopTimeH = parseFloat(document.getElementById('map-stop-time').value) || 0;
+
+    const waypointInputs = document.querySelectorAll('.waypoint-input');
+    const waypoints = [];
+    const waypointNames = [];
+    waypointInputs.forEach(input => {
+        if (input.value.trim()) {
+            waypoints.push({
+                location: input.value.trim(),
+                stopover: true
+            });
+            waypointNames.push(input.value.trim());
+        }
+    });
+
     const loading = document.getElementById('map-loading');
     loading.classList.remove('hidden');
 
     const request = {
         origin: origen,
         destination: destino,
+        waypoints: waypoints,
         travelMode: google.maps.TravelMode.DRIVING,
         provideRouteAlternatives: false,
         avoidTolls: false // Heavy transport usually uses tolls in MX
     };
 
-    directionsService.route(request, (result, status) => {
+    directionsService.route(request, async (result, status) => {
         loading.classList.add('hidden');
         if (status == 'OK') {
             directionsRenderer.setDirections(result);
             
-            const route = result.routes[0].legs[0];
-            const distanceText = route.distance.text;
-            const distanceValue = route.distance.value / 1000; // in km
-            const durationText = route.duration.text;
+            let totalDistanceMeters = 0;
+            result.routes[0].legs.forEach(leg => {
+                totalDistanceMeters += leg.distance.value;
+            });
             
-            document.getElementById('res-distance').textContent = distanceText;
-            document.getElementById('res-distance').dataset.km = distanceValue;
-            document.getElementById('res-time').textContent = durationText;
+            const distanceValueKm = totalDistanceMeters / 1000;
+            
+            // Re-calculate Time based on inputs
+            const drivingTimeH = distanceValueKm / speedKmH;
+            const totalTimeH = drivingTimeH + stopTimeH;
+            
+            const hours = Math.floor(totalTimeH);
+            const minutes = Math.round((totalTimeH - hours) * 60);
+            
+            const drivingHours = Math.floor(drivingTimeH);
+            const drivingMinutes = Math.round((drivingTimeH - drivingHours) * 60);
+            
+            document.getElementById('res-distance').textContent = distanceValueKm.toLocaleString('es-MX', {maximumFractionDigits: 1}) + ' km';
+            document.getElementById('res-distance').dataset.km = distanceValueKm;
+            
+            document.getElementById('res-time').textContent = `${hours}h ${minutes}m`;
+            
+            const breakdown = document.getElementById('res-time-breakdown');
+            if (breakdown) {
+                 breakdown.innerHTML = `
+                     <span class="text-indigo-300 font-bold block mb-1">Desglose de Tiempo:</span>
+                     • <b>En Movimiento (${speedKmH}km/h):</b> ${drivingHours}h ${drivingMinutes}m <br>
+                     • <b>Paradas Seguras:</b> ${stopTimeH}h
+                 `;
+            }
 
             document.getElementById('route-results').classList.remove('hidden');
+            document.getElementById('res-tolls').innerHTML = '<i class="fas fa-sync fa-spin"></i> Estimando con IA...';
             updatePayroll();
+            
+            try {
+                const tollText = await estimateTollsWithAI(origen, destino, waypointNames);
+                document.getElementById('res-tolls').innerHTML = tollText;
+            } catch (e) {
+                document.getElementById('res-tolls').innerHTML = '<span class="text-red-500 font-normal">Error al estimar peajes.</span>';
+            }
             
         } else {
             console.error("Directions requests failed: ", status);
-            Swal.fire('Ruta no encontrada', 'No se pudo trazar la ruta entre estos puntos.', 'error');
+            Swal.fire('Ruta no encontrada', 'No se pudo trazar la ruta entre estos puntos. Verifica que estén escritos correctamente.', 'error');
         }
     });
 }
