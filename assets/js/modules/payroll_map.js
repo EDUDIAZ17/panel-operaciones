@@ -5,6 +5,8 @@ import { getHeavyVehicleRouteWithAI, estimateTollsWithAI } from '../services/gem
 let map = null;
 let directionsService = null;
 let directionsRenderer = null;
+let geocoder = null;
+let infoWindow = null;
 let waypointCount = 0;
 
 export function renderPayrollMap(container) {
@@ -132,7 +134,11 @@ export function renderPayrollMap(container) {
                             </div>
                         </div>
 
-                        <button id="btn-ai-restrictions" class="w-full border-2 border-purple-500 text-purple-700 bg-purple-50 hover:bg-purple-100 font-bold py-2.5 rounded-lg transition flex justify-center items-center gap-2 text-sm mt-4">
+                        <button id="btn-start-nav" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg shadow-md transition transform hover:-translate-y-0.5 mt-2 flex justify-center items-center gap-2">
+                            <i class="fas fa-location-arrow"></i> INICIAR NAVEGACIÓN (MÓVIL)
+                        </button>
+
+                        <button id="btn-ai-restrictions" class="w-full border-2 border-purple-500 text-purple-700 bg-purple-50 hover:bg-purple-100 font-bold py-2.5 rounded-lg transition flex justify-center items-center gap-2 text-sm mt-3">
                             <i class="fas fa-robot"></i> Inteligencia Artificial: Riesgos Carretera
                         </button>
                     </div>
@@ -156,6 +162,7 @@ export function renderPayrollMap(container) {
     document.getElementById('btn-calc-route').addEventListener('click', calculateMapRoute);
     document.getElementById('map-rate-nomina').addEventListener('input', updatePayroll);
     document.getElementById('map-rate-alimentos').addEventListener('input', updatePayroll);
+    document.getElementById('btn-start-nav').addEventListener('click', startMobileNavigation);
     document.getElementById('btn-ai-restrictions').addEventListener('click', checkAIRestrictions);
     
     document.getElementById('map-trip-condition').addEventListener('change', (e) => {
@@ -224,6 +231,14 @@ function initMap() {
             strokeOpacity: 0.8,
             strokeWeight: 6
         }
+    });
+
+    geocoder = new google.maps.Geocoder();
+    infoWindow = new google.maps.InfoWindow();
+
+    // Map click event to see what's there
+    map.addListener('click', (e) => {
+        geocodeLatLng(e.latLng);
     });
 
     // Escuchar cuando el usuario arrastre y modifique la ruta
@@ -301,8 +316,18 @@ function calculateMapRoute() {
                             position: step.start_location,
                             map: map,
                             icon: 'https://maps.google.com/mapfiles/ms/icons/orange-dot.png',
-                            title: 'Caseta / Cobro de Peaje'
+                            title: 'Caseta de Cobro'
                         });
+                        
+                        // Agregar interactividad a la caseta
+                        marker.addListener('mouseover', () => {
+                            infoWindow.setContent(`<div class="p-1"><p class="font-bold text-orange-600 text-xs"><i class="fas fa-ticket-alt"></i> Caseta de Peaje Oficial</p><p class="text-[10px] text-gray-500">Punto de cobro verificado en ruta SCT.</p></div>`);
+                            infoWindow.open(map, marker);
+                        });
+                        marker.addListener('mouseout', () => {
+                            infoWindow.close();
+                        });
+
                         window.tollMarkers.push(marker);
                     }
                 });
@@ -410,8 +435,18 @@ function recalculateTotalsFromDraggedRoute(result) {
                     position: step.start_location,
                     map: map,
                     icon: 'https://maps.google.com/mapfiles/ms/icons/orange-dot.png',
-                    title: 'Caseta / Cobro de Peaje (Ruta Modificada)'
+                    title: 'Caseta de Cobro'
                 });
+
+                // Agregar interactividad a la caseta al arrastrar
+                marker.addListener('mouseover', () => {
+                    infoWindow.setContent(`<div class="p-1"><p class="font-bold text-orange-600 text-xs"><i class="fas fa-ticket-alt"></i> Caseta de Peaje (Modificada)</p><p class="text-[10px] text-gray-500">Punto de cobro detectado en la nueva ruta.</p></div>`);
+                    infoWindow.open(map, marker);
+                });
+                marker.addListener('mouseout', () => {
+                    infoWindow.close();
+                });
+
                 window.tollMarkers.push(marker);
             }
         });
@@ -554,4 +589,53 @@ async function checkAIRestrictions() {
         confirmButtonColor: '#8b5cf6',
         width: 600
     });
+}
+
+// ---- INTERACTION & UTILITIES ---- //
+function geocodeLatLng(latLng) {
+    if (!geocoder) return;
+    geocoder.geocode({ location: latLng }, (results, status) => {
+        if (status === "OK") {
+            if (results[0]) {
+                infoWindow.setContent(`
+                    <div class="p-2 max-w-xs">
+                        <p class="font-bold text-gray-800 text-sm mb-1"><i class="fas fa-map-marker-alt text-indigo-500"></i> Ubicación Seleccionada</p>
+                        <p class="text-xs text-gray-600 leading-relaxed">${results[0].formatted_address}</p>
+                    </div>
+                `);
+                infoWindow.setPosition(latLng);
+                infoWindow.open(map);
+            } else {
+                infoWindow.setContent('<div class="p-1 text-xs">No se encontraron resultados para esta ubicación.</div>');
+                infoWindow.setPosition(latLng);
+                infoWindow.open(map);
+            }
+        }
+    });
+}
+
+function startMobileNavigation() {
+    const origen = document.getElementById('map-origen').value;
+    const destino = document.getElementById('map-destino').value;
+
+    if (!origen || !destino) {
+        Swal.fire('Atención', 'Calcule la ruta primero antes de iniciar la navegación.', 'warning');
+        return;
+    }
+
+    const waypointInputs = document.querySelectorAll('.waypoint-input');
+    const waypoints = [];
+    waypointInputs.forEach(input => {
+        if (input.value.trim()) {
+            waypoints.push(encodeURIComponent(input.value.trim()));
+        }
+    });
+
+    let navUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origen)}&destination=${encodeURIComponent(destino)}&travelmode=driving`;
+    if (waypoints.length > 0) {
+        navUrl += `&waypoints=${waypoints.join('|')}`;
+    }
+
+    // Open link in a new tab, forcing Google Maps app to trigger on mobile devices
+    window.open(navUrl, '_blank');
 }
