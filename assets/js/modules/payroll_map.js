@@ -218,10 +218,19 @@ function initMap() {
     directionsService = new google.maps.DirectionsService();
     directionsRenderer = new google.maps.DirectionsRenderer({
         map: map,
+        draggable: true, // Habilitar arrastre de ruta
         polylineOptions: {
             strokeColor: '#4f46e5',
             strokeOpacity: 0.8,
             strokeWeight: 6
+        }
+    });
+
+    // Escuchar cuando el usuario arrastre y modifique la ruta
+    directionsRenderer.addListener('directions_changed', () => {
+        const result = directionsRenderer.getDirections();
+        if (result) {
+            recalculateTotalsFromDraggedRoute(result);
         }
     });
 
@@ -327,50 +336,116 @@ function calculateMapRoute() {
 
             document.getElementById('route-results').classList.remove('hidden');
             
-            const tollMethod = document.getElementById('map-toll-method').value;
-
-            if (tollMethod === 'native') {
-                document.getElementById('res-tolls').innerHTML = '<i class="fas fa-sync fa-spin"></i> Consultando SCT (Google Routes)...';
-                fetchTollsViaRoutesAPI(origen, destino, waypointNames).then(tollData => {
-                     document.getElementById('res-tolls').textContent = tollData.costoTotalFormatted;
-                     document.getElementById('res-tolls').dataset.tollsAmount = tollData.costoTotalNumerical;
-                     updatePayroll();
-                }).catch(e => {
-                     console.error("Native toll error:", e);
-                     document.getElementById('res-tolls').innerHTML = '<span class="text-red-500 text-[10px]">Error SCT. Intente con IA.</span>';
-                     document.getElementById('res-tolls').dataset.tollsAmount = 0;
-                     updatePayroll();
-                });
-            } else {
-                document.getElementById('res-tolls').innerHTML = '<i class="fas fa-sync fa-spin"></i> Estimando con IA...';
-                updatePayroll(); // Update with 0 for now
-                
-                const unitType = document.getElementById('map-unit-type').value;
-
-                estimateTollsWithAI(origen, destino, waypointNames, unitType).then(tollText => {
-                    document.getElementById('res-tolls').innerHTML = tollText;
-                    // Try to extract the number from AI response to add it to total
-                    const match = tollText.match(/\$?(\d+,?\d*\.?\d*)/);
-                    if (match) {
-                        const numStr = match[1].replace(/,/g, '');
-                        const num = parseFloat(numStr);
-                        if (!isNaN(num)) {
-                             document.getElementById('res-tolls').dataset.tollsAmount = num;
-                             updatePayroll();
-                        }
-                    }
-                }).catch(e => {
-                    document.getElementById('res-tolls').innerHTML = '<span class="text-red-500 font-normal">Error al estimar peajes IA.</span>';
-                    document.getElementById('res-tolls').dataset.tollsAmount = 0;
-                    updatePayroll();
-                });
-            }
+            triggerTollCalculation(origen, destino, waypointNames);
 
         } else {
             console.error("Directions requests failed: ", status);
             Swal.fire('Ruta no encontrada', 'No se pudo trazar la ruta entre estos puntos. Verifica que estén escritos correctamente.', 'error');
         }
     });
+}
+
+// Nueva función extraída para calcular casetas y no repetir código al arrastrar
+function triggerTollCalculation(origen, destino, waypointNames) {
+    const tollMethod = document.getElementById('map-toll-method').value;
+    const unitType = document.getElementById('map-unit-type').value;
+
+    if (tollMethod === 'native') {
+        document.getElementById('res-tolls').innerHTML = '<i class="fas fa-sync fa-spin"></i> Consultando SCT (Google Routes)...';
+        fetchTollsViaRoutesAPI(origen, destino, waypointNames).then(tollData => {
+             document.getElementById('res-tolls').textContent = tollData.costoTotalFormatted;
+             document.getElementById('res-tolls').dataset.tollsAmount = tollData.costoTotalNumerical;
+             updatePayroll();
+        }).catch(e => {
+             console.error("Native toll error:", e);
+             document.getElementById('res-tolls').innerHTML = '<span class="text-red-500 text-[10px]">Error SCT. Intente con IA.</span>';
+             document.getElementById('res-tolls').dataset.tollsAmount = 0;
+             updatePayroll();
+        });
+    } else {
+        document.getElementById('res-tolls').innerHTML = '<i class="fas fa-sync fa-spin"></i> Estimando con IA...';
+        updatePayroll(); // Update with 0 for now
+        
+        estimateTollsWithAI(origen, destino, waypointNames, unitType).then(tollText => {
+            document.getElementById('res-tolls').innerHTML = tollText;
+            const match = tollText.match(/\$?(\d+,?\d*\.?\d*)/);
+            if (match) {
+                const numStr = match[1].replace(/,/g, '');
+                const num = parseFloat(numStr);
+                if (!isNaN(num)) {
+                     document.getElementById('res-tolls').dataset.tollsAmount = num;
+                     updatePayroll();
+                }
+            }
+        }).catch(e => {
+            document.getElementById('res-tolls').innerHTML = '<span class="text-red-500 font-normal">Error al estimar peajes IA.</span>';
+            document.getElementById('res-tolls').dataset.tollsAmount = 0;
+            updatePayroll();
+        });
+    }
+}
+
+function recalculateTotalsFromDraggedRoute(result) {
+    if (window.tollMarkers) {
+        window.tollMarkers.forEach(m => m.setMap(null));
+    }
+    window.tollMarkers = [];
+    
+    let totalDistanceMeters = 0;
+    const legWaypoints = [];
+    const origen = result.request.origin.query || result.request.origin.location.toString();
+    const destino = result.request.destination.query || result.request.destination.location.toString();
+
+    result.routes[0].legs.forEach(leg => {
+        totalDistanceMeters += leg.distance.value;
+        
+        // El usuario al arrastrar crea "vía endpoints" o waypoints implícitos
+        // Estos no tienen query de texto directo a veces, usamos location
+        if(leg.start_address) legWaypoints.push(leg.start_address);
+
+        leg.steps.forEach(step => {
+            const instructions = step.instructions.toLowerCase();
+            if (instructions.includes('cuota') || instructions.includes('peaje') || instructions.includes('toll')) {
+                const marker = new google.maps.Marker({
+                    position: step.start_location,
+                    map: map,
+                    icon: 'https://maps.google.com/mapfiles/ms/icons/orange-dot.png',
+                    title: 'Caseta / Cobro de Peaje (Ruta Modificada)'
+                });
+                window.tollMarkers.push(marker);
+            }
+        });
+    });
+
+    const distanceValueKm = totalDistanceMeters / 1000;
+    const speedKmH = parseFloat(document.getElementById('map-speed').value) || 70;
+    const stopTimeH = parseFloat(document.getElementById('map-stop-time').value) || 0;
+    
+    const drivingTimeH = distanceValueKm / speedKmH;
+    const totalTimeH = drivingTimeH + stopTimeH;
+    
+    const hours = Math.floor(totalTimeH);
+    const minutes = Math.round((totalTimeH - hours) * 60);
+    const drivingHours = Math.floor(drivingTimeH);
+    const drivingMinutes = Math.round((drivingTimeH - drivingHours) * 60);
+    
+    document.getElementById('res-distance').textContent = distanceValueKm.toLocaleString('es-MX', {maximumFractionDigits: 1}) + ' km (Modificada)';
+    document.getElementById('res-distance').dataset.km = distanceValueKm;
+    document.getElementById('res-time').textContent = `${hours}h ${minutes}m`;
+    
+    const breakdown = document.getElementById('res-time-breakdown');
+    if (breakdown) {
+         breakdown.innerHTML = `
+             <span class="text-indigo-300 font-bold block mb-1">Desglose de Tiempo (Modificado):</span>
+             • <b>En Movimiento (${speedKmH}km/h):</b> ${drivingHours}h ${drivingMinutes}m <br>
+             • <b>Paradas Seguras:</b> ${stopTimeH}h
+         `;
+    }
+
+    // Volver a calcular casetas con los nuevos puntos arrastrados
+    // Excluir el primer address porque es el origen
+    const arrastrados = legWaypoints.slice(1); 
+    triggerTollCalculation(origen, destino, arrastrados);
 }
 
 async function fetchTollsViaRoutesAPI(originStr, destinationStr, waypointsArray) {
