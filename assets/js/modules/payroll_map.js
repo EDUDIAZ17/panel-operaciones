@@ -67,7 +67,15 @@ export function renderPayrollMap(container) {
                             </div>
                         </div>
 
-                        <button id="btn-calc-route" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-lg shadow-md transition transform hover:-translate-y-0.5 mt-2 flex justify-center items-center gap-2">
+                        <div class="pt-2 border-t mt-2 border-gray-100 mb-4">
+                            <label class="block text-xs font-bold text-gray-700 mb-1">Cálculo de Casetas</label>
+                            <select id="map-toll-method" class="w-full border border-gray-300 rounded-lg p-2 text-sm shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
+                                <option value="ai">Inteligencia Artificial (Recomendado)</option>
+                                <option value="native">Oficial SCT / Google Maps (Preciso)</option>
+                            </select>
+                        </div>
+
+                        <button id="btn-calc-route" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-lg shadow-md transition transform hover:-translate-y-0.5 flex justify-center items-center gap-2">
                             <i class="fas fa-route"></i> CALCULAR RUTA EDY
                         </button>
                     </div>
@@ -257,9 +265,29 @@ function calculateMapRoute() {
         if (status == 'OK') {
             directionsRenderer.setDirections(result);
             
+            // Remove previous toll markers
+            if (window.tollMarkers) {
+                window.tollMarkers.forEach(m => m.setMap(null));
+            }
+            window.tollMarkers = [];
+            
             let totalDistanceMeters = 0;
             result.routes[0].legs.forEach(leg => {
                 totalDistanceMeters += leg.distance.value;
+                
+                // Add markers for tolls
+                leg.steps.forEach(step => {
+                    const instructions = step.instructions.toLowerCase();
+                    if (instructions.includes('cuota') || instructions.includes('peaje') || instructions.includes('toll')) {
+                        const marker = new google.maps.Marker({
+                            position: step.start_location,
+                            map: map,
+                            icon: 'https://maps.google.com/mapfiles/ms/icons/orange-dot.png',
+                            title: 'Caseta / Cobro de Peaje'
+                        });
+                        window.tollMarkers.push(marker);
+                    }
+                });
             });
             
             const distanceValueKm = totalDistanceMeters / 1000;
@@ -289,19 +317,43 @@ function calculateMapRoute() {
             }
 
             document.getElementById('route-results').classList.remove('hidden');
-            document.getElementById('res-tolls').innerHTML = '<i class="fas fa-sync fa-spin"></i> Consultando Sect. de Comunicaciones y Transportes... (Google Routes)';
             
-            // Llama a la nueva funcion de Routes API V2 para casetas nativas
-            fetchTollsViaRoutesAPI(origen, destino, waypointNames).then(tollData => {
-                 document.getElementById('res-tolls').textContent = tollData.costoTotalFormatted;
-                 document.getElementById('res-tolls').dataset.tollsAmount = tollData.costoTotalNumerical;
-                 updatePayroll();
-            }).catch(e => {
-                 console.error("Native toll error:", e);
-                 document.getElementById('res-tolls').innerHTML = '<span class="text-red-500 text-[10px]">Error al obtener peajes de SCT. Intente más tarde o la ruta no es de cuota.</span>';
-                 document.getElementById('res-tolls').dataset.tollsAmount = 0;
-                 updatePayroll();
-            });
+            const tollMethod = document.getElementById('map-toll-method').value;
+
+            if (tollMethod === 'native') {
+                document.getElementById('res-tolls').innerHTML = '<i class="fas fa-sync fa-spin"></i> Consultando SCT (Google Routes)...';
+                fetchTollsViaRoutesAPI(origen, destino, waypointNames).then(tollData => {
+                     document.getElementById('res-tolls').textContent = tollData.costoTotalFormatted;
+                     document.getElementById('res-tolls').dataset.tollsAmount = tollData.costoTotalNumerical;
+                     updatePayroll();
+                }).catch(e => {
+                     console.error("Native toll error:", e);
+                     document.getElementById('res-tolls').innerHTML = '<span class="text-red-500 text-[10px]">Error SCT. Intente con IA.</span>';
+                     document.getElementById('res-tolls').dataset.tollsAmount = 0;
+                     updatePayroll();
+                });
+            } else {
+                document.getElementById('res-tolls').innerHTML = '<i class="fas fa-sync fa-spin"></i> Estimando con IA...';
+                updatePayroll(); // Update with 0 for now
+                
+                estimateTollsWithAI(origen, destino, waypointNames).then(tollText => {
+                    document.getElementById('res-tolls').innerHTML = tollText;
+                    // Try to extract the number from AI response to add it to total
+                    const match = tollText.match(/\$?(\d+,?\d*\.?\d*)/);
+                    if (match) {
+                        const numStr = match[1].replace(/,/g, '');
+                        const num = parseFloat(numStr);
+                        if (!isNaN(num)) {
+                             document.getElementById('res-tolls').dataset.tollsAmount = num;
+                             updatePayroll();
+                        }
+                    }
+                }).catch(e => {
+                    document.getElementById('res-tolls').innerHTML = '<span class="text-red-500 font-normal">Error al estimar peajes IA.</span>';
+                    document.getElementById('res-tolls').dataset.tollsAmount = 0;
+                    updatePayroll();
+                });
+            }
 
         } else {
             console.error("Directions requests failed: ", status);
@@ -311,27 +363,21 @@ function calculateMapRoute() {
 }
 
 async function fetchTollsViaRoutesAPI(originStr, destinationStr, waypointsArray) {
-    // Para usar Directions API V2, usamos la URL REST
     const url = 'https://routes.googleapis.com/directions/v2:computeRoutes';
     
-    const waypointsNodes = waypointsArray.map(w => ({
-        location: { address: w }
-    }));
-
     const requestBody = {
         origin: { address: originStr },
         destination: { address: destinationStr },
-        intermediates: waypointsNodes,
         travelMode: "DRIVE",
-        routeModifiers: {
-            vehicleInfo: {
-                emissionType: "GASOLINE" // Required minimal vehicle info for tolls
-            },
-            tollPasses: []
-        },
         computeTollInfo: true,
         extraComputations: ["TOLLS"]
     };
+
+    if (waypointsArray && waypointsArray.length > 0) {
+        requestBody.intermediates = waypointsArray.map(w => ({
+            location: { address: w }
+        }));
+    }
 
     const response = await fetch(url, {
         method: 'POST',
