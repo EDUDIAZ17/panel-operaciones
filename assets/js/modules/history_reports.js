@@ -1,6 +1,8 @@
 import { supabase } from '../services/supabaseClient.js';
 import { formatDate } from '../utils/formatters.js';
 
+let currentMode = 'auditoria';
+
 export async function renderHistoryReports(container) {
     container.innerHTML = `
         <div class="p-6 fade-in max-w-7xl mx-auto h-full flex flex-col gap-6">
@@ -13,6 +15,16 @@ export async function renderHistoryReports(container) {
                 </div>
                 <button id="btn-export-pdf" class="bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-500 hover:to-orange-500 text-white font-bold py-2.5 px-6 rounded-xl shadow-lg hover:shadow-red-500/30 transition-all flex items-center gap-2 group">
                     <i class="fas fa-file-pdf group-hover:-translate-y-1 transition-transform"></i> Descargar PDF Formal
+                </button>
+            </div>
+
+            <!-- Tabs -->
+            <div class="flex border-b mb-1">
+                <button class="tab-btn active px-6 py-3 font-bold text-sm text-red-600 border-b-2 border-red-600 transition" data-target="auditoria" id="tab-auditoria">
+                    <i class="fas fa-list-ul mr-2"></i> Auditoría General
+                </button>
+                <button class="tab-btn px-6 py-3 font-bold text-sm text-gray-500 hover:text-red-500 transition border-b-2 border-transparent" data-target="viajes" id="tab-viajes">
+                    <i class="fas fa-route mr-2"></i> Viajes Completados
                 </button>
             </div>
 
@@ -61,7 +73,7 @@ export async function renderHistoryReports(container) {
             <div class="bg-white/90 backdrop-blur-md rounded-2xl border border-gray-100 shadow-[0_8px_30px_rgb(0,0,0,0.08)] overflow-hidden flex-1 flex flex-col">
                 <div class="overflow-auto flex-1 custom-scrollbar">
                     <table class="w-full text-sm text-left whitespace-nowrap">
-                        <thead class="text-[10px] text-gray-400 uppercase tracking-widest bg-gray-50/90 backdrop-blur-sm sticky top-0 border-b border-gray-100 z-10">
+                        <thead class="text-[10px] text-gray-400 uppercase tracking-widest bg-gray-50/90 backdrop-blur-sm sticky top-0 border-b border-gray-100 z-10" id="history-table-thead">
                             <tr>
                                 <th class="px-5 py-4 font-black">Fecha y Hora</th>
                                 <th class="px-5 py-4 font-black bg-white shadow-sm sticky left-0 z-20">Económico</th>
@@ -84,6 +96,23 @@ export async function renderHistoryReports(container) {
 
     // Initialize Filters
     await initFilters();
+
+    // Tabs Event Listeners
+    const tabs = container.querySelectorAll('.tab-btn');
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+             tabs.forEach(t => {
+                t.classList.remove('active', 'text-red-600', 'border-red-600');
+                t.classList.add('text-gray-500', 'border-transparent');
+            });
+            tab.classList.remove('text-gray-500', 'border-transparent');
+            tab.classList.add('active', 'text-red-600', 'border-red-600');
+            currentMode = tab.dataset.target;
+            
+            updateTableHeaders();
+            loadHistoryData();
+        });
+    });
 
     // Event Listeners
     document.getElementById('btn-apply-filters').addEventListener('click', loadHistoryData);
@@ -142,6 +171,10 @@ async function loadHistoryData() {
         `)
         .order('timestamp', { ascending: false });
 
+    if (currentMode === 'viajes') {
+        query = query.eq('action_type', 'Viaje Terminado');
+    }
+
     if (startDt) query = query.gte('timestamp', startDt + 'T00:00:00Z');
     if (endDt) query = query.lte('timestamp', endDt + 'T23:59:59Z');
     if (unitId) query = query.eq('unit_id', unitId);
@@ -161,12 +194,15 @@ async function loadHistoryData() {
     let filteredData = data || [];
     
     if (opId) {
-        const selectedOpName = document.getElementById('filter-operator').options[document.getElementById('filter-operator').selectedIndex].text;
-        filteredData = filteredData.filter(d => 
-            (d.details && d.details.includes(selectedOpName)) || 
-            (d.new_operator_id === opId) || 
-            (d.previous_operator_id === opId)
-        );
+        const opSelect = document.getElementById('filter-operator');
+        if (opSelect && opSelect.selectedIndex > -1) {
+            const selectedOpName = opSelect.options[opSelect.selectedIndex].text;
+            filteredData = filteredData.filter(d => 
+                (d.details && d.details.includes(selectedOpName)) || 
+                (d.new_operator_id === opId) || 
+                (d.previous_operator_id === opId)
+            );
+        }
     }
 
     currentData = filteredData;
@@ -180,24 +216,102 @@ async function loadHistoryData() {
         const tr = document.createElement('tr');
         tr.className = 'hover:bg-orange-50/50 transition-colors group bg-white';
 
-        let badgeClass = 'bg-gray-100 text-gray-600';
-        if (row.action_type === 'Cambio de Estatus') badgeClass = 'bg-yellow-100 text-yellow-700 border border-yellow-200';
-        if (row.action_type === 'Viaje Programado') badgeClass = 'bg-purple-100 text-purple-700 border border-purple-200';
-        if (row.action_type === 'Edición Manual') badgeClass = 'bg-blue-100 text-blue-700 border border-blue-200';
-        if (row.action_type.includes('Terminado')) badgeClass = 'bg-emerald-100 text-emerald-700 border border-emerald-200';
-        if (row.action_type.includes('Logistico')) badgeClass = 'bg-orange-100 text-orange-700 border border-orange-200';
+        if (currentMode === 'auditoria') {
+            let badgeClass = 'bg-gray-100 text-gray-600';
+            if (row.action_type === 'Cambio de Estatus') badgeClass = 'bg-yellow-100 text-yellow-700 border border-yellow-200';
+            if (row.action_type === 'Viaje Programado') badgeClass = 'bg-purple-100 text-purple-700 border border-purple-200';
+            if (row.action_type === 'Edición Manual') badgeClass = 'bg-blue-100 text-blue-700 border border-blue-200';
+            if (row.action_type.includes('Terminado')) badgeClass = 'bg-emerald-100 text-emerald-700 border border-emerald-200';
+            if (row.action_type.includes('Logistico')) badgeClass = 'bg-orange-100 text-orange-700 border border-orange-200';
 
-        tr.innerHTML = `
-            <td class="px-5 py-4 whitespace-nowrap text-gray-500 text-xs">${formatDate(row.timestamp)}</td>
-            <td class="px-5 py-4 whitespace-nowrap font-black text-gray-800 bg-white group-hover:bg-orange-50/30 sticky left-0 z-10 transition-colors shadow-sm">${row.units?.economic_number || 'N/A'}</td>
-            <td class="px-5 py-4 whitespace-nowrap text-center">
-                <span class="px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-lg shadow-sm ${badgeClass}">${row.action_type}</span>
-            </td>
-            <td class="px-5 py-4 text-gray-600 min-w-[400px] leading-relaxed max-w-lg whitespace-normal text-xs font-medium">${row.details || ''}</td>
-            <td class="px-5 py-4 whitespace-nowrap text-gray-400 font-bold text-xs"><i class="fas fa-user-circle mr-1"></i> ${row.modified_by || 'Sistema'}</td>
-        `;
+            tr.innerHTML = `
+                <td class="px-5 py-4 whitespace-nowrap text-gray-500 text-xs">${formatDate(row.timestamp)}</td>
+                <td class="px-5 py-4 whitespace-nowrap font-black text-gray-800 bg-white group-hover:bg-orange-50/30 sticky left-0 z-10 transition-colors shadow-sm">${row.units?.economic_number || 'N/A'}</td>
+                <td class="px-5 py-4 whitespace-nowrap text-center">
+                    <span class="px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-lg shadow-sm ${badgeClass}">${row.action_type}</span>
+                </td>
+                <td class="px-5 py-4 text-gray-600 min-w-[400px] leading-relaxed max-w-lg whitespace-normal text-xs font-medium">${row.details || ''}</td>
+                <td class="px-5 py-4 whitespace-nowrap text-gray-400 font-bold text-xs"><i class="fas fa-user-circle mr-1"></i> ${row.modified_by || 'Sistema'}</td>
+            `;
+        } else {
+            // "Viaje Terminado" format
+            // The details string is like: "Cliente: CHANGAN | Obs: ... | Viaje: {"cliente":"CHANGAN","destino"...}"
+            let parsed = {};
+            let commentTxt = '';
+            let clientTxt = '---';
+            try {
+                const parts = (row.details || '').split('| Viaje: ');
+                if (parts.length > 1) {
+                     parsed = JSON.parse(parts[1].trim());
+                }
+                const p1 = parts[0].split('| Obs: ');
+                if (p1.length > 1) {
+                     commentTxt = p1[1].trim();
+                }
+                const p0 = p1[0].split('Cliente: ');
+                if (p0.length > 1) {
+                    clientTxt = p0[1].trim();
+                }
+            } catch(e) {}
+            
+            const origen = parsed.origen || '---';
+            const destino = parsed.destino || '---';
+            const viaje = parsed.viaje || parsed.bol || '---';
+            
+            const cp = parsed.checkpoints || {};
+            const formatShort = (dtStr) => {
+                if (!dtStr) return '---';
+                return new Date(dtStr).toLocaleString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'});
+            };
+
+            tr.innerHTML = `
+                <td class="px-5 py-4 whitespace-nowrap text-gray-500 text-xs font-bold">${formatDate(row.timestamp)}</td>
+                <td class="px-5 py-4 whitespace-nowrap font-black text-gray-800 bg-white group-hover:bg-orange-50/30 sticky left-0 z-10">
+                    <div class="text-lg">${row.units?.economic_number || 'N/A'}</div>
+                    <div class="text-[10px] font-mono text-gray-400">VIAJE / BOL: ${viaje}</div>
+                </td>
+                <td class="px-5 py-4 whitespace-nowrap font-bold text-blue-700">${clientTxt}</td>
+                <td class="px-5 py-4 whitespace-nowrap text-xs">
+                    <div><b>Origen:</b> ${origen}</div>
+                    <div class="mt-1"><b>Destino:</b> ${destino}</div>
+                </td>
+                <td class="px-5 py-4 text-[10px] text-gray-500 text-center leading-tight">
+                    <div><span class="text-gray-400 border-b border-gray-100 pb-0.5">Fin Carga:</span> <br><b>${formatShort(cp.trip_load_end || cp.llegadaCarga)}</b></div>
+                    <div class="mt-1"><span class="text-gray-400 border-b border-gray-100 pb-0.5">Entrega:</span> <br><b>${formatShort(cp.trip_unload_end || cp.finDescarga)}</b></div>
+                </td>
+                <td class="px-5 py-4 text-xs text-gray-600 truncate max-w-[200px]" title="${commentTxt}">${commentTxt || '<i class="text-gray-300">Ninguna</i>'}</td>
+            `;
+        }
+        
         list.appendChild(tr);
     });
+}
+
+function updateTableHeaders() {
+    const thead = document.querySelector('#history-table-thead');
+    if (!thead) return;
+    if (currentMode === 'auditoria') {
+        thead.innerHTML = `
+            <tr>
+                <th class="px-5 py-4 font-black">Fecha y Hora</th>
+                <th class="px-5 py-4 font-black bg-white shadow-sm sticky left-0 z-20">Económico</th>
+                <th class="px-5 py-4 font-black text-center">Acción / Tipo</th>
+                <th class="px-5 py-4 font-black">Detalles Auditados</th>
+                <th class="px-5 py-4 font-black">Usuario (Torre de Control)</th>
+            </tr>
+        `;
+    } else {
+        thead.innerHTML = `
+            <tr>
+                <th class="px-5 py-4 font-black">Fecha de Término</th>
+                <th class="px-5 py-4 font-black bg-white shadow-sm sticky left-0 z-20">Unidad</th>
+                <th class="px-5 py-4 font-black">Cliente</th>
+                <th class="px-5 py-4 font-black">Ruta (Origen/Destino)</th>
+                <th class="px-5 py-4 font-black text-center">Tiempos Registrados</th>
+                <th class="px-5 py-4 font-black">Observaciones</th>
+            </tr>
+        `;
+    }
 }
 
 function generatePDF() {
@@ -252,19 +366,46 @@ function generatePDF() {
         doc.text(`Periodo: ${startDt || 'Inicio'} a ${endDt || 'Hoy'}   |   Unidad: ${unitText}   |   Generado el: ${new Date().toLocaleString()}`, 14, 43);
 
         // Prepare Table Data
-        const tableColumn = ["Fecha y Hora", "Unidad", "Acción/Tipo", "Detalles", "Elaboró"];
-        const tableRows = [];
+        let tableColumn = [];
+        let tableRows = [];
 
-        currentData.forEach(row => {
-            const rowData = [
-                formatDate(row.timestamp),
-                row.units?.economic_number || 'N/A',
-                row.action_type,
-                row.details || '',
-                row.modified_by || 'Sistema'
-            ];
-            tableRows.push(rowData);
-        });
+        if (currentMode === 'auditoria') {
+            tableColumn = ["Fecha y Hora", "Unidad", "Acción/Tipo", "Detalles", "Elaboró"];
+            currentData.forEach(row => {
+                const rowData = [
+                    formatDate(row.timestamp),
+                    row.units?.economic_number || 'N/A',
+                    row.action_type,
+                    row.details || '',
+                    row.modified_by || 'Sistema'
+                ];
+                tableRows.push(rowData);
+            });
+        } else {
+            tableColumn = ["Término", "Unidad", "BOL/Viaje", "Cliente", "Ruta", "Obs"];
+            currentData.forEach(row => {
+                let parsed = {};
+                let commentTxt = '';
+                let clientTxt = '---';
+                try {
+                    const parts = (row.details || '').split('| Viaje: ');
+                    if (parts.length > 1) parsed = JSON.parse(parts[1].trim());
+                    const p1 = parts[0].split('| Obs: ');
+                    if (p1.length > 1) commentTxt = p1[1].trim();
+                    const p0 = p1[0].split('Cliente: ');
+                    if (p0.length > 1) clientTxt = p0[1].trim();
+                } catch(e) {}
+                
+                tableRows.push([
+                    formatDate(row.timestamp),
+                    row.units?.economic_number || 'N/A',
+                    parsed.viaje || parsed.bol || '---',
+                    clientTxt,
+                    (parsed.origen && parsed.destino) ? `${parsed.origen} a ${parsed.destino}` : '---',
+                    commentTxt
+                ]);
+            });
+        }
 
         // Generate Table
         doc.autoTable({
