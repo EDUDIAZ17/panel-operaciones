@@ -75,7 +75,7 @@ try {
         } 
         else if (role === 'operaciones') {
             allNavs.forEach(nav => {
-                if(nav !== 'nav-assignments' && nav !== 'nav-expenses') document.getElementById(nav)?.classList.add('hidden-section');
+                if(nav !== 'nav-assignments' && nav !== 'nav-expenses' && nav !== 'nav-payroll-map') document.getElementById(nav)?.classList.add('hidden-section');
             });
         } 
         else if (role === 'otros_usuarios') {
@@ -84,11 +84,11 @@ try {
             });
         } 
         else if (role === 'torre_control') {
-            // Torre de Control view logic remains as requested ("torre de control esta bien con lo que tiene")
+            // Torre de Control view logic
             document.getElementById('nav-expenses')?.classList.add('hidden-section');
             document.getElementById('nav-observations')?.classList.add('hidden-section');
             document.getElementById('nav-reports')?.classList.add('hidden-section');
-            document.getElementById('nav-payroll-map')?.classList.add('hidden-section');
+            // nav-payroll-map is NOT hidden for Torre de Control now
         } 
         else if (role === 'contabilidad') {
             allNavs.forEach(nav => {
@@ -177,7 +177,7 @@ function loadView(view) {
             renderHistoryReports(contentArea);
             break;
         case 'payroll-map':
-            pageTitle.textContent = 'Mapa de Nóminas (Recursos Humanos)';
+            pageTitle.textContent = 'Mapa EDY (Torre / Operaciones / RH)';
             setActiveNav('nav-payroll-map');
             renderPayrollMap(contentArea);
             break;

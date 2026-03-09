@@ -14,9 +14,9 @@ export function renderPayrollMap(container) {
             <div class="w-full md:w-1/3 bg-white rounded-xl shadow-lg border border-indigo-100 flex flex-col overflow-hidden">
                 <div class="p-4 bg-gradient-to-r from-indigo-700 to-indigo-900 border-b relative">
                     <h2 class="text-xl font-bold text-white flex items-center gap-2">
-                        <i class="fas fa-map-marked-alt text-indigo-300"></i> Calculadora Nómima y Rutas
+                        <i class="fas fa-map-marked-alt text-indigo-300"></i> Mapa EDY
                     </h2>
-                    <p class="text-indigo-200 text-xs mt-1">Herramienta exclusiva para Recursos Humanos</p>
+                    <p class="text-indigo-200 text-xs mt-1">Herramienta de Ruteo, Tráfico y Liquidaciones</p>
                 </div>
                 
                 <div class="p-4 flex-1 overflow-y-auto custom-scrollbar">
@@ -47,17 +47,26 @@ export function renderPayrollMap(container) {
                              </div>
                         </div>
 
-                        <div class="pt-2">
-                            <label class="block text-sm font-semibold text-gray-700 mb-1">Tipo de Unidad</label>
-                            <select id="map-unit-type" class="w-full border border-gray-300 rounded-lg p-2.5 shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
-                                <option value="full">Tractocamión T3-S2-R4 (Full)</option>
-                                <option value="sencillo">Tractocamión T3-S2 (Sencillo)</option>
-                                <option value="torton">Torton / Rabón</option>
-                            </select>
+                        <div class="pt-2 border-t mt-3 border-gray-100">
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Liquidación del Operador</label>
+                            
+                            <div class="grid grid-cols-2 gap-3 mb-2">
+                                <div>
+                                    <label class="block text-xs font-semibold text-gray-600 mb-1">Costo Base por KM</label>
+                                    <select id="map-rate-type" class="w-full border border-gray-300 rounded-lg p-2 text-sm shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
+                                        <option value="5.00">Unidad Cargada ($5.00/km)</option>
+                                        <option value="3.00">Unidad Vacía ($3.00/km)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-gray-600 mb-1">Alimentos Fijos</label>
+                                    <input type="text" disabled value="$0.45 / km" class="w-full border border-gray-200 bg-gray-50 rounded-lg p-2 text-sm shadow-sm text-gray-500 cursor-not-allowed">
+                                </div>
+                            </div>
                         </div>
-                        
+
                         <button id="btn-calc-route" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-lg shadow-md transition transform hover:-translate-y-0.5 mt-2 flex justify-center items-center gap-2">
-                            <i class="fas fa-route"></i> CALCULAR LOGÍSTICA
+                            <i class="fas fa-route"></i> CALCULAR RUTA EDY
                         </button>
                     </div>
 
@@ -79,29 +88,33 @@ export function renderPayrollMap(container) {
 
                         <div class="bg-orange-50 p-3 rounded-lg border border-orange-100 mb-4 flex items-center justify-between">
                              <div class="flex-1">
-                                 <p class="text-[10px] text-orange-600 font-bold uppercase tracking-wider mb-1">Costo Aprox. de Peajes (SCT)</p>
-                                 <p id="res-tolls" class="text-xs font-medium text-orange-800"><i class="fas fa-sync fa-spin"></i> Estimando con IA...</p>
+                                 <p class="text-[10px] text-orange-600 font-bold uppercase tracking-wider mb-1">Costo Casetas (Oficial SCT/Google)</p>
+                                 <p id="res-tolls" class="text-xl font-black text-orange-800">--</p>
                              </div>
-                             <i class="fas fa-robot text-orange-300 text-3xl ml-2"></i>
+                             <i class="fas fa-ticket-alt text-orange-300 text-3xl ml-2"></i>
                         </div>
 
                         <div class="bg-gray-50 border p-4 rounded-lg mb-4 space-y-3">
-                            <h4 class="text-sm font-bold text-gray-700 uppercase"><i class="fas fa-calculator text-gray-400"></i> Proyección de Nómina</h4>
-                            <div>
-                                <p class="text-xs text-gray-500 font-bold">Tarifa por KM Sugerida</p>
-                                <div class="flex items-center gap-2 mt-1">
-                                    <span class="text-gray-500">$</span>
-                                    <input type="number" id="rate-per-km" class="w-full border rounded p-1.5 text-sm font-bold bg-white text-right outline-none focus:border-indigo-500" value="0.45" step="0.01">
-                                </div>
+                            <h4 class="text-sm font-bold text-gray-700 uppercase"><i class="fas fa-calculator text-gray-400"></i> Proyección de Liquidación</h4>
+                            
+                            <div class="flex justify-between items-center bg-white p-2 border rounded-md">
+                                <span class="text-xs text-gray-600 font-bold"><i class="fas fa-hamburger text-amber-500 w-4"></i> Alimentos Base:</span>
+                                <span id="res-alimentos" class="text-sm font-bold text-gray-800">$0.00</span>
                             </div>
-                            <div class="pt-2 border-t mt-2">
-                                <p class="text-xs text-gray-500 font-bold">Total Nómina (Viáticos/Comisión)</p>
-                                <p id="res-payroll" class="text-2xl font-black text-gray-800">$0.00</p>
+                            
+                            <div class="flex justify-between items-center bg-white p-2 border rounded-md">
+                                <span class="text-xs text-gray-600 font-bold"><i class="fas fa-coins text-yellow-500 w-4"></i> Nómina Operador:</span>
+                                <span id="res-nomina" class="text-sm font-bold text-gray-800">$0.00</span>
+                            </div>
+
+                            <div class="pt-3 border-t-2 border-gray-200 mt-2">
+                                <p class="text-xs text-gray-500 font-bold uppercase tracking-wider mb-1">Gran Total Estimado (Viáticos + Liquidación)</p>
+                                <p id="res-payroll" class="text-3xl font-black text-indigo-800">$0.00</p>
                             </div>
                         </div>
 
-                        <button id="btn-ai-restrictions" class="w-full border-2 border-purple-500 text-purple-700 bg-purple-50 hover:bg-purple-100 font-bold py-2.5 rounded-lg transition flex justify-center items-center gap-2 text-sm">
-                            <i class="fas fa-robot"></i> Rúta IA Sugerida y Restricciones
+                        <button id="btn-ai-restrictions" class="w-full border-2 border-purple-500 text-purple-700 bg-purple-50 hover:bg-purple-100 font-bold py-2.5 rounded-lg transition flex justify-center items-center gap-2 text-sm mt-4">
+                            <i class="fas fa-robot"></i> Inteligencia Artificial: Riesgos Carretera
                         </button>
                     </div>
                 </div>
@@ -122,7 +135,7 @@ export function renderPayrollMap(container) {
     bindWaypointLogic();
     
     document.getElementById('btn-calc-route').addEventListener('click', calculateMapRoute);
-    document.getElementById('rate-per-km').addEventListener('change', updatePayroll);
+    document.getElementById('map-rate-type').addEventListener('change', updatePayroll);
     document.getElementById('btn-ai-restrictions').addEventListener('click', checkAIRestrictions);
 }
 
@@ -173,6 +186,9 @@ function initMap() {
             {"featureType":"water","elementType":"geometry","stylers":[{"color":"#e9e9e9"}]}
         ]
     });
+
+    const trafficLayer = new google.maps.TrafficLayer();
+    trafficLayer.setMap(map);
 
     directionsService = new google.maps.DirectionsService();
     directionsRenderer = new google.maps.DirectionsRenderer({
@@ -265,16 +281,20 @@ function calculateMapRoute() {
             }
 
             document.getElementById('route-results').classList.remove('hidden');
-            document.getElementById('res-tolls').innerHTML = '<i class="fas fa-sync fa-spin"></i> Estimando con IA...';
-            updatePayroll();
+            document.getElementById('res-tolls').innerHTML = '<i class="fas fa-sync fa-spin"></i> Consultando Sect. de Comunicaciones y Transportes... (Google Routes)';
             
-            try {
-                const tollText = await estimateTollsWithAI(origen, destino, waypointNames);
-                document.getElementById('res-tolls').innerHTML = tollText;
-            } catch (e) {
-                document.getElementById('res-tolls').innerHTML = '<span class="text-red-500 font-normal">Error al estimar peajes.</span>';
-            }
-            
+            // Llama a la nueva funcion de Routes API V2 para casetas nativas
+            fetchTollsViaRoutesAPI(origen, destino, waypointNames).then(tollData => {
+                 document.getElementById('res-tolls').textContent = tollData.costoTotalFormatted;
+                 document.getElementById('res-tolls').dataset.tollsAmount = tollData.costoTotalNumerical;
+                 updatePayroll();
+            }).catch(e => {
+                 console.error("Native toll error:", e);
+                 document.getElementById('res-tolls').innerHTML = '<span class="text-red-500 text-[10px]">Error al obtener peajes de SCT. Intente más tarde o la ruta no es de cuota.</span>';
+                 document.getElementById('res-tolls').dataset.tollsAmount = 0;
+                 updatePayroll();
+            });
+
         } else {
             console.error("Directions requests failed: ", status);
             Swal.fire('Ruta no encontrada', 'No se pudo trazar la ruta entre estos puntos. Verifica que estén escritos correctamente.', 'error');
@@ -282,15 +302,92 @@ function calculateMapRoute() {
     });
 }
 
+async function fetchTollsViaRoutesAPI(originStr, destinationStr, waypointsArray) {
+    // Para usar Directions API V2, usamos la URL REST
+    const url = 'https://routes.googleapis.com/directions/v2:computeRoutes';
+    
+    const waypointsNodes = waypointsArray.map(w => ({
+        location: { address: w }
+    }));
+
+    const requestBody = {
+        origin: { address: originStr },
+        destination: { address: destinationStr },
+        intermediates: waypointsNodes,
+        travelMode: "DRIVE",
+        routeModifiers: {
+            vehicleInfo: {
+                emissionType: "GASOLINE" // Required minimal vehicle info for tolls
+            },
+            tollPasses: []
+        },
+        computeTollInfo: true,
+        extraComputations: ["TOLLS"]
+    };
+
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Goog-Api-Key': GOOGLE_MAPS_API_KEY,
+            'X-Goog-FieldMask': 'routes.distanceMeters,routes.duration,routes.travelAdvisory.tollInfo'
+        },
+        body: JSON.stringify(requestBody)
+    });
+
+    if (!response.ok) {
+        throw new Error(`Google Routes API V2 Error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    
+    // Calcula el costo total basado en la moneda local
+    let costoTotal = 0;
+    let currencyCode = "MXN";
+
+    if (data.routes && data.routes[0] && data.routes[0].travelAdvisory && data.routes[0].travelAdvisory.tollInfo) {
+        const tollInfo = data.routes[0].travelAdvisory.tollInfo;
+        if (tollInfo.estimatedPrice && tollInfo.estimatedPrice.length > 0) {
+            costoTotal = parseFloat(tollInfo.estimatedPrice[0].units) || 0;
+            const nanos = tollInfo.estimatedPrice[0].nanos || 0;
+            costoTotal += (nanos / 1000000000); // 1 nano = 10^-9
+            currencyCode = tollInfo.estimatedPrice[0].currencyCode;
+        }
+    }
+
+    if(costoTotal === 0) {
+        return {
+            costoTotalFormatted: "Sin Costo de Casetas Libre de Peaje",
+            costoTotalNumerical: 0
+        };
+    }
+
+    return {
+         costoTotalFormatted: new Intl.NumberFormat('es-MX', { style: 'currency', currency: currencyCode }).format(costoTotal) + " " + currencyCode,
+         costoTotalNumerical: costoTotal
+    };
+}
+
 function updatePayroll() {
     const kmSpan = document.getElementById('res-distance');
     if (!kmSpan.dataset.km) return;
     
     const km = parseFloat(kmSpan.dataset.km);
-    const rate = parseFloat(document.getElementById('rate-per-km').value) || 0;
-    const total = km * rate;
+    const nominaRate = parseFloat(document.getElementById('map-rate-type').value) || 3.00; // Vacía por default
+    const alimentosRate = 0.45; // Fijo
     
-    document.getElementById('res-payroll').textContent = '$' + total.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    const nominaTotal = km * nominaRate;
+    const alimentosTotal = km * alimentosRate;
+    
+    const casetasElement = document.getElementById('res-tolls');
+    const casetasTotal = parseFloat(casetasElement?.dataset?.tollsAmount) || 0;
+
+    const granTotal = nominaTotal + alimentosTotal + casetasTotal;
+    
+    document.getElementById('res-alimentos').textContent = '$' + alimentosTotal.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    document.getElementById('res-nomina').textContent = '$' + nominaTotal.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    
+    document.getElementById('res-payroll').textContent = '$' + granTotal.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2});
 }
 
 async function checkAIRestrictions() {
