@@ -183,10 +183,10 @@ async function loadClientReport() {
                 const fProg = scheduledDate ? formatCP(scheduledDate) : '<span class="text-gray-300">---</span>';
                 const cp = u.details?.checkpoints || {};
                 
-                const fCarga = cp.finCarga ? formatCP(cp.finCarga) : (cp.llegadaCarga ? formatCP(cp.llegadaCarga) : '<span class="text-gray-300">---</span>');
-                const fRuta = cp.finCarga ? formatCP(cp.finCarga) : '<span class="text-gray-300">---</span>'; 
-                const eta = u.details?.eta ? formatCP(u.details.eta) : '<span class="text-gray-300">---</span>';
-                const fEntrega = cp.finDescarga ? formatCP(cp.finDescarga) : '<span class="text-gray-300">---</span>';
+                const fCarga = cp.trip_load_end ? formatCP(cp.trip_load_end) : (cp.trip_load_arrival ? formatCP(cp.trip_load_arrival) : '<span class="text-gray-300">---</span>');
+                const fRuta = cp.trip_route_start ? formatCP(cp.trip_route_start) : (cp.trip_load_end ? formatCP(cp.trip_load_end) : '<span class="text-gray-300">---</span>'); 
+                const eta = u.details?.eta ? formatCP(u.details.eta) : (cp.trip_unload_arrival ? formatCP(cp.trip_unload_arrival) : '<span class="text-gray-300">---</span>');
+                const fEntrega = cp.trip_unload_end ? formatCP(cp.trip_unload_end) : '<span class="text-gray-300">---</span>';
                 
                 const comentarios = u.details?.comments || '';
 
@@ -271,7 +271,7 @@ async function loadClientReport() {
             filteredUnits.forEach(u => {
                 const opName = u.operators?.name || '<span class="text-gray-400 italic">Sin Asignar</span>';
                 const cp = u.details?.checkpoints || {};
-                const fCarga = cp.finCarga ? formatCP(cp.finCarga) : (cp.llegadaCarga ? formatCP(cp.llegadaCarga) : '<span class="text-gray-300">---</span>');
+                const fCarga = cp.trip_load_end ? formatCP(cp.trip_load_end) : (cp.trip_load_arrival ? formatCP(cp.trip_load_arrival) : '<span class="text-gray-300">---</span>');
                 
                 const cliente = u.details?.cliente || 'CHANGAN';
                 const viaje = u.details?.viaje || u.details?.bol || '<span class="text-gray-300">---</span>';
@@ -502,11 +502,11 @@ window.openClientReportEdit = (id) => {
                         </div>
                         <div class="bg-gray-50 p-3 rounded-xl border border-gray-100">
                             <label class="block text-[10px] font-bold text-gray-500 mb-1 uppercase">Llegada a Carga</label>
-                            <input type="datetime-local" id="cr-edit-llegadac" value="${cp.llegadaCarga ? new Date(new Date(cp.llegadaCarga).getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().slice(0,16) : ''}" class="w-full bg-white border border-gray-200 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                            <input type="datetime-local" id="cr-edit-llegadac" value="${cp.trip_load_arrival ? new Date(new Date(cp.trip_load_arrival).getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().slice(0,16) : ''}" class="w-full bg-white border border-gray-200 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
                         </div>
                         <div class="bg-gray-50 p-3 rounded-xl border border-gray-100">
                             <label class="block text-[10px] font-bold text-gray-500 mb-1 uppercase">Fin Carga / Ins. Ruta</label>
-                            <input type="datetime-local" id="cr-edit-finc" value="${cp.finCarga ? new Date(new Date(cp.finCarga).getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().slice(0,16) : ''}" class="w-full bg-white border border-gray-200 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                            <input type="datetime-local" id="cr-edit-finc" value="${cp.trip_load_end ? new Date(new Date(cp.trip_load_end).getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().slice(0,16) : ''}" class="w-full bg-white border border-gray-200 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
                         </div>
                         <div class="bg-gray-50 p-3 rounded-xl border border-gray-100">
                             <label class="block text-[10px] font-bold text-gray-500 mb-1 uppercase">ETA (Estimado Llegada)</label>
@@ -514,7 +514,7 @@ window.openClientReportEdit = (id) => {
                         </div>
                         <div class="bg-gray-50 p-3 rounded-xl border border-gray-100 col-span-2">
                             <label class="block text-[10px] font-bold text-gray-500 mb-1 uppercase">Fin Descarga (Entrega Final)</label>
-                            <input type="datetime-local" id="cr-edit-find" value="${cp.finDescarga ? new Date(new Date(cp.finDescarga).getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().slice(0,16) : ''}" class="w-full bg-white border border-gray-200 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                            <input type="datetime-local" id="cr-edit-find" value="${cp.trip_unload_end ? new Date(new Date(cp.trip_unload_end).getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().slice(0,16) : ''}" class="w-full bg-white border border-gray-200 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
                         </div>
                     </div>
 
@@ -555,9 +555,9 @@ window.saveClientReportEdit = async (id) => {
         details.eta = document.getElementById('cr-edit-eta').value;
         details.comments = document.getElementById('cr-edit-comments').value;
 
-        cp.llegadaCarga = document.getElementById('cr-edit-llegadac').value;
-        cp.finCarga = document.getElementById('cr-edit-finc').value;
-        cp.finDescarga = document.getElementById('cr-edit-find').value;
+        cp.trip_load_arrival = document.getElementById('cr-edit-llegadac').value;
+        cp.trip_load_end = document.getElementById('cr-edit-finc').value;
+        cp.trip_unload_end = document.getElementById('cr-edit-find').value;
 
         details.checkpoints = cp;
         const newStatus = document.getElementById('cr-edit-status').value;
@@ -565,9 +565,9 @@ window.saveClientReportEdit = async (id) => {
         // Si se limpió un date, lo pasamos como null para que no rompa el parsing
         if(!details.scheduled_trip) delete details.scheduled_trip;
         if(!details.eta) delete details.eta;
-        if(!cp.llegadaCarga) delete cp.llegadaCarga;
-        if(!cp.finCarga) delete cp.finCarga;
-        if(!cp.finDescarga) delete cp.finDescarga;
+        if(!cp.trip_load_arrival) delete cp.trip_load_arrival;
+        if(!cp.trip_load_end) delete cp.trip_load_end;
+        if(!cp.trip_unload_end) delete cp.trip_unload_end;
 
         const { error } = await supabase.from('units').update({
             details: details,
@@ -645,14 +645,14 @@ function generatePDF() {
                 const destino = u.details?.destino || '---';
                 const fProg = u.details?.scheduled_trip ? formatCPTxt(u.details.scheduled_trip) : '---';
                 const cp = u.details?.checkpoints || {};
-                const fCarga = cp.finCarga ? formatCPTxt(cp.finCarga) : (cp.llegadaCarga ? formatCPTxt(cp.llegadaCarga) : '---');
-                const fRuta = cp.finCarga ? formatCPTxt(cp.finCarga) : '---'; 
-                const eta = u.details?.eta ? formatCPTxt(u.details.eta) : '---';
-                const fEntrega = cp.finDescarga ? formatCPTxt(cp.finDescarga) : '---';
+                const fCarga = cp.trip_load_end ? formatCPTxt(cp.trip_load_end) : (cp.trip_load_arrival ? formatCPTxt(cp.trip_load_arrival) : '---');
+                const fRuta = cp.trip_route_start ? formatCPTxt(cp.trip_route_start) : (cp.trip_load_end ? formatCPTxt(cp.trip_load_end) : '---'); 
+                const eta = u.details?.eta ? formatCPTxt(u.details.eta) : (cp.trip_unload_arrival ? formatCPTxt(cp.trip_unload_arrival) : '---');
+                const fEntrega = cp.trip_unload_end ? formatCPTxt(cp.trip_unload_end) : '---';
                 const comentarios = u.details?.comments || '';
 
                 tableRows.push([
-                    "---",
+                    u.details?.bol || u.details?.viaje || '---',
                     u.economic_number,
                     destino,
                     fProg,
@@ -669,12 +669,12 @@ function generatePDF() {
             currentFilteredUnits.forEach(u => {
                 const opName = u.operators?.name || 'Sin Asignar';
                 const cp = u.details?.checkpoints || {};
-                const fCarga = cp.finCarga ? formatCPTxt(cp.finCarga) : (cp.llegadaCarga ? formatCPTxt(cp.llegadaCarga) : '---');
+                const fCarga = cp.trip_load_end ? formatCPTxt(cp.trip_load_end) : (cp.trip_load_arrival ? formatCPTxt(cp.trip_load_arrival) : '---');
                 const cliente = u.details?.cliente || 'CHANGAN';
-                const viaje = u.details?.viaje || '---';
+                const viaje = u.details?.viaje || u.details?.bol || '---';
                 const origen = u.details?.origen || '---';
                 const destino = u.details?.destino || '---';
-                const eta = u.details?.eta ? formatCPTxt(u.details.eta) : '---';
+                const eta = u.details?.eta ? formatCPTxt(u.details.eta) : (cp.trip_unload_arrival ? formatCPTxt(cp.trip_unload_arrival) : '---');
                 const obs = u.details?.comments || '';
 
                 tableRows.push([

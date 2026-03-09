@@ -4,11 +4,45 @@ import { formatDate, calculateTimeElapsed, formatCurrency, calculateFinancialLos
 import { fetchSamsaraLocations } from '../services/samsara.js';
 import { GOOGLE_API_KEY } from '../config/config.js'; // Added import for GOOGLE_API_KEY
 
+const geoCache = new Map();
 let updateInterval; 
 let transitionInterval;
 let currentPage = 0;
 const ITEMS_PER_PAGE = 8;
 let samsaraData = [];
+
+async function reverseGeocode(lat, lng, elementId) {
+    const key = `${lat.toFixed(3)},${lng.toFixed(3)}`;
+    if (geoCache.has(key)) {
+        const el = document.getElementById(elementId);
+        if (el) el.innerText = geoCache.get(key);
+        return;
+    }
+
+    if (!window.google || !window.google.maps || !window.google.maps.Geocoder) return;
+
+    const geocoder = new window.google.maps.Geocoder();
+    try {
+        geocoder.geocode({ location: { lat, lng } }, (results, status) => {
+            if (status === "OK" && results[0]) {
+                // Try to get a short locality or route
+                let shortAddress = results[0].formatted_address.split(',').slice(0, 2).join(', ');
+                const localityMatch = results.find(r => r.types.includes('locality') || r.types.includes('sublocality') || r.types.includes('route'));
+                if (localityMatch) shortAddress = localityMatch.formatted_address.split(',')[0];
+
+                geoCache.set(key, shortAddress);
+                const el = document.getElementById(elementId);
+                if (el) el.innerText = shortAddress;
+            } else {
+                geoCache.set(key, 'GPS Activo');
+                const el = document.getElementById(elementId);
+                if (el) el.innerText = 'GPS Activo';
+            }
+        });
+    } catch(e) {
+        console.error("Geocoding Error", e);
+    }
+}
 
 export async function renderDashboard(container) {
     if (updateInterval) clearInterval(updateInterval);
@@ -220,7 +254,13 @@ function renderRows(units, container) {
             aiRouteBtn = `<div class="mt-1"><button onclick="window.openAIRoute('${origenStr}', '${destinoStr}')" class="text-purple-400 hover:text-purple-300 text-[10px] font-bold transition flex justify-center items-center gap-1 w-full"><i class="fas fa-robot"></i> Ruta IA</button></div>`;
         }
 
-        const city = samsaraVeh ? `<span class="text-[10px] block truncate text-gray-400">GPS Activo</span>` : '<span class="text-[10px] text-gray-600">No Signal</span>';
+        let geoId = `geo-${unit.id}`;
+        let city = '<span class="text-[10px] text-gray-600">No Signal</span>';
+        
+        if (samsaraVeh && samsaraVeh.location) {
+            city = `<span id="${geoId}" class="text-[10px] block truncate text-purple-300 font-bold w-32 mx-auto" title="Ubicación GPS">Obteniendo...</span>`;
+            setTimeout(() => reverseGeocode(samsaraVeh.location.latitude, samsaraVeh.location.longitude, geoId), 100);
+        }
 
         let rowClass = 'border-l-4 border-transparent airport-flip'; 
         if(unit.status === 'Vacia' || unit.status === 'En Taller') rowClass += ' border-l-red-900';
