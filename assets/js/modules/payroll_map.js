@@ -47,6 +47,15 @@ export function renderPayrollMap(container) {
                              </div>
                         </div>
 
+                        <div class="pt-2">
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">Tipo de Unidad</label>
+                            <select id="map-unit-type" class="w-full border border-gray-300 rounded-lg p-2.5 shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
+                                <option value="full">Tractocamión T3-S2-R4 (Full)</option>
+                                <option value="sencillo">Tractocamión T3-S2 (Sencillo)</option>
+                                <option value="torton">Torton / Rabón</option>
+                            </select>
+                        </div>
+
                         <div class="pt-2 border-t mt-3 border-gray-100">
                             <label class="block text-sm font-semibold text-gray-700 mb-2">Liquidación del Operador</label>
                             
@@ -336,7 +345,9 @@ function calculateMapRoute() {
                 document.getElementById('res-tolls').innerHTML = '<i class="fas fa-sync fa-spin"></i> Estimando con IA...';
                 updatePayroll(); // Update with 0 for now
                 
-                estimateTollsWithAI(origen, destino, waypointNames).then(tollText => {
+                const unitType = document.getElementById('map-unit-type').value;
+
+                estimateTollsWithAI(origen, destino, waypointNames, unitType).then(tollText => {
                     document.getElementById('res-tolls').innerHTML = tollText;
                     // Try to extract the number from AI response to add it to total
                     const match = tollText.match(/\$?(\d+,?\d*\.?\d*)/);
@@ -447,21 +458,22 @@ function updatePayroll() {
 async function checkAIRestrictions() {
     const origen = document.getElementById('map-origen').value;
     const destino = document.getElementById('map-destino').value;
+    const unitType = document.getElementById('map-unit-type').value;
 
     if (!origen || !destino) return;
 
     Swal.fire({
         title: 'Consultando Restricciones SCT...',
-        html: '<div class="spinner my-4"></div><p class="text-sm">Analizando trazado de autopistas federales de cuota compatibles con Full Remolque...</p>',
+        html: '<div class="spinner my-4"></div><p class="text-sm">Analizando trazado de autopistas federales de cuota y compatibilidad de unidad...</p>',
         allowOutsideClick: false,
         showConfirmButton: false
     });
 
-    const routeAI = await getHeavyVehicleRouteWithAI(origen, destino);
+    const routeAI = await getHeavyVehicleRouteWithAI(origen, destino, unitType);
 
     Swal.fire({
         icon: 'info',
-        title: 'Análisis IA (SCT Doble Articulado)',
+        title: 'Análisis IA (Restricciones SCT)',
         html: `<div class="text-left text-sm bg-purple-50 p-4 border border-purple-100 rounded-xl shadow-inner mt-4 text-purple-900">${routeAI}</div>`,
         confirmButtonText: 'Entendido',
         confirmButtonColor: '#8b5cf6',
