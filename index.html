@@ -4,6 +4,27 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Panel de Operaciones Logísticas</title>
+    <!-- Error Handler for Mobile Debugging -->
+    <script>
+      window.onerror = function (message, source, lineno, colno, error) {
+        alert(
+          "CRITICAL JS ERROR: " +
+            message +
+            "\nArchivo: " +
+            source +
+            "\nLinea: " +
+            lineno,
+        );
+      };
+      window.addEventListener("unhandledrejection", function (event) {
+        alert(
+          "PROMISE ERROR: " +
+            (event.reason && event.reason.message
+              ? event.reason.message
+              : event.reason),
+        );
+      });
+    </script>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com/3.4.1"></script>
     <!-- FontAwesome -->
