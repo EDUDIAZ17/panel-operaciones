@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Maps EDY - Cabina</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com/3.4.1"></script>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Roboto:wght@500;700;900&display=swap" rel="stylesheet" />
+    <!-- Google Maps API -->
+    <script async src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBiaioYABgNrwIm-j_H1VuPk2SN7CsbbFY&libraries=places,geometry&loading=async"></script>
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+      body {
+        font-family: "Roboto", sans-serif;
+        background-color: #000;
+        color: #fff;
+        overflow: hidden; /* Prevent scrolling, app is fixed */
+        touch-action: none;
+      }
+      .font-mono-tech {
+        font-family: "Share Tech Mono", monospace;
+      }
+      
+      /* Alto Contraste UI */
+      .panel-blur {
+        background: rgba(15, 23, 42, 0.85);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 2px solid rgba(255, 255, 255, 0.1);
+      }
+      
+      .neon-accent {
+        box-shadow: 0 0 15px rgba(52, 211, 153, 0.5);
+      }
+      
+      .neon-warning {
+        box-shadow: 0 0 15px rgba(245, 158, 11, 0.5);
+      }
+      
+      .neon-danger {
+        box-shadow: 0 0 15px rgba(239, 68, 68, 0.5);
+      }
+
+      /* Pulse animation for voice */
+      @keyframes mic-pulse {
+        0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); }
+        70% { box-shadow: 0 0 0 20px rgba(59, 130, 246, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+      }
+      .listening {
+        animation: mic-pulse 1.5s infinite;
+        background-color: #3b82f6 !important;
+        color: white !important;
+      }
+
+      /* Custom scrollbar for small panels */
+      .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+      .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+      .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.3); border-radius: 4px; }
+    </style>
+  </head>
+  <body class="w-screen h-screen flex flex-col relative text-white">
+
+    <!-- Mapa Full Screen -->
+    <div id="edy-map-canvas" class="absolute inset-0 z-0 h-full w-full"></div>
+
+    <!-- Capa Superior: Header Top -->
+    <header class="absolute top-0 left-0 w-full z-10 p-3 pointer-events-none">
+        <div class="flex justify-between items-start pointer-events-auto gap-2">
+            
+            <!-- Turn-by-turn / Próxima Acción (Alto Contraste) -->
+            <div id="nav-instruction" class="panel-blur rounded-2xl p-4 flex-1 shadow-2xl border-l-8 border-l-emerald-500 max-w-xl flex items-center gap-4">
+                <i id="nav-icon" class="fas fa-arrow-up text-5xl text-emerald-400 drop-shadow-md"></i>
+                <div>
+                    <h2 id="nav-distance" class="text-3xl font-black text-white font-mono-tech tracking-wider">-- m</h2>
+                    <p id="nav-text" class="text-xl font-bold text-gray-200">Esperando Ruta...</p>
+                </div>
+            </div>
+
+            <!-- Panel Derecho: Casetas & IA -->
+            <div class="panel-blur rounded-2xl p-3 flex flex-col items-end shadow-2xl border-t-4 border-t-amber-500">
+                <div class="flex items-center gap-2 mb-1">
+                    <i class="fas fa-ticket-alt text-amber-500"></i>
+                    <span class="text-xs text-gray-300 font-bold uppercase">Siguiente Caseta</span>
+                </div>
+                <div id="next-toll-name" class="text-sm font-bold text-white text-right w-full mb-1">--</div>
+                <div class="flex items-baseline gap-1">
+                    <span class="text-xs text-amber-500 font-bold">EST.</span>
+                    <span id="next-toll-cost" class="text-2xl font-black text-amber-400 font-mono-tech">$0.00</span>
+                </div>
+                <div class="mt-2 text-[10px] text-gray-400 font-bold bg-white/10 px-2 py-0.5 rounded flex items-center gap-1">
+                    <i class="fas fa-robot text-purple-400"></i> IA OCR Validado
+                </div>
+            </div>
+
+        </div>
+    </header>
+
+    <!-- Overlay Controls (Bottom Area) -->
+    <footer class="absolute bottom-0 left-0 w-full z-10 p-3 pointer-events-none pb-6">
+        <div class="flex flex-col gap-3 pointer-events-auto">
+            
+            <!-- Toolbar de Seguridad y Carta Porte -->
+            <div class="flex justify-between items-end gap-2">
+                
+                <!-- Botones Izquierdos (Seguridad) -->
+                <div class="flex flex-col gap-2">
+                    <button id="btn-hotspots" class="bg-slate-900 border border-red-500/50 text-red-400 rounded-full w-14 h-14 flex items-center justify-center text-2xl shadow-lg hover:bg-slate-800 transition" title="Toggle Hotspots de Riesgo">
+                        <i class="fas fa-biohazard"></i>
+                    </button>
+                    <button id="btn-safe-stops" class="bg-slate-900 border border-emerald-500/50 text-emerald-400 rounded-full w-14 h-14 flex items-center justify-center text-2xl shadow-lg hover:bg-slate-800 transition" title="Paraderos Seguros">
+                        <i class="fas fa-shield-alt"></i>
+                    </button>
+                    <button id="btn-carta-porte" class="bg-indigo-900 border border-indigo-500/50 text-indigo-300 rounded-xl p-3 flex flex-col items-center justify-center shadow-lg hover:bg-indigo-800 transition mt-2">
+                        <i class="fas fa-file-invoice text-xl mb-1"></i>
+                        <span class="text-[10px] font-bold">Carta Porte</span>
+                    </button>
+                </div>
+
+                <!-- Botón de Asistente de Voz (Centro) -->
+                <div class="flex flex-col items-center justify-end pb-2">
+                    <div id="voice-tooltip" class="bg-blue-600 text-white text-xs font-bold px-3 py-1 rounded-full mb-2 opacity-0 transition-opacity whitespace-nowrap shadow-lg">
+                        "¿Falta mucho?"
+                    </div>
+                    <button id="btn-voice" class="bg-slate-800 border-2 border-blue-500 text-blue-400 rounded-full w-20 h-20 flex items-center justify-center text-3xl shadow-[0_0_20px_rgba(59,130,246,0.4)] transition-all">
+                        <i class="fas fa-microphone"></i>
+                    </button>
+                </div>
+
+                <!-- Panel Derecho (Telemetría / ETA) -->
+                <div class="panel-blur rounded-2xl p-4 flex flex-col min-w-[160px] shadow-2xl border-b-4 border-b-blue-500">
+                    <div class="flex justify-between items-end mb-2">
+                        <div class="text-xs text-gray-400 tracking-widest font-bold">VEL</div>
+                        <div class="flex items-baseline gap-1">
+                            <span id="telemetry-speed" class="text-4xl font-black font-mono-tech text-white">0</span>
+                            <span class="text-sm font-bold text-gray-500">km/h</span>
+                        </div>
+                    </div>
+                    <div class="w-full bg-gray-700 h-1.5 rounded-full mb-4 overflow-hidden">
+                        <div id="speed-bar" class="bg-emerald-500 h-full w-0 transition-all"></div>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-2 mt-auto">
+                        <div>
+                            <p class="text-[10px] text-gray-400 font-bold uppercase">ETA Adaptativo</p>
+                            <p id="telemetry-eta" class="text-xl font-bold text-white">--:--</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-[10px] text-gray-400 font-bold uppercase">Resta</p>
+                            <p id="telemetry-time-left" class="text-lg font-bold text-blue-400">-- h</p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </footer>
+
+    <!-- Offline Status Indicator -->
+    <div id="offline-indicator" class="hidden absolute top-4 left-1/2 transform -translate-x-1/2 bg-red-600/90 backdrop-blur text-white px-4 py-1.5 rounded-full text-xs font-bold shadow-lg z-50 flex items-center gap-2 border border-red-400">
+        <i class="fas fa-wifi-slash"></i> MODO OFFLINE LÍNEA BASE
+    </div>
+
+    <!-- Scripts -->
+    <script type="module" src="assets/js/edy_app.js"></script>
+    <script type="module" src="assets/js/edy_voice.js"></script>
+    <script type="module" src="assets/js/edy_offline.js"></script>
+    <script type="module" src="assets/js/edy_security.js"></script>
+    <script type="module" src="assets/js/edy_ai.js"></script>
+  </body>
+</html>
