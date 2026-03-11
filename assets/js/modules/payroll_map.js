@@ -499,13 +499,13 @@ async function fetchTollsViaRoutesAPI(originStr, destinationStr, waypointsArray)
         origin: { address: originStr },
         destination: { address: destinationStr },
         travelMode: "DRIVE",
-        computeTollInfo: true,
+        routingPreference: "TRAFFIC_AWARE",
         extraComputations: ["TOLLS"]
     };
 
     if (waypointsArray && waypointsArray.length > 0) {
         requestBody.intermediates = waypointsArray.map(w => ({
-            location: { address: w }
+            address: w
         }));
     }
 
@@ -520,10 +520,12 @@ async function fetchTollsViaRoutesAPI(originStr, destinationStr, waypointsArray)
     });
 
     if (!response.ok) {
+        const errDetails = await response.text();
+        console.error("Detalle de Error de Google Routes API V2:", errDetails);
         throw new Error(`Google Routes API V2 Error: ${response.status}`);
     }
 
-    const data = await response.json();
+    const data = JSON.parse(await response.text());
     
     // Calcula el costo total basado en la moneda local
     let costoTotal = 0;
