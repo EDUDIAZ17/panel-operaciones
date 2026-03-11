@@ -50,12 +50,16 @@ export function renderPayrollMap(container) {
                         </div>
 
                         <div class="pt-2">
-                            <label class="block text-sm font-semibold text-gray-700 mb-1">Tipo de Unidad</label>
-                            <select id="map-unit-type" class="w-full border border-gray-300 rounded-lg p-2.5 shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
-                                <option value="full">Tractocamión T3-S2-R4 (Full)</option>
-                                <option value="sencillo">Tractocamión T3-S2 (Sencillo)</option>
-                                <option value="torton">Torton / Rabón</option>
-                            </select>
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">Perfil Operativo (NOM-012)</label>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+                                <select id="map-unit-type" class="w-full border border-gray-300 rounded-lg p-2.5 shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white text-xs" title="Tipo de Unidad">
+                                    <option value="full">Tractocamión (Full)</option>
+                                    <option value="sencillo">Tractocamión (Sencillo)</option>
+                                    <option value="torton">Torton/Rabón</option>
+                                </select>
+                                <input type="number" id="map-axles" value="9" min="2" max="14" class="w-full border border-gray-300 rounded-lg p-2.5 shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none text-xs" title="Número de Ejes (ej. 9 para Full)" placeholder="Ejes">
+                                <input type="number" id="map-weight" value="75.5" step="0.5" class="w-full border border-gray-300 rounded-lg p-2.5 shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none text-xs" title="Peso Bruto/Carga (Toneladas)" placeholder="Ton.">
+                            </div>
                         </div>
 
                         <div class="pt-2 border-t mt-3 border-gray-100">
@@ -138,8 +142,12 @@ export function renderPayrollMap(container) {
                             <i class="fas fa-location-arrow"></i> INICIAR NAVEGACIÓN (MÓVIL)
                         </button>
 
-                        <button id="btn-ai-restrictions" class="w-full border-2 border-purple-500 text-purple-700 bg-purple-50 hover:bg-purple-100 font-bold py-2.5 rounded-lg transition flex justify-center items-center gap-2 text-sm mt-3">
+                        <button id="btn-ai-restrictions" class="w-full border border-purple-500 text-purple-700 bg-purple-50 hover:bg-purple-100 font-bold py-2 rounded-lg transition flex justify-center items-center gap-2 text-xs mt-3">
                             <i class="fas fa-robot"></i> Inteligencia Artificial: Riesgos Carretera
+                        </button>
+                        
+                        <button id="btn-ai-nom012" class="w-full border-2 border-slate-800 text-slate-800 bg-slate-50 hover:bg-slate-800 hover:text-white font-bold py-2.5 rounded-lg transition flex justify-center items-center gap-2 text-sm mt-3 shadow-sm">
+                            <i class="fas fa-balance-scale"></i> Análisis Logístico Integral (NOM-012)
                         </button>
                     </div>
                 </div>
@@ -164,6 +172,7 @@ export function renderPayrollMap(container) {
     document.getElementById('map-rate-alimentos').addEventListener('input', updatePayroll);
     document.getElementById('btn-start-nav').addEventListener('click', startMobileNavigation);
     document.getElementById('btn-ai-restrictions').addEventListener('click', checkAIRestrictions);
+    document.getElementById('btn-ai-nom012').addEventListener('click', runNOM012Analysis);
     
     document.getElementById('map-trip-condition').addEventListener('change', (e) => {
         document.getElementById('map-rate-nomina').value = e.target.value;
@@ -589,6 +598,51 @@ async function checkAIRestrictions() {
         confirmButtonColor: '#8b5cf6',
         width: 600
     });
+}
+
+async function runNOM012Analysis() {
+    const origen = document.getElementById('map-origen').value;
+    const destino = document.getElementById('map-destino').value;
+    const unitType = document.getElementById('map-unit-type').value;
+    const axles = document.getElementById('map-axles').value;
+    const weight = document.getElementById('map-weight').value;
+
+    if (!origen || !destino) {
+        Swal.fire('Atención', 'Ingrese Origen y Destino para el análisis NOM-012.', 'warning');
+        return;
+    }
+
+    // Get waypoints
+    const waypointInputs = document.querySelectorAll('.waypoint-input');
+    const waypoints = [];
+    waypointInputs.forEach(input => {
+        if (input.value.trim()) waypoints.push(input.value.trim());
+    });
+
+    Swal.fire({
+        title: 'Auditoría Logística (NOM-012)...',
+        html: '<div class="spinner my-4"></div><p class="text-sm font-mono text-gray-600">Calculando categorización de vía, Fórmula Puente y extracción Inteligente de Tarifas...</p>',
+        allowOutsideClick: false,
+        showConfirmButton: false
+    });
+
+    try {
+        const reportHTML = await window.generateLogisticsReportAI(origen, destino, waypoints, unitType, axles, weight);
+        
+        Swal.fire({
+            title: '<i class="fas fa-shield-alt text-slate-800"></i> Reporte Integral de Operación (NOM-012)',
+            html: `<div class="text-left text-sm mt-4 custom-scrollbar overflow-y-auto max-h-[70vh] w-full">${reportHTML}</div>`,
+            confirmButtonText: 'Cerrar Reporte',
+            confirmButtonColor: '#1e293b',
+            width: '800px',
+            customClass: {
+                popup: 'rounded-xl shadow-2xl',
+                htmlContainer: 'p-0 m-0'
+            }
+        });
+    } catch (e) {
+        // Error already handled in gemini layer, but dismiss spinner if needed
+    }
 }
 
 // ---- INTERACTION & UTILITIES ---- //
