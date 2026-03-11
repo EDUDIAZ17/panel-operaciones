@@ -182,3 +182,101 @@ export async function estimateTollsWithAI(origen, destino, paradas = [], unitTyp
     console.error("All Gemini models failed for tolls. Last error:", lastError);
     throw lastError;
 }
+
+// =========================================================================
+// AGENTE DE AUDITORIA NOM-012 Y RIESGO CARRETERO (ITERACION 6)
+// =========================================================================
+
+export async function generateLogisticsReportAI(origen, destino, paradas = [], unitType = 'full', axles = 9, weight = 75.5) {
+    let paradasText = '';
+    if (paradas.length > 0) {
+        paradasText = `\nParadas intermedias: ${paradas.join(', ')}`;
+    }
+
+    let unitDesc = unitType === 'full' ? 'Tractocamión T3-S2-R4 (Doble Articulado / Full)' :
+                   unitType === 'sencillo' ? 'Tractocamión T3-S2 (Sencillo)' : 'Camión Unitario Torton/Rabón';
+
+    const prompt = `
+        Actúa como un Agente de Auditoría Normativa y Despachador Logístico Experto en México (NOM-012-SCT-2-2017).
+        
+        Se te solicita un "Análisis Logístico Integral" para el siguiente viaje:
+        - Origen: "${origen}"
+        - Destino: "${destino}"${paradasText}
+        - Configuración Vehicular: ${unitDesc}
+        - Número de Ejes Totales: ${axles}
+        - Peso Bruto / Carga Estimada: ${weight} Toneladas
+
+        TU TAREA:
+        Generar un reporte en formato TABLA HTML nativa (limpia, con clases de Tailwind CSS básicas sugeridas como "table-auto w-full text-sm", "border", "bg-gray-50", "text-left", "text-gray-800"). NO uses Markdown (como \`\`\`html), devuelve SOLO el código HTML desde un <div class="overflow-x-auto">.
+
+        REGLAS DE AUDITORÍA:
+        1. CLASIFICACIÓN RNC (Red Nacional de Caminos): Para cada tramo principal de la ruta, evalúa si es un camino ET (Ejes de Transporte), A (Red Primaria), B, C, o D. 
+           * Si la unidad es un FULL (doble remolque), ADVIERTE CLARAMENTE si un tramo propuesto es B, C o D (Restringido o Prohibido).
+           * Valida teóricamente si ${weight} Toneladas es legal para esa configuración en ese tramo.
+        2. COSTOS DE CASETA (C${axles}): Identifica las plazas de cobro principales. Estima la tarifa considerando que es un vehículo especial de ${axles} ejes. Trata de diferenciar si es C5 (5 ejes) vs C9 (9 ejes).
+        3. RIESGO CARRETERO (Hotspots): Identifica si la ruta cruza focos rojos históricos (ej. Arco Norte de madrugada, Circuito Mexiquense, MEX-150D Cumbres de Maltrata, Carretera 45D Salamanca-León, etc.). Si cruza, propón una "Ruta de Seguridad" o paraderos seguros.
+
+        ESTRUCTURA HTML REQUERIDA (Respetar estrictamente):
+        <h3 class="text-lg font-bold text-slate-800 mb-2">Auditoría de Ruta: ${origen} a ${destino}</h3>
+        <p class="text-xs text-gray-500 mb-4">Unidad: ${unitDesc} | Ejes: ${axles} | PBV: ${weight} Tons</p>
+        
+        <div class="overflow-x-auto shadow-sm rounded-lg border border-gray-200 mb-4">
+            <table class="w-full text-sm text-left">
+                <thead class="bg-slate-800 text-white text-xs uppercase">
+                    <tr>
+                        <th class="px-3 py-2">Tramo / Caseta</th>
+                        <th class="px-3 py-2">Clasificación SCT</th>
+                        <th class="px-3 py-2">Validación NOM-012</th>
+                        <th class="px-3 py-2">Costo Aprox (${axles} ejes)</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 bg-white text-gray-800">
+                    <!-- Filas <tr> generadas dinámicamente aquí -->
+                </tbody>
+            </table>
+        </div>
+
+        <div class="bg-red-50 border-l-4 border-red-500 p-3 mb-2 rounded-r">
+            <h4 class="font-bold text-red-800 text-sm"><i class="fas fa-exclamation-triangle"></i> Análisis de Seguridad / Riesgo Delictivo</h4>
+            <p class="text-xs text-red-700 mt-1">[Párrafo de análisis de hotspots y recomendaciones de paraderos seguros]</p>
+        </div>
+
+        <div class="text-right font-bold text-lg text-slate-800 mt-3 p-2 bg-gray-100 rounded">
+            Peaje Total Estimado (MXN): $[Suma Total]
+        </div>
+
+        Sé muy directo en la tabla y usa lenguaje técnico logístico mexicano.
+    `;
+
+    const modelsToTry = [
+        'gemini-2.5-flash',
+        'gemini-2.5-pro'
+    ];
+    let lastError = null;
+
+    for (const model of modelsToTry) {
+        try {
+            const { data, error } = await supabase.functions.invoke('gemini-proxy', {
+                body: { model, prompt }
+            });
+            
+            if (error) {
+                console.warn(`Model ${model} failed via proxy for NOM012:`, error);
+                lastError = error;
+                continue;
+            }
+
+            const textOption = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (textOption) return textOption.replace(/\`\`\`html/g, '').replace(/\`\`\`/g, '');
+        } catch (error) {
+            console.warn(`Fetch error for model ${model} for NOM012:`, error);
+            lastError = error;
+        }
+    }
+    
+    console.error("All Gemini models failed for NOM012. Last error:", lastError);
+    // Let it throw to catch it on UI
+    throw lastError;
+}
+
+window.generateLogisticsReportAI = generateLogisticsReportAI;
