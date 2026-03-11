@@ -683,15 +683,28 @@ function startMobileNavigation() {
     const waypoints = [];
     waypointInputs.forEach(input => {
         if (input.value.trim()) {
-            waypoints.push(encodeURIComponent(input.value.trim()));
+            waypoints.push(input.value.trim());
         }
     });
 
-    let navUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origen)}&destination=${encodeURIComponent(destino)}&travelmode=driving`;
-    if (waypoints.length > 0) {
-        navUrl += `&waypoints=${waypoints.join('|')}`;
-    }
+    // Guardar para la App EDY (offline-first simulator)
+    localStorage.setItem('edy_pending_route', JSON.stringify({
+        origen,
+        destino,
+        waypoints
+    }));
 
-    // Open link in a new tab, forcing Google Maps app to trigger on mobile devices
-    window.open(navUrl, '_blank');
+    Swal.fire({
+        title: 'Navegación Cabina',
+        text: 'Se ha preparado la ruta para la aplicación integral de Cabina.',
+        icon: 'success',
+        showCancelButton: true,
+        confirmButtonText: '<i class="fas fa-truck"></i> Abrir App EDY',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#4f46e5'
+    }).then((res) => {
+        if(res.isConfirmed) {
+            window.open('edy_app.html', '_blank');
+        }
+    });
 }
