@@ -28,6 +28,16 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function initEdyMap() {
+    if (typeof google === 'undefined') {
+        Swal.fire({
+            title: 'Mapas Bloqueados',
+            text: 'No se pudo cargar Google Maps. Por favor desactiva tu bloqueador de anuncios (AdBlock, Brave Shields) para esta página.',
+            icon: 'error',
+            confirmButtonColor: '#3b82f6'
+        });
+        return;
+    }
+
     // High contrast dark style for cabin
     const darkStyle = [
       { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
