@@ -11,154 +11,250 @@ let waypointCount = 0;
 
 export function renderPayrollMap(container) {
     container.innerHTML = `
-        <div class="h-full flex flex-col md:flex-row bg-gray-50 p-4 gap-4 fade-in">
-            <!-- Menú Izquierdo: Formularios y Controles -->
-            <div class="w-full md:w-1/3 bg-white rounded-xl shadow-lg border border-indigo-100 flex flex-col overflow-hidden">
-                <div class="p-4 bg-gradient-to-r from-indigo-700 to-indigo-900 border-b relative">
-                    <h2 class="text-xl font-bold text-white flex items-center gap-2">
-                        <i class="fas fa-map-marked-alt text-indigo-300"></i> Mapa EDY
-                    </h2>
-                    <p class="text-indigo-200 text-xs mt-1">Herramienta de Ruteo, Tráfico y Liquidaciones</p>
+        <div class="h-full flex flex-col md:flex-row bg-[#f3f4f6] p-2 gap-2 fade-in font-sans text-sm">
+            
+            <!-- Panel Izquierdo: Creador Avanzado de Rutas -->
+            <div class="w-full md:w-[420px] bg-white border border-gray-300 flex flex-col overflow-hidden drop-shadow-sm h-full max-h-screen">
+                
+                <!-- TABS -->
+                <div class="flex bg-[#e0e0e0] border-b border-gray-400">
+                    <button id="tab-btn-create" class="flex-1 py-2 px-4 text-center border-r border-gray-300 font-bold bg-white text-gray-800 border-t-2 border-t-blue-600 focus:outline-none flex items-center justify-center gap-2 text-xs">
+                        <i class="fas fa-map-marked-alt text-gray-500"></i> Crear Ruta
+                    </button>
+                    <button id="tab-btn-report" class="flex-1 py-2 px-4 text-center border-r border-gray-300 font-semibold text-gray-600 hover:bg-gray-100 focus:outline-none flex items-center justify-center gap-2 text-xs transition-colors">
+                        <i class="fas fa-chart-line text-gray-500"></i> Reporte Ruta
+                    </button>
+                    <button id="tab-btn-points" class="flex-1 py-2 px-4 text-center font-semibold text-gray-600 hover:bg-gray-100 focus:outline-none flex items-center justify-center gap-2 text-xs transition-colors">
+                        <i class="fas fa-map-marker-alt text-gray-500"></i> Puntos
+                    </button>
                 </div>
                 
-                <div class="p-4 flex-1 overflow-y-auto custom-scrollbar">
-                    <div class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-1">Origen (Ciudad/Estado)</label>
-                            <input type="text" id="map-origen" class="w-full border border-gray-300 rounded-lg p-2.5 shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition" placeholder="Ej: Celaya, GTO">
-                        </div>
+                <!-- CONTENIDO TABS -->
+                <div class="flex-1 overflow-y-auto custom-scrollbar relative">
+                    
+                    <!-- TAB 1: CREAR RUTA -->
+                    <div id="tab-crear-ruta" class="p-3 space-y-4">
                         
-                        <div id="waypoints-container" class="space-y-2">
-                            <!-- Paradas dinámicas aquí -->
-                        </div>
-                        <button id="btn-add-waypoint" class="text-indigo-600 text-xs font-bold hover:text-indigo-800 flex items-center gap-1 transition-colors w-max"><i class="fas fa-plus-circle"></i> Agregar Parada Segura</button>
-
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-1">Destino (Ciudad/Estado)</label>
-                            <input type="text" id="map-destino" class="w-full border border-gray-300 rounded-lg p-2.5 shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition" placeholder="Ej: Nuevo Laredo, TAMPS">
-                        </div>
-                        
-                        <div class="grid grid-cols-2 gap-3 pt-2">
-                             <div>
-                                 <label class="block text-xs font-semibold text-gray-700 mb-1" title="Velocidad Promedio">Velocidad (km/h)</label>
-                                 <input type="number" id="map-speed" value="70" class="w-full border border-gray-300 rounded-lg p-2 shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none">
-                             </div>
-                             <div>
-                                 <label class="block text-xs font-semibold text-gray-700 mb-1" title="Tiempo total en Paradas">Tiempo Paradas (h)</label>
-                                 <input type="number" id="map-stop-time" value="0.0" step="0.5" class="w-full border border-gray-300 rounded-lg p-2 shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none">
-                             </div>
-                        </div>
-
-                        <div class="pt-2">
-                            <label class="block text-sm font-semibold text-gray-700 mb-1">Perfil Operativo (NOM-012)</label>
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
-                                <select id="map-unit-type" class="w-full border border-gray-300 rounded-lg p-2.5 shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white text-xs" title="Tipo de Unidad">
-                                    <option value="full">Tractocamión (Full)</option>
-                                    <option value="sencillo">Tractocamión (Sencillo)</option>
-                                    <option value="torton">Torton/Rabón</option>
+                        <!-- 1. Selección de Vehículo -->
+                        <div class="border border-gray-300 bg-gray-50">
+                            <div class="bg-[#e0e0e0] px-3 py-1.5 border-b border-gray-300 flex justify-between items-center">
+                                <span class="font-bold text-gray-800 text-xs shadow-text">1. Seleccione un Vehículo para la Ruta</span>
+                                <button class="bg-white border text-gray-600 px-2 py-0.5 text-[10px] hover:bg-gray-50"><i class="fas fa-plus"></i> Nuevo</button>
+                            </div>
+                            <div class="p-2 bg-white">
+                                <select id="map-unit-type" class="w-full border border-gray-300 p-1.5 text-xs focus:outline-none focus:border-blue-500 bg-blue-50">
+                                    <option value="Tractocamión Full (C3-R3)">Ejemplo 3 - Tracto Full (C3-R3)</option>
+                                    <option value="Tractocamión Sencillo (T3-S2)">Ejemplo 2 - Tracto Sencillo (T3-S2)</option>
+                                    <option value="Torton (C3)">Ejemplo 1 - Camión Torton (C3)</option>
+                                    <option value="Automóvil (A2)">Ejemplo 4 - Automóvil (A2)</option>
                                 </select>
-                                <input type="number" id="map-axles" value="9" min="2" max="14" class="w-full border border-gray-300 rounded-lg p-2.5 shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none text-xs" title="Número de Ejes (ej. 9 para Full)" placeholder="Ejes">
-                                <input type="number" id="map-weight" value="75.5" step="0.5" class="w-full border border-gray-300 rounded-lg p-2.5 shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none text-xs" title="Peso Bruto/Carga (Toneladas)" placeholder="Ton.">
                             </div>
                         </div>
 
-                        <div class="pt-2 border-t mt-3 border-gray-100">
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">Liquidación del Operador</label>
-                            
-                            <select id="map-trip-condition" class="w-full border border-gray-300 rounded-lg p-2 text-xs shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white mb-2 text-gray-600">
-                                <option value="5.00">Estándar: Unidad Cargada ($5.00/km)</option>
-                                <option value="3.00">Estándar: Unidad Vacía ($3.00/km)</option>
-                            </select>
-
-                            <div class="grid grid-cols-2 gap-3 mb-2">
-                                <div>
-                                    <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Nómina ($ / KM)</label>
-                                    <input type="number" id="map-rate-nomina" value="5.00" step="0.01" class="w-full border border-gray-300 rounded-lg p-2 text-sm shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white font-bold text-indigo-700">
-                                </div>
-                                <div>
-                                    <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Alimentos ($ / KM)</label>
-                                    <input type="number" id="map-rate-alimentos" value="0.45" step="0.01" class="w-full border border-gray-300 rounded-lg p-2 text-sm shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white font-bold text-amber-600">
+                        <!-- 2. Preferencias -->
+                        <div class="border border-gray-300 bg-gray-50">
+                            <div class="bg-[#e0e0e0] px-3 py-1.5 border-b border-gray-300"><span class="font-bold text-gray-800 text-xs shadow-text">2. Preferencias de la Ruta</span></div>
+                            <div class="p-3 bg-white grid grid-cols-2 gap-x-4 gap-y-2 text-[11px] text-gray-700">
+                                <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="pref-avoid-tolls" class="form-checkbox text-blue-600"> Evitar Casetas</label>
+                                <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="pref-opt-truck" class="form-checkbox text-blue-600" checked> Optimizar Camión</label>
+                                <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="pref-avoid-ferries" class="form-checkbox text-blue-600" checked> Evitar Ferrys</label>
+                                <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="pref-opt-nom" class="form-checkbox text-blue-600" checked> Opt. NOM-012</label>
+                                <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="pref-close-road" class="form-checkbox text-blue-600"> Cerrar Tramo</label>
+                                <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="pref-opt-stops" class="form-checkbox text-blue-600" checked> Opt. Paradas</label>
+                            </div>
+                            <div class="border-t border-gray-200 p-2 bg-white flex items-center justify-between">
+                                <span class="text-[11px] font-semibold text-gray-600">Velocidad Promedio:</span>
+                                <div class="flex items-center gap-2">
+                                     <button id="btn-speed-down" class="px-2 bg-gray-100 border hover:bg-gray-200">-</button>
+                                     <input type="number" id="map-speed" value="70" class="w-12 text-center text-xs border p-1" title="km/h">
+                                     <button id="btn-speed-up" class="px-2 bg-gray-100 border hover:bg-gray-200">+</button>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="pt-2 border-t mt-2 border-gray-100 mb-4">
-                            <label class="block text-xs font-bold text-gray-700 mb-1">Cálculo de Casetas</label>
-                            <select id="map-toll-method" class="w-full border border-gray-300 rounded-lg p-2 text-sm shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
-                                <option value="ai">Inteligencia Artificial (Recomendado)</option>
-                                <option value="native">Oficial SCT / Google Maps (Preciso)</option>
-                            </select>
+                        <!-- 3. Paradas -->
+                        <div class="border border-gray-300 bg-gray-50">
+                            <div class="bg-[#e0e0e0] px-3 py-1.5 border-b border-gray-300"><span class="font-bold text-gray-800 text-xs shadow-text">3. Origen, Destino y Paradas</span></div>
+                            <div class="p-2 bg-white">
+                                <table class="w-full text-[11px]">
+                                    <tbody>
+                                        <tr class="border-b">
+                                            <td class="w-12 py-1.5 text-gray-500 font-semibold">Origen</td>
+                                            <td class="py-1.5 px-1"><input type="text" id="map-origen" class="w-full border-none outline-none focus:ring-1 focus:ring-blue-300 px-1 placeholder-gray-400 text-gray-800" placeholder="Ej: Celaya, GTO"></td>
+                                            <td class="w-16 py-1.5 text-right"><button class="text-gray-500 hover:text-red-500" onclick="document.getElementById('map-origen').value=''"><i class="fas fa-times"></i></button></td>
+                                        </tr>
+                                        <tr>
+                                            <td colspan="3" class="p-0">
+                                                <div id="waypoints-container" class="divide-y divide-gray-100"></div>
+                                            </td>
+                                        </tr>
+                                        <tr class="border-b bg-gray-50 hover:bg-gray-100 cursor-pointer" id="btn-add-waypoint">
+                                            <td class="w-12 py-2 text-gray-400 text-center"><i class="fas fa-plus"></i></td>
+                                            <td class="py-2 px-1 text-gray-400 italic">Agregar nueva parada...</td>
+                                            <td class="w-16 py-2 text-right"></td>
+                                        </tr>
+                                        <tr class="border-t border-gray-300 bg-gray-50">
+                                            <td class="w-12 py-2 text-gray-700 font-semibold pl-1">Destino</td>
+                                            <td class="py-2 px-1"><input type="text" id="map-destino" class="w-full border-none outline-none focus:ring-1 focus:ring-blue-300 px-1 placeholder-gray-400 text-gray-800 bg-transparent font-semibold" placeholder="Ej: Nuevo Laredo, TAMPS"></td>
+                                            <td class="w-16 py-2 text-right"><button class="text-gray-500 hover:text-red-500 pr-1" onclick="document.getElementById('map-destino').value=''"><i class="fas fa-times"></i></button></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
 
-                        <button id="btn-calc-route" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-lg shadow-md transition transform hover:-translate-y-0.5 flex justify-center items-center gap-2">
-                            <i class="fas fa-route"></i> CALCULAR RUTA EDY
-                        </button>
+                        <!-- Action Buttons -->
+                        <div class="flex gap-4 pt-2 pb-6">
+                            <button id="btn-calc-route" class="flex-1 bg-gray-100 hover:bg-gray-200 border border-gray-300 text-gray-800 font-bold py-2 shadow-sm text-sm">
+                                Calcular Ruta
+                            </button>
+                            <button id="btn-clear-route" class="flex-1 bg-gray-100 hover:bg-gray-200 border border-gray-300 text-gray-800 font-bold py-2 shadow-sm text-sm">
+                                Borrar Ruta
+                            </button>
+                        </div>
                     </div>
 
-                    <div id="route-results" class="mt-6 hidden">
-                        <h3 class="text-lg font-bold text-gray-800 border-b pb-2 mb-3">Resultados del Viaje</h3>
-                        
-                        <div class="grid grid-cols-2 gap-3 mb-4">
-                            <div class="bg-blue-50 p-3 rounded-lg border border-blue-100">
-                                <p class="text-[10px] text-blue-600 font-bold uppercase tracking-wider">Distancia</p>
-                                <p id="res-distance" class="text-xl font-black text-blue-800">-- km</p>
-                            </div>
-                            <div class="bg-emerald-50 p-3 rounded-lg border border-emerald-100 relative group cursor-help">
-                                <p class="text-[10px] text-emerald-600 font-bold uppercase tracking-wider">Tiempo Estimado</p>
-                                <p id="res-time" class="text-xl font-black text-emerald-800">-- h</p>
-                                <!-- Tooltip con el desglose del tiempo -->
-                                <div id="res-time-breakdown" class="hidden group-hover:block absolute z-50 bg-gray-900 text-white text-[10px] p-2 rounded -top-16 left-0 w-max shadow-lg leading-relaxed"></div>
-                            </div>
-                        </div>
-
-                        <div class="bg-orange-50 p-3 rounded-lg border border-orange-100 mb-4 flex items-center justify-between">
-                             <div class="flex-1">
-                                 <p class="text-[10px] text-orange-600 font-bold uppercase tracking-wider mb-1">Costo Casetas (Oficial SCT/Google)</p>
-                                 <p id="res-tolls" class="text-xl font-black text-orange-800">--</p>
+                    <!-- TAB 2: REPORTE RUTA -->
+                    <div id="tab-reporte-ruta" class="p-2 space-y-2 hidden">
+                        <!-- Detalles de Ruta Superior -->
+                        <div class="bg-[#f0f0f0] border border-gray-300 p-2 text-xs text-gray-800">
+                             <div class="flex justify-between items-start mb-1">
+                                 <span class="font-bold w-12 text-gray-600">Origen:</span>
+                                 <span class="flex-1 px-1 font-semibold" id="rep-origen">--</span>
+                                 <span class="text-gray-500" id="rep-fecha">--/--/----</span>
                              </div>
-                             <i class="fas fa-ticket-alt text-orange-300 text-3xl ml-2"></i>
+                             <div class="flex justify-between items-start mb-2">
+                                 <span class="font-bold w-12 text-gray-600">Destino:</span>
+                                 <span class="flex-1 px-1 font-semibold" id="rep-destino">--</span>
+                             </div>
+                             <div class="flex justify-between items-start pt-1 border-t border-gray-300">
+                                 <span class="font-bold w-16 text-gray-600">Vehículo:</span>
+                                 <span class="flex-1 px-1 font-semibold text-blue-700" id="rep-vehiculo">--</span>
+                             </div>
                         </div>
 
-                        <div class="bg-gray-50 border p-4 rounded-lg mb-4 space-y-3">
-                            <h4 class="text-sm font-bold text-gray-700 uppercase"><i class="fas fa-calculator text-gray-400"></i> Proyección de Liquidación</h4>
-                            
-                            <div class="flex justify-between items-center bg-white p-2 border rounded-md">
-                                <span class="text-xs text-gray-600 font-bold"><i class="fas fa-hamburger text-amber-500 w-4"></i> Alimentos Base:</span>
-                                <span id="res-alimentos" class="text-sm font-bold text-gray-800">$0.00</span>
-                            </div>
-                            
-                            <div class="flex justify-between items-center bg-white p-2 border rounded-md">
-                                <span class="text-xs text-gray-600 font-bold"><i class="fas fa-coins text-yellow-500 w-4"></i> Nómina Operador:</span>
-                                <span id="res-nomina" class="text-sm font-bold text-gray-800">$0.00</span>
-                            </div>
+                        <div class="grid grid-cols-[1fr_130px] gap-2">
+                             <!-- Columna Izquierda: Tablas Resumen -->
+                             <div class="space-y-2">
+                                 
+                                 <!-- Distancia -->
+                                 <div class="border border-gray-400 bg-white text-xs">
+                                      <div class="bg-[#e0e0e0] px-2 py-1 border-b border-gray-400 flex justify-between font-bold">
+                                          <span>Distancia Total</span>
+                                          <span id="rep-dist-total">0 Kms</span>
+                                      </div>
+                                      <div class="p-1 px-2 text-[10px] space-y-0.5">
+                                          <div class="flex justify-between text-gray-600"><span>Con vehículo cargado...</span><span>0.00 Kms</span></div>
+                                          <div class="flex justify-between text-gray-800 font-semibold border-t border-dashed border-gray-200 pt-0.5 mt-0.5"><span>Con vehículo vacío...</span><span id="rep-dist-vacio">0.00 Kms</span></div>
+                                      </div>
+                                 </div>
 
-                            <div class="pt-3 border-t-2 border-gray-200 mt-2">
-                                <p class="text-xs text-gray-500 font-bold uppercase tracking-wider mb-1">Gran Total Estimado (Viáticos + Liquidación)</p>
-                                <p id="res-payroll" class="text-3xl font-black text-indigo-800">$0.00</p>
-                            </div>
+                                 <!-- Tiempo -->
+                                 <div class="border border-gray-400 bg-white text-xs">
+                                      <div class="bg-[#e0e0e0] px-2 py-1 border-b border-gray-400 flex justify-between font-bold">
+                                          <span>Tiempo Total</span>
+                                          <span id="rep-time-total">0h:00m</span>
+                                      </div>
+                                      <div class="p-1 px-2 text-[10px] space-y-0.5 text-gray-600">
+                                          <div class="flex justify-between"><span>Conduciendo...</span><span id="rep-time-drive">0h:00m</span></div>
+                                          <div class="flex justify-between"><span>En paradas programadas...</span><span>0h:00m</span></div>
+                                          <div class="flex justify-between"><span>Descansando...</span><span>0h:00m</span></div>
+                                      </div>
+                                 </div>
+
+                                 <!-- Costos Generales -->
+                                 <div class="border border-gray-400 bg-white text-xs">
+                                      <div class="bg-[#e0e0e0] px-2 py-1 border-b border-gray-400 flex justify-between font-bold text-gray-800">
+                                          <span>Costo Total Estimado</span>
+                                          <span id="rep-cost-total" class="text-blue-800">$0.00</span>
+                                      </div>
+                                      <div class="p-1 px-2 text-[10px] space-y-0.5 text-gray-700 font-mono tracking-tight">
+                                          <div class="flex justify-between"><span>Casetas de cobro.......</span><span id="rep-cost-tolls">$0.00</span></div>
+                                          <div class="flex justify-between"><span>Combustible............</span><span id="rep-cost-fuel" class="text-amber-700">$0.00</span></div>
+                                          <div class="flex justify-between"><span>Chofer.................</span><span id="rep-cost-driver" class="text-green-700">$0.00</span></div>
+                                          <div class="flex justify-between"><span>Mantenimiento..........</span><span id="rep-cost-maint">$0.00</span></div>
+                                          <div class="flex justify-between"><span>Desgaste de llantas....</span><span id="rep-cost-tires">$0.00</span></div>
+                                      </div>
+                                      <div class="bg-[#e0e0e0] px-2 py-1 border-t border-gray-400 flex justify-between font-bold text-[10px] text-gray-800">
+                                          <span>Costo promedio por Km</span>
+                                          <span id="rep-cost-km">$0.00</span>
+                                      </div>
+                                 </div>
+
+                             </div>
+
+                             <!-- Columna Derecha: Botones -->
+                             <div class="flex flex-col gap-1.5 pt-1">
+                                  <button class="bg-[#f0f0f0] hover:bg-white border border-gray-400 text-gray-800 font-semibold py-1.5 px-2 text-xs shadow-sm text-center w-full">Itinerario</button>
+                                  <button id="btn-show-tolls" class="bg-[#f0f0f0] hover:bg-white border text-blue-800 border-blue-400 font-bold py-1.5 px-2 text-xs shadow-sm text-center w-full"><i class="fas fa-ticket-alt"></i> Casetas</button>
+                                  <button class="bg-[#f0f0f0] hover:bg-white border border-gray-400 text-gray-800 font-semibold py-1.5 px-2 text-xs shadow-sm text-center w-full">Paradas</button>
+                                  <button id="btn-show-nom" class="bg-[#f0f0f0] hover:bg-white border border-gray-400 text-gray-800 font-semibold py-1.5 px-2 text-xs shadow-sm text-center w-full">NOM-012</button>
+                                  <hr class="border-gray-300 my-1">
+                                  <button class="bg-[#e6f0ff] hover:bg-blue-100 border border-blue-300 text-blue-800 font-bold py-1.5 px-2 text-xs shadow-sm text-center w-full"><i class="fas fa-file-invoice-dollar mt-1 block"></i> Generar Cotización</button>
+                                  <button class="bg-[#f0f0f0] hover:bg-white border border-gray-400 text-gray-800 font-semibold py-1.5 px-2 text-xs shadow-sm text-center w-full"><i class="fas fa-file-pdf text-red-600"></i> Reporte PDF</button>
+                                  <button id="btn-share-whatsapp" class="bg-green-50 hover:bg-green-100 border border-green-600 text-green-800 font-bold py-1.5 px-2 text-[11px] shadow-sm text-center w-full"><i class="fab fa-whatsapp text-green-600 text-sm mb-1 block"></i> Enviar a Operador</button>
+                             </div>
                         </div>
-
-                        <button id="btn-start-nav" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg shadow-md transition transform hover:-translate-y-0.5 mt-2 flex justify-center items-center gap-2">
-                            <i class="fas fa-location-arrow"></i> INICIAR NAVEGACIÓN (MÓVIL)
-                        </button>
-
-                        <button id="btn-ai-restrictions" class="w-full border border-purple-500 text-purple-700 bg-purple-50 hover:bg-purple-100 font-bold py-2 rounded-lg transition flex justify-center items-center gap-2 text-xs mt-3">
-                            <i class="fas fa-robot"></i> Inteligencia Artificial: Riesgos Carretera
-                        </button>
-                        
-                        <button id="btn-ai-nom012" class="w-full border-2 border-slate-800 text-slate-800 bg-slate-50 hover:bg-slate-800 hover:text-white font-bold py-2.5 rounded-lg transition flex justify-center items-center gap-2 text-sm mt-3 shadow-sm">
-                            <i class="fas fa-balance-scale"></i> Análisis Logístico Integral (NOM-012)
-                        </button>
                     </div>
                 </div>
             </div>
 
             <!-- Mapa Principal -->
-            <div class="flex-1 bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden relative min-h-[400px]">
+            <div class="flex-1 bg-white border border-gray-300 overflow-hidden relative drop-shadow-sm min-h-[400px]">
+                <div class="absolute top-2 left-2 z-10 bg-white/90 px-2 py-1 rounded shadow text-xs font-bold text-gray-700 border border-gray-300 hidden md:block">
+                    <i class="fas fa-globe-americas"></i> Mapas EDY Fleet Management
+                </div>
+                <!-- Mini Toolbar -->
+                <div class="absolute top-2 right-2 z-10 bg-white border border-gray-400 shadow flex text-gray-600 rounded">
+                     <button class="px-2 py-1 hover:bg-gray-100 border-r border-gray-300" title="Imprimir"><i class="fas fa-print"></i></button>
+                     <button class="px-2 py-1 hover:bg-gray-100 border-r border-gray-300" title="Centrar"><i class="fas fa-crosshairs"></i></button>
+                     <button class="px-2 py-1 hover:bg-gray-100" id="btn-nav-view" title="Vista Cabina 3D"><i class="fas fa-truck"></i> Dashboard Cabina</button>
+                </div>
+
                 <div id="map-canvas" class="w-full h-full"></div>
-                <div id="map-loading" class="absolute inset-0 bg-white/80 flex flex-col items-center justify-center z-10 hidden">
-                    <div class="spinner w-12 h-12 border-4 border-indigo-500 border-t-transparent mb-3"></div>
-                    <p class="text-indigo-800 font-medium">Renderizando rutas...</p>
+                <div id="map-loading" class="absolute inset-0 bg-white/70 flex flex-col items-center justify-center z-[1000] hidden">
+                    <img src="assets/images/logo.png" alt="Loading" class="h-16 w-auto mb-4 animate-pulse sepia">
+                    <div class="spinner border-4 border-gray-400 border-t-blue-600 w-8 h-8 rounded-full animate-spin"></div>
+                    <p class="text-gray-800 font-bold mt-2 font-mono text-sm tracking-widest uppercase">Trazando Ruta Logística...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Caseta Modal Container (Template) -->
+        <div id="modal-casetas" class="fixed inset-0 bg-black/50 z-[2000] hidden flex items-center justify-center p-4">
+            <div class="bg-[#f0f0f0] border-2 border-slate-400 shadow-2xl rounded-sm w-full max-w-2xl flex flex-col max-h-[80vh]">
+                <!-- Modal Header -->
+                <div class="bg-gradient-to-b from-[#e8ebf1] to-[#cbd2e0] border-b border-slate-400 flex justify-between items-center px-3 py-1.5">
+                    <div class="flex items-center gap-2">
+                         <i class="fas fa-globe-americas text-blue-600"></i>
+                         <span class="font-bold text-slate-800 text-sm pb-0.5 shadow-text">Casetas de Cobro</span>
+                    </div>
+                    <button class="modal-casetas-close text-red-600 hover:bg-red-200 border border-transparent hover:border-red-400 px-2 rounded font-bold">X</button>
+                </div>
+                
+                <!-- Modal Content -->
+                <div class="p-2 flex-1 overflow-hidden flex flex-col bg-white">
+                    <div class="bg-[#f8f9fa] border border-gray-300 mb-2 p-2 flex justify-between items-center text-sm">
+                         <span class="font-semibold text-gray-700">Ruta Tarifada Oficialmente</span>
+                         <span class="font-black text-red-700 text-base" id="casetas-gran-total">Total: $0.00</span>
+                    </div>
+                    
+                    <div class="flex-1 overflow-y-auto border border-gray-300">
+                        <table class="w-full text-xs text-left whitespace-nowrap">
+                            <thead class="bg-[#e4e7ec] border-b border-gray-300 sticky top-0 font-bold text-gray-700">
+                                <tr>
+                                    <th class="py-1.5 px-2 border-r border-gray-300 w-8 text-center text-gray-400"><i class="fas fa-dollar-sign"></i></th>
+                                    <th class="py-1.5 px-2 border-r border-gray-300">Nombre de Plaza de Cobro</th>
+                                    <th class="py-1.5 px-2 border-r border-gray-300 w-24 text-right">Distancia</th>
+                                    <th class="py-1.5 px-2 border-r border-gray-300 w-20 text-center">Tiempo</th>
+                                    <th class="py-1.5 px-2 w-20 text-right text-green-700">Tarifa</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200" id="casetas-table-body">
+                                <tr><td colspan="5" class="py-8 text-center text-gray-400 italic">No hay casetas detectadas en esta ruta.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
@@ -166,18 +262,65 @@ export function renderPayrollMap(container) {
 
     initMap();
     bindWaypointLogic();
+    bindTabsAndUI();
     
     document.getElementById('btn-calc-route').addEventListener('click', calculateMapRoute);
-    document.getElementById('map-rate-nomina').addEventListener('input', updatePayroll);
-    document.getElementById('map-rate-alimentos').addEventListener('input', updatePayroll);
-    document.getElementById('btn-start-nav').addEventListener('click', startMobileNavigation);
-    document.getElementById('btn-ai-restrictions').addEventListener('click', checkAIRestrictions);
-    document.getElementById('btn-ai-nom012').addEventListener('click', runNOM012Analysis);
-    
-    document.getElementById('map-trip-condition').addEventListener('change', (e) => {
-        document.getElementById('map-rate-nomina').value = e.target.value;
-        updatePayroll();
+    document.getElementById('btn-clear-route').addEventListener('click', clearMapRoute);
+    document.getElementById('btn-show-tolls').addEventListener('click', openTollsModal);
+    document.querySelectorAll('.modal-casetas-close').forEach(btn => {
+        btn.addEventListener('click', closeTollsModal);
     });
+    document.getElementById('btn-share-whatsapp').addEventListener('click', shareRouteWhatsApp);
+}
+
+function bindTabsAndUI() {
+    const tabCreateBtn = document.getElementById('tab-btn-create');
+    const tabReportBtn = document.getElementById('tab-btn-report');
+    const tabPointsBtn = document.getElementById('tab-btn-points');
+    
+    const tabCreateContent = document.getElementById('tab-crear-ruta');
+    const tabReportContent = document.getElementById('tab-reporte-ruta');
+
+    function switchTab(activeBtn, activeContent) {
+        // Reset buttons
+        [tabCreateBtn, tabReportBtn, tabPointsBtn].forEach(btn => {
+            btn.classList.remove('bg-white', 'text-gray-800', 'border-t-2', 'border-t-blue-600');
+            btn.classList.add('text-gray-600', 'hover:bg-gray-100');
+        });
+        
+        // Hide contents
+        tabCreateContent.classList.add('hidden');
+        tabReportContent.classList.add('hidden');
+        
+        // Set active
+        activeBtn.classList.remove('text-gray-600', 'hover:bg-gray-100');
+        activeBtn.classList.add('bg-white', 'text-gray-800', 'border-t-2', 'border-t-blue-600');
+        if(activeContent) activeContent.classList.remove('hidden');
+    }
+
+    tabCreateBtn.addEventListener('click', () => switchTab(tabCreateBtn, tabCreateContent));
+    tabReportBtn.addEventListener('click', () => switchTab(tabReportBtn, tabReportContent));
+    tabPointsBtn.addEventListener('click', () => switchTab(tabPointsBtn, null));
+
+    // Speed controls
+    const speedInput = document.getElementById('map-speed');
+    document.getElementById('btn-speed-up').addEventListener('click', () => {
+        speedInput.value = parseInt(speedInput.value || 70) + 5;
+    });
+    document.getElementById('btn-speed-down').addEventListener('click', () => {
+        speedInput.value = Math.max(10, parseInt(speedInput.value || 70) - 5);
+    });
+}
+
+function clearMapRoute() {
+    document.getElementById('map-origen').value = '';
+    document.getElementById('map-destino').value = '';
+    document.getElementById('waypoints-container').innerHTML = '';
+    if (directionsRenderer) directionsRenderer.setDirections({routes: []});
+    if (window.tollMarkers) {
+        window.tollMarkers.forEach(m => m.setMap(null));
+    }
+    window.tollMarkers = [];
 }
 
 window.removeWaypoint = (btn) => {
@@ -275,7 +418,8 @@ function calculateMapRoute() {
     }
 
     const speedKmH = parseFloat(document.getElementById('map-speed').value) || 70;
-    const stopTimeH = parseFloat(document.getElementById('map-stop-time').value) || 0;
+    const unitTypeOptions = document.getElementById('map-unit-type');
+    const unitTypeName = unitTypeOptions.options[unitTypeOptions.selectedIndex].text;
 
     const waypointInputs = document.querySelectorAll('.waypoint-input');
     const waypoints = [];
@@ -299,7 +443,8 @@ function calculateMapRoute() {
         waypoints: waypoints,
         travelMode: google.maps.TravelMode.DRIVING,
         provideRouteAlternatives: false,
-        avoidTolls: false // Heavy transport usually uses tolls in MX
+        avoidTolls: document.getElementById('pref-avoid-tolls').checked,
+        avoidFerries: document.getElementById('pref-avoid-ferries').checked
     };
 
     directionsService.route(request, async (result, status) => {
@@ -308,16 +453,13 @@ function calculateMapRoute() {
             directionsRenderer.setDirections(result);
             
             // Remove previous toll markers
-            if (window.tollMarkers) {
-                window.tollMarkers.forEach(m => m.setMap(null));
-            }
+            if (window.tollMarkers) window.tollMarkers.forEach(m => m.setMap(null));
             window.tollMarkers = [];
             
             let totalDistanceMeters = 0;
             result.routes[0].legs.forEach(leg => {
                 totalDistanceMeters += leg.distance.value;
-                
-                // Add markers for tolls
+                // Add basic orange markers for tolls from Google
                 leg.steps.forEach(step => {
                     const instructions = step.instructions.toLowerCase();
                     if (instructions.includes('cuota') || instructions.includes('peaje') || instructions.includes('toll')) {
@@ -327,16 +469,6 @@ function calculateMapRoute() {
                             icon: 'https://maps.google.com/mapfiles/ms/icons/orange-dot.png',
                             title: 'Caseta de Cobro'
                         });
-                        
-                        // Agregar interactividad a la caseta
-                        marker.addListener('mouseover', () => {
-                            infoWindow.setContent(`<div class="p-1"><p class="font-bold text-orange-600 text-xs"><i class="fas fa-ticket-alt"></i> Caseta de Peaje Oficial</p><p class="text-[10px] text-gray-500">Punto de cobro verificado en ruta SCT.</p></div>`);
-                            infoWindow.open(map, marker);
-                        });
-                        marker.addListener('mouseout', () => {
-                            infoWindow.close();
-                        });
-
                         window.tollMarkers.push(marker);
                     }
                 });
@@ -344,79 +476,145 @@ function calculateMapRoute() {
             
             const distanceValueKm = totalDistanceMeters / 1000;
             
-            // Re-calculate Time based on inputs
+            // Time breakdown
             const drivingTimeH = distanceValueKm / speedKmH;
-            const totalTimeH = drivingTimeH + stopTimeH;
+            const stopTimeH = waypoints.length * 0.5; // Assume 30 mins per stop for now
+            const restTimeH = document.getElementById('pref-opt-nom').checked ? Math.floor(drivingTimeH / 5) * 0.5 : 0; // NOM-012 rest (30 min every 5h)
             
-            const hours = Math.floor(totalTimeH);
-            const minutes = Math.round((totalTimeH - hours) * 60);
+            const totalTimeH = drivingTimeH + stopTimeH + restTimeH;
             
-            const drivingHours = Math.floor(drivingTimeH);
-            const drivingMinutes = Math.round((drivingTimeH - drivingHours) * 60);
-            
-            document.getElementById('res-distance').textContent = distanceValueKm.toLocaleString('es-MX', {maximumFractionDigits: 1}) + ' km';
-            document.getElementById('res-distance').dataset.km = distanceValueKm;
-            
-            document.getElementById('res-time').textContent = `${hours}h ${minutes}m`;
-            
-            const breakdown = document.getElementById('res-time-breakdown');
-            if (breakdown) {
-                 breakdown.innerHTML = `
-                     <span class="text-indigo-300 font-bold block mb-1">Desglose de Tiempo:</span>
-                     • <b>En Movimiento (${speedKmH}km/h):</b> ${drivingHours}h ${drivingMinutes}m <br>
-                     • <b>Paradas Seguras:</b> ${stopTimeH}h
-                 `;
+            function formatTime(hoursDecimal) {
+                const hours = Math.floor(hoursDecimal);
+                const minutes = Math.round((hoursDecimal - hours) * 60);
+                return `${hours}h:${minutes.toString().padStart(2, '0')}m`;
             }
-
-            document.getElementById('route-results').classList.remove('hidden');
             
-            triggerTollCalculation(origen, destino, waypointNames);
+            // Populate Reporte Ruta
+            const today = new Date().toLocaleDateString('es-MX');
+            document.getElementById('rep-origen').textContent = origen;
+            document.getElementById('rep-destino').textContent = destino;
+            document.getElementById('rep-fecha').textContent = today;
+            document.getElementById('rep-vehiculo').textContent = unitTypeName;
+            
+            document.getElementById('rep-dist-total').textContent = distanceValueKm.toLocaleString('es-MX', {maximumFractionDigits: 0}) + ' Kms';
+            document.getElementById('rep-dist-vacio').textContent = distanceValueKm.toLocaleString('es-MX', {maximumFractionDigits: 0}) + ' Kms';
+            
+            document.getElementById('rep-time-total').textContent = formatTime(totalTimeH);
+            document.getElementById('rep-time-drive').textContent = formatTime(drivingTimeH);
+            
+            window.currentRouteData = {
+                origen, destino, waypointNames, distance: distanceValueKm, unitTypeName
+            };
+            
+            // Switch to Report Tab
+            document.getElementById('tab-btn-report').click();
+            
+            // Trigger AI Tolls & Payroll Calc
+            triggerTollCalculationAndPayroll(distanceValueKm, unitTypeName);
 
         } else {
             console.error("Directions requests failed: ", status);
-            Swal.fire('Ruta no encontrada', 'No se pudo trazar la ruta entre estos puntos. Verifica que estén escritos correctamente.', 'error');
+            Swal.fire('Ruta no encontrada', 'No se pudo trazar la ruta entre estos puntos.', 'error');
         }
     });
 }
 
 // Nueva función extraída para calcular casetas y no repetir código al arrastrar
-function triggerTollCalculation(origen, destino, waypointNames) {
-    const tollMethod = document.getElementById('map-toll-method').value;
-    const unitType = document.getElementById('map-unit-type').value;
+async function triggerTollCalculationAndPayroll(distanceKm, unitTypeName) {
+    const origen = window.currentRouteData.origen;
+    const destino = window.currentRouteData.destino;
+    const waypoints = window.currentRouteData.waypointNames;
+    const avoidTolls = document.getElementById('pref-avoid-tolls').checked;
 
-    if (tollMethod === 'native') {
-        document.getElementById('res-tolls').innerHTML = '<i class="fas fa-sync fa-spin"></i> Consultando SCT (Google Routes)...';
-        fetchTollsViaRoutesAPI(origen, destino, waypointNames).then(tollData => {
-             document.getElementById('res-tolls').textContent = tollData.costoTotalFormatted;
-             document.getElementById('res-tolls').dataset.tollsAmount = tollData.costoTotalNumerical;
-             updatePayroll();
-        }).catch(e => {
-             console.error("Native toll error:", e);
-             document.getElementById('res-tolls').innerHTML = '<span class="text-red-500 text-[10px]">Error SCT. Intente con IA.</span>';
-             document.getElementById('res-tolls').dataset.tollsAmount = 0;
-             updatePayroll();
-        });
+    document.getElementById('rep-cost-tolls').innerHTML = '<i class="fas fa-sync fa-spin"></i>';
+    
+    let tollsCost = 0;
+
+    if (avoidTolls) {
+        document.getElementById('rep-cost-tolls').textContent = '$0.00';
+        populateCasetasModal([]);
     } else {
-        document.getElementById('res-tolls').innerHTML = '<i class="fas fa-sync fa-spin"></i> Estimando con IA...';
-        updatePayroll(); // Update with 0 for now
-        
-        estimateTollsWithAI(origen, destino, waypointNames, unitType).then(tollText => {
-            document.getElementById('res-tolls').innerHTML = tollText;
-            const match = tollText.match(/\$?(\d+,?\d*\.?\d*)/);
-            if (match) {
-                const numStr = match[1].replace(/,/g, '');
-                const num = parseFloat(numStr);
-                if (!isNaN(num)) {
-                     document.getElementById('res-tolls').dataset.tollsAmount = num;
-                     updatePayroll();
+        try {
+            // This will be handled by Gemini to get detailed info
+            if(window.getDetailedTollsAI) {
+                const response = await window.getDetailedTollsAI(origen, destino, waypoints, unitTypeName);
+                if (response && response.tolls) {
+                    tollsCost = response.totalCost || 0;
+                    document.getElementById('rep-cost-tolls').textContent = '$' + tollsCost.toLocaleString('es-MX', {minimumFractionDigits: 2});
+                    populateCasetasModal(response.tolls, tollsCost);
+                } else {
+                    document.getElementById('rep-cost-tolls').textContent = 'Error IA';
+                    populateCasetasModal([]);
                 }
+            } else {
+                 document.getElementById('rep-cost-tolls').textContent = 'IA No Lista';
+                 populateCasetasModal([]);
             }
-        }).catch(e => {
-            document.getElementById('res-tolls').innerHTML = '<span class="text-red-500 font-normal">Error al estimar peajes IA.</span>';
-            document.getElementById('res-tolls').dataset.tollsAmount = 0;
-            updatePayroll();
-        });
+        } catch (e) {
+            console.error("Error estimando casetas con IA:", e);
+            document.getElementById('rep-cost-tolls').textContent = 'Error IA';
+            populateCasetasModal([]);
+        }
     }
+
+    // Rendimiento/Fuel based on Unit type (approx)
+    let kpl = Math.max(1, parseFloat(document.getElementById('pref-kpl').value) || 2.5); // Km/L
+    let dieselPrice = 24.50; // Approximated
+    let fuelCost = (distanceKm / kpl) * dieselPrice;
+    
+    // Sueldo/Driver (based on km usually)
+    let driverRateKm = document.getElementById('pref-opt-truck').checked ? 1.50 : 1.20; 
+    let driverCost = distanceKm * driverRateKm;
+
+    // Maintenance factor per km
+    let maintCost = distanceKm * 0.85; 
+
+    // Tires factor per km
+    let tiresCost = distanceKm * 0.60;
+
+    // Update Report Table
+    document.getElementById('rep-cost-fuel').textContent = '$' + fuelCost.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    document.getElementById('rep-cost-driver').textContent = '$' + driverCost.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    document.getElementById('rep-cost-maint').textContent = '$' + maintCost.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    document.getElementById('rep-cost-tires').textContent = '$' + tiresCost.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
+    let masterTotal = tollsCost + fuelCost + driverCost + maintCost + tiresCost;
+    document.getElementById('rep-cost-total').textContent = '$' + masterTotal.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    document.getElementById('rep-tit-cost').textContent = '$' + masterTotal.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 0}) + ' MXN';
+
+    let costPerKm = distanceKm > 0 ? (masterTotal / distanceKm) : 0;
+    document.getElementById('rep-cost-km').textContent = '$' + costPerKm.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    
+    window.currentRouteData.calculatedCosts = {
+         tolls: tollsCost, fuel: fuelCost, driver: driverCost, maint: maintCost, tires: tiresCost, total: masterTotal, perKm: costPerKm
+    };
+}
+
+function populateCasetasModal(tollsArray, totalCost) {
+    const tbody = document.getElementById('casetas-table-body');
+    const totalSpan = document.getElementById('casetas-gran-total');
+    
+    if(!tollsArray || tollsArray.length === 0) {
+         tbody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-gray-400 italic">No hay casetas registradas o se seleccionó 'Evitar Cuotas'.</td></tr>`;
+         totalSpan.textContent = "Total: $0.00";
+         return;
+    }
+
+    totalSpan.textContent = "Total: $" + (totalCost || 0).toLocaleString('es-MX', {minimumFractionDigits: 2});
+    
+    tbody.innerHTML = '';
+    tollsArray.forEach(toll => {
+         const tr = document.createElement('tr');
+         tr.className = "hover:bg-blue-50 transition-colors";
+         tr.innerHTML = `
+             <td class="py-1.5 px-2 border-r border-gray-200 text-center"><i class="fas fa-ticket-alt text-orange-500"></i></td>
+             <td class="py-1.5 px-2 border-r border-gray-200 font-medium text-gray-800">${toll.name}</td>
+             <td class="py-1.5 px-2 border-r border-gray-200 text-right text-gray-600">${toll.distance || '-'} km</td>
+             <td class="py-1.5 px-2 border-r border-gray-200 text-center text-gray-600">${toll.time || '-'}</td>
+             <td class="py-1.5 px-2 text-right font-bold text-green-700">$${(toll.cost || 0).toLocaleString('es-MX', {minimumFractionDigits: 2})}</td>
+         `;
+         tbody.appendChild(tr);
+    });
 }
 
 function recalculateTotalsFromDraggedRoute(result) {
@@ -463,33 +661,31 @@ function recalculateTotalsFromDraggedRoute(result) {
 
     const distanceValueKm = totalDistanceMeters / 1000;
     const speedKmH = parseFloat(document.getElementById('map-speed').value) || 70;
-    const stopTimeH = parseFloat(document.getElementById('map-stop-time').value) || 0;
+    const stopTimeH = waypoints.length * 0.5;
     
     const drivingTimeH = distanceValueKm / speedKmH;
-    const totalTimeH = drivingTimeH + stopTimeH;
+    const restTimeH = document.getElementById('pref-opt-nom').checked ? Math.floor(drivingTimeH / 5) * 0.5 : 0;
+    const totalTimeH = drivingTimeH + stopTimeH + restTimeH;
     
-    const hours = Math.floor(totalTimeH);
-    const minutes = Math.round((totalTimeH - hours) * 60);
-    const drivingHours = Math.floor(drivingTimeH);
-    const drivingMinutes = Math.round((drivingTimeH - drivingHours) * 60);
-    
-    document.getElementById('res-distance').textContent = distanceValueKm.toLocaleString('es-MX', {maximumFractionDigits: 1}) + ' km (Modificada)';
-    document.getElementById('res-distance').dataset.km = distanceValueKm;
-    document.getElementById('res-time').textContent = `${hours}h ${minutes}m`;
-    
-    const breakdown = document.getElementById('res-time-breakdown');
-    if (breakdown) {
-         breakdown.innerHTML = `
-             <span class="text-indigo-300 font-bold block mb-1">Desglose de Tiempo (Modificado):</span>
-             • <b>En Movimiento (${speedKmH}km/h):</b> ${drivingHours}h ${drivingMinutes}m <br>
-             • <b>Paradas Seguras:</b> ${stopTimeH}h
-         `;
+    function formatTime(hoursDecimal) {
+        const h = Math.floor(hoursDecimal);
+        const m = Math.round((hoursDecimal - h) * 60);
+        return `${h}h:${m.toString().padStart(2, '0')}m`;
     }
+    
+    // Update Report tab manually since dragged
+    document.getElementById('rep-dist-total').textContent = distanceValueKm.toLocaleString('es-MX', {maximumFractionDigits: 0}) + ' Kms';
+    document.getElementById('rep-dist-vacio').textContent = distanceValueKm.toLocaleString('es-MX', {maximumFractionDigits: 0}) + ' Kms';
+    
+    document.getElementById('rep-time-total').textContent = formatTime(totalTimeH) + ' (Modificado)';
+    document.getElementById('rep-time-drive').textContent = formatTime(drivingTimeH);
+
+    window.currentRouteData.distance = distanceValueKm;
 
     // Volver a calcular casetas con los nuevos puntos arrastrados
     // Excluir el primer address porque es el origen
     const arrastrados = legWaypoints.slice(1); 
-    triggerTollCalculation(origen, destino, arrastrados);
+    triggerTollCalculationAndPayroll(distanceValueKm, window.currentRouteData.unitTypeName);
 }
 
 async function fetchTollsViaRoutesAPI(originStr, destinationStr, waypointsArray) {
@@ -554,26 +750,50 @@ async function fetchTollsViaRoutesAPI(originStr, destinationStr, waypointsArray)
     };
 }
 
-function updatePayroll() {
-    const kmSpan = document.getElementById('res-distance');
-    if (!kmSpan.dataset.km) return;
-    
-    const km = parseFloat(kmSpan.dataset.km);
-    const nominaRate = parseFloat(document.getElementById('map-rate-nomina').value) || 0;
-    const alimentosRate = parseFloat(document.getElementById('map-rate-alimentos').value) || 0;
-    
-    const nominaTotal = km * nominaRate;
-    const alimentosTotal = km * alimentosRate;
-    
-    const casetasElement = document.getElementById('res-tolls');
-    const casetasTotal = parseFloat(casetasElement?.dataset?.tollsAmount) || 0;
+// Modals and Share Logic
+function openTollsModal() {
+    document.getElementById('modal-casetas').classList.remove('hidden');
+}
 
-    const granTotal = nominaTotal + alimentosTotal + casetasTotal;
+function closeTollsModal() {
+    document.getElementById('modal-casetas').classList.add('hidden');
+}
+
+function shareRouteWhatsApp() {
+    if(!window.currentRouteData || !window.currentRouteData.origen) {
+        Swal.fire('Atención', 'Debe calcular una ruta primero antes de enviarla.', 'warning');
+        return;
+    }
     
-    document.getElementById('res-alimentos').textContent = '$' + alimentosTotal.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-    document.getElementById('res-nomina').textContent = '$' + nominaTotal.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    let text = `*📍 NUEVA ASIGNACIÓN DE RUTA*\n\n`;
+    text += `*🚛 Unidad:* ${window.currentRouteData.unitTypeName || 'No esp.'}\n`;
+    text += `*🛣️ Origen:* ${window.currentRouteData.origen}\n`;
+    text += `*🏁 Destino:* ${window.currentRouteData.destino}\n`;
     
-    document.getElementById('res-payroll').textContent = '$' + granTotal.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    let mapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(window.currentRouteData.origen)}&destination=${encodeURIComponent(window.currentRouteData.destino)}`;
+
+    if(window.currentRouteData.waypointNames && window.currentRouteData.waypointNames.length > 0) {
+        text += `\n*🛑 Paradas Obligatorias:*\n`;
+        window.currentRouteData.waypointNames.forEach((w,i) => {
+             text += `  ${i+1}. ${w}\n`;
+        });
+        const waypointsStr = window.currentRouteData.waypointNames.join('|');
+        mapsUrl += `&waypoints=${encodeURIComponent(waypointsStr)}`;
+    }
+    
+    if(window.currentRouteData.calculatedCosts) {
+        text += `\n*💰 Viáticos Asignados:*\n`;
+        text += `  Casetas: $${window.currentRouteData.calculatedCosts.tolls.toLocaleString('es-MX', {minimumFractionDigits: 2})}\n`;
+        text += `  Diésel Estimado: $${window.currentRouteData.calculatedCosts.fuel.toLocaleString('es-MX', {minimumFractionDigits: 2})}\n`;
+    }
+    
+    text += `\n*🗺️ Ver Ruta en Google Maps:*\n${mapsUrl}\n`;
+    
+    text += `\nPor favor, confirme de recibido y registre la salida en su App de Operador (EDY). Buen viaje.`;
+    
+    const encoded = encodeURIComponent(text);
+    // Para simplificar, abrir WhatsApp Web/App hacia el usuario
+    window.open(`https://wa.me/?text=${encoded}`, '_blank');
 }
 
 async function checkAIRestrictions() {

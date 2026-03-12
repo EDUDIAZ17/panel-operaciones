@@ -626,33 +626,45 @@ window.openFinishTripModal = (unitId) => {
         const finishDate = document.getElementById('finish-date').value;
         const comments = document.getElementById('finish-comments').value;
         const currentUser = JSON.parse(sessionStorage.getItem('currentUser'));
-
         const checkpoints = parsedDetails.checkpoints || {};
         const requiredCPs = [
-            'trip_load_arrival', 'trip_load_start', 'trip_load_end', 
-            'trip_unload_arrival', 'trip_unload_start', 'trip_unload_end',
-            'trip_route_start', 'trip_route_end'
+            { key: 'trip_load_arrival', name: 'Llegada a Carga' },
+            { key: 'trip_load_end', name: 'Fin de Carga / Ins. Ruta' },
+            { key: 'trip_route_start', name: 'Inicio de Ruta (Punta a Punta)' },
+            { key: 'trip_route_end', name: 'Fin de Ruta (Punta a Punta)' },
+            { key: 'trip_unload_arrival', name: 'Llegada a Descarga (ETA)' },
+            { key: 'trip_unload_end', name: 'Fin de Descarga (Entrega)' }
         ];
 
-        let missing = [];
+        let missingFields = [];
+        
+        if(!parsedDetails.cliente) missingFields.push('Cliente');
+        if(!parsedDetails.origen) missingFields.push('Origen');
+        if(!parsedDetails.destino) missingFields.push('Destino');
+
         for (const cp of requiredCPs) {
-            if (!checkpoints[cp]) {
-                missing.push(cp);
+            if (!checkpoints[cp.key]) {
+                missingFields.push(cp.name);
             }
         }
 
-        if(!parsedDetails.cliente || !parsedDetails.origen || !parsedDetails.destino) {
-             missing.push('Datos Básicos (Cliente, Origen, Destino)');
-        }
-
-        if (missing.length > 0) {
+        if (missingFields.length > 0) {
+            let errorHtml = `<div class="text-left text-sm text-gray-700 mb-2">Para terminar el viaje, necesitas llenar los siguientes campos:</div>
+                <ul class="list-disc pl-5 text-left text-red-600 font-bold mb-4 text-sm">
+                    ${missingFields.map(f => `<li>${f}</li>`).join('')}
+                </ul>
+                <div class="text-xs text-gray-500 italic bg-gray-50 p-2 rounded border text-left">
+                    <i class="fas fa-info-circle mr-1"></i>Puedes completar los datos faltantes en la pestaña "Bitácora de Viajes" o haciendo clic en el botón de "Tiempos Logísticos" de esta unidad.
+                </div>
+            `;
             Swal.fire({
-                icon: 'error',
-                title: 'Datos Incompletos',
-                text: 'Para terminar el viaje debes llenar todos los datos logísticos y tiempos. Faltan campos por completar.',
+                icon: 'warning',
+                title: 'Faltan Datos del Viaje',
+                html: errorHtml,
+                confirmButtonColor: '#4f46e5'
             });
             return;
-        }
+        };
 
         const oldDetailsStr = JSON.stringify(parsedDetails);
 
