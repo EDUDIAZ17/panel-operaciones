@@ -182,6 +182,67 @@ export async function estimateTollsWithAI(origen, destino, paradas = [], unitTyp
     console.error("All Gemini models failed for tolls. Last error:", lastError);
     throw lastError;
 }
+window.getDetailedTollsAI = async (origen, destino, paradas = [], unitType = 'full') => {
+    let paradasText = '';
+    if (paradas.length > 0) {
+        paradasText = ` haciendo paradas intermedias en: ${paradas.join(', ')}`;
+    }
+
+    let axels = "9 ejes (Full)";
+    if (unitType === 'sencillo') axels = "5-6 ejes (Sencillo)";
+    if (unitType === 'torton') axels = "3 ejes (Torton)";
+
+    const prompt = `
+        Actúa como un analista logístico experto en rutas terrestres de México.
+        Necesitamos obtener el DESGLOSE DE CASETAS/PEAJES para un vehículo pesado de ${axels} 
+        que viaja desde "${origen}" hacia "${destino}"${paradasText}.
+
+        Reglas:
+        1. Considera rutas de autopistas de cuota (Federales) más probables.
+        2. Proporciona la respuesta ÚNICAMENTE en formato JSON válido, sin texto adicional ni bloques markdown (\`\`\`json).
+        3. El JSON debe cumplir estrictamente esta estructura:
+        {
+            "totalCost": 4500,
+            "tolls": [
+                 { "name": "Nombre Caseta 1", "distance": "120", "time": "1h 30m", "cost": 500 },
+                 { "name": "Nombre Caseta 2", "distance": "250", "time": "2h 45m", "cost": 1200 }
+            ]
+        }
+        Recuerda: SOLO JSON VÁLIDO. Los costos ("totalCost" y "cost") deben ser números (sin símbolos de peso o comas). "distance" y "time" son strings descriptivos.
+    `;
+
+    const modelsToTry = [
+        'gemini-2.5-flash',
+        'gemini-2.5-pro'
+    ];
+    let lastError = null;
+
+    for (const model of modelsToTry) {
+        try {
+            const { data, error } = await supabase.functions.invoke('gemini-proxy', {
+                body: { model, prompt }
+            });
+            
+            if (error) {
+                console.warn('Model ' + model + ' failed for detailed tolls:', error);
+                lastError = error;
+                continue;
+            }
+
+            let textOption = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (textOption) {
+                textOption = textOption.replace(/\`\`\`json/gi, '').replace(/\`\`\`/g, '').trim();
+                return JSON.parse(textOption);
+            }
+        } catch (error) {
+            console.warn('Parse error for model ' + model + ' for detailed tolls:', error);
+            lastError = error;
+        }
+    }
+    
+    console.error("All Gemini models failed for detailed tolls. Last error:", lastError);
+    throw lastError;
+};
 
 // =========================================================================
 // AGENTE DE AUDITORIA NOM-012 Y RIESGO CARRETERO (ITERACION 6)
