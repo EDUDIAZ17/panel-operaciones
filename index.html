@@ -27,6 +27,19 @@
     </script>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com/3.4.1"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              slate: {
+                950: '#020617',
+              }
+            }
+          }
+        }
+      }
+    </script>
     <!-- FontAwesome -->
     <link
       rel="stylesheet"
@@ -42,7 +55,7 @@
     <!-- Google Maps API -->
     <script
       async
-      src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBiaioYABgNrwIm-j_H1VuPk2SN7CsbbFY&libraries=places,geometry&loading=async"
+      src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBiaioYABgNrwIm-j_H1VuPk2SN7CsbbFY&libraries=places,geometry,marker&loading=async"
     ></script>
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -303,8 +316,7 @@
         </button>
       </nav>
 
-      <!-- Chart.js -->
-      <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 
       <div class="p-4 border-t border-slate-700/50 bg-black/20">
         <div class="user-profile flex items-center gap-3">
