@@ -483,12 +483,7 @@ function initMap() {
         mapId: '62e666a4666cf647', // ID for advanced markers
         mapTypeControl: false,
         streetViewControl: false,
-        fullscreenControl: false,
-        styles: [
-            {"featureType":"administrative.country","elementType":"geometry.stroke","stylers":[{"color":"#4b6878"}]},
-            {"featureType":"landscape.natural","elementType":"geometry","stylers":[{"color":"#f5f5f2"}]},
-            {"featureType":"water","elementType":"geometry","stylers":[{"color":"#e9e9e9"}]}
-        ]
+        fullscreenControl: false
     });
 
     const trafficLayer = new google.maps.TrafficLayer();
@@ -611,16 +606,25 @@ function calculateMapRoute() {
             
             // Populate Reporte Ruta
             const today = new Date().toLocaleDateString('es-MX');
-            document.getElementById('rep-origen').textContent = origen;
-            document.getElementById('rep-destino').textContent = destino;
-            document.getElementById('rep-fecha').textContent = today;
-            document.getElementById('rep-vehiculo').textContent = unitTypeName;
+            const repOrig = document.getElementById('rep-origen');
+            const repDest = document.getElementById('rep-destino');
+            const repDate = document.getElementById('rep-fecha');
+            const repVeh = document.getElementById('rep-vehiculo');
+            const repDTotal = document.getElementById('rep-dist-total');
+            const repDVacio = document.getElementById('rep-dist-vacio');
+            const repTTotal = document.getElementById('rep-time-total');
+            const repTDrive = document.getElementById('rep-time-drive');
+
+            if (repOrig) repOrig.textContent = origen;
+            if (repDest) repDest.textContent = destino;
+            if (repDate) repDate.textContent = today;
+            if (repVeh) repVeh.textContent = unitTypeName;
             
-            document.getElementById('rep-dist-total').textContent = distanceValueKm.toLocaleString('es-MX', {maximumFractionDigits: 0}) + ' Kms';
-            document.getElementById('rep-dist-vacio').textContent = distanceValueKm.toLocaleString('es-MX', {maximumFractionDigits: 0}) + ' Kms';
+            if (repDTotal) repDTotal.textContent = distanceValueKm.toLocaleString('es-MX', {maximumFractionDigits: 0}) + ' Kms';
+            if (repDVacio) repDVacio.textContent = distanceValueKm.toLocaleString('es-MX', {maximumFractionDigits: 0}) + ' Kms';
             
-            document.getElementById('rep-time-total').textContent = formatTime(totalTimeH);
-            document.getElementById('rep-time-drive').textContent = formatTime(drivingTimeH);
+            if (repTTotal) repTTotal.textContent = formatTime(totalTimeH);
+            if (repTDrive) repTDrive.textContent = formatTime(drivingTimeH);
             
             window.currentRouteData = {
                 origen, destino, waypointNames, distance: distanceValueKm, unitTypeName
@@ -646,12 +650,13 @@ async function triggerTollCalculationAndPayroll(distanceKm, unitTypeName) {
     const waypoints = window.currentRouteData.waypointNames;
     const avoidTolls = document.getElementById('pref-avoid-tolls').checked;
 
-    document.getElementById('rep-cost-tolls').innerHTML = '<i class="fas fa-sync fa-spin"></i>';
+    const repTolls = document.getElementById('rep-cost-tolls');
+    if (repTolls) repTolls.innerHTML = '<i class="fas fa-sync fa-spin"></i>';
     
     let tollsCost = 0;
 
     if (avoidTolls) {
-        document.getElementById('rep-cost-tolls').textContent = '$0.00';
+        if (repTolls) repTolls.textContent = '$0.00';
         populateCasetasModal([]);
     } else {
         try {
@@ -722,14 +727,14 @@ function populateCasetasModal(tollsArray, totalCost) {
     const totalSpan = document.getElementById('casetas-gran-total');
     
     if(!tollsArray || tollsArray.length === 0) {
-         tbody.innerHTML = `<tr><td colspan="5" class="py-12 text-center text-slate-600 italic">No se detectaron registros de peaje en esta configuración de ruta.</td></tr>`;
-         totalSpan.textContent = "$0.00";
+         if (tbody) tbody.innerHTML = `<tr><td colspan="5" class="py-12 text-center text-slate-600 italic">No se detectaron registros de peaje en esta configuración de ruta.</td></tr>`;
+         if (totalSpan) totalSpan.textContent = "$0.00";
          return;
     }
 
-    totalSpan.textContent = "$" + (totalCost || 0).toLocaleString('es-MX', {minimumFractionDigits: 2});
+    if (totalSpan) totalSpan.textContent = "$" + (totalCost || 0).toLocaleString('es-MX', {minimumFractionDigits: 2});
     
-    tbody.innerHTML = '';
+    if (tbody) tbody.innerHTML = '';
     tollsArray.forEach((toll, index) => {
          const tr = document.createElement('tr');
          tr.className = "hover:bg-white/5 transition-colors border-b border-white/5 last:border-0";
@@ -805,11 +810,16 @@ function recalculateTotalsFromDraggedRoute(result) {
     }
     
     // Update Report tab manually since dragged
-    document.getElementById('rep-dist-total').textContent = distanceValueKm.toLocaleString('es-MX', {maximumFractionDigits: 0}) + ' Kms';
-    document.getElementById('rep-dist-vacio').textContent = distanceValueKm.toLocaleString('es-MX', {maximumFractionDigits: 0}) + ' Kms';
+    const repDistTotal = document.getElementById('rep-dist-total');
+    const repDistVacio = document.getElementById('rep-dist-vacio');
+    const repTimeTotal = document.getElementById('rep-time-total');
+    const repTimeDrive = document.getElementById('rep-time-drive');
+
+    if (repDistTotal) repDistTotal.textContent = distanceValueKm.toLocaleString('es-MX', {maximumFractionDigits: 0}) + ' Kms';
+    if (repDistVacio) repDistVacio.textContent = distanceValueKm.toLocaleString('es-MX', {maximumFractionDigits: 0}) + ' Kms';
     
-    document.getElementById('rep-time-total').textContent = formatTime(totalTimeH) + ' (Modificado)';
-    document.getElementById('rep-time-drive').textContent = formatTime(drivingTimeH);
+    if (repTimeTotal) repTimeTotal.textContent = formatTime(totalTimeH) + ' (Modificado)';
+    if (repTimeDrive) repTimeDrive.textContent = formatTime(drivingTimeH);
 
     // Actualizar datos globales para auditoría
     window.currentRouteData.origen = origen;
