@@ -11,21 +11,21 @@ let waypointCount = 0;
 
 export function renderPayrollMap(container) {
     container.innerHTML = `
-        <div class="h-full flex flex-col md:flex-row bg-[#0f172a] p-3 gap-3 fade-in font-sans text-sm">
+        <div class="h-full flex flex-col md:flex-row bg-[#020617] p-3 gap-3 fade-in font-sans text-sm text-slate-200">
             
             <!-- Panel Izquierdo: Creador Avanzado de Rutas (Premium Dark Mode) -->
             <div class="w-full md:w-[440px] bg-slate-900/90 backdrop-blur-md border border-slate-700/50 flex flex-col overflow-hidden rounded-xl shadow-2xl h-full max-h-[92vh]">
                 
                 <!-- TABS (Glassmorphism Header) -->
-                <div class="flex bg-slate-800/50 p-1 gap-1 border-b border-white/5">
-                    <button id="tab-btn-create" class="flex-1 py-2.5 px-4 rounded-lg text-center font-bold bg-indigo-600 text-white shadow-lg shadow-indigo-500/20 focus:outline-none flex items-center justify-center gap-2 text-xs transition-all duration-300">
-                        <i class="fas fa-route text-indigo-200"></i> Diseñar Ruta
+                <div class="flex bg-white/5 p-1 gap-1 border-b border-white/5">
+                    <button id="tab-btn-create" class="flex-1 py-3 px-4 rounded-xl text-center font-bold bg-indigo-600/90 text-white shadow-lg shadow-indigo-500/10 focus:outline-none flex items-center justify-center gap-2 text-xs transition-all duration-300">
+                        <i class="fas fa-route text-indigo-300"></i> Diseñar Ruta
                     </button>
-                    <button id="tab-btn-report" class="flex-1 py-2.5 px-4 rounded-lg text-center font-semibold text-slate-400 hover:bg-slate-800/80 hover:text-slate-200 focus:outline-none flex items-center justify-center gap-2 text-xs transition-all duration-300">
-                        <i class="fas fa-analytics"></i> Reporte Global
+                    <button id="tab-btn-report" class="flex-1 py-3 px-4 rounded-xl text-center font-bold text-slate-400 hover:bg-white/5 hover:text-slate-100 focus:outline-none flex items-center justify-center gap-2 text-xs transition-all duration-300">
+                        <i class="fas fa-chart-pie"></i> Análisis Ruta
                     </button>
-                    <button id="tab-btn-points" class="flex-1 py-2.5 px-4 rounded-lg text-center font-semibold text-slate-400 hover:bg-slate-800/80 hover:text-slate-200 focus:outline-none flex items-center justify-center gap-2 text-xs transition-all duration-300">
-                        <i class="fas fa-map-pins"></i> Logística
+                    <button id="tab-btn-points" class="flex-1 py-3 px-4 rounded-xl text-center font-bold text-slate-400 hover:bg-white/5 hover:text-slate-100 focus:outline-none flex items-center justify-center gap-2 text-xs transition-all duration-300">
+                        <i class="fas fa-shield-alt"></i> Seguridad
                     </button>
                 </div>
                 
@@ -209,17 +209,24 @@ export function renderPayrollMap(container) {
                              </div>
 
                              <!-- Action Grid -->
-                             <div class="grid grid-cols-2 gap-2 pt-2 pb-6">
-                                  <button id="btn-show-tolls" class="bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 py-3 rounded-xl transition-all flex flex-col items-center justify-center gap-1">
-                                      <i class="fas fa-ticket-alt"></i>
-                                      <span class="text-[10px] font-bold">VER CASETAS</span>
+                             <div class="grid grid-cols-2 gap-3 pt-4 pb-6">
+                                  <button id="btn-show-tolls" class="bg-indigo-600/20 hover:bg-indigo-600/40 border border-indigo-500/40 text-indigo-300 py-4 rounded-2xl transition-all flex flex-col items-center justify-center gap-2 shadow-lg shadow-indigo-500/5">
+                                      <i class="fas fa-ticket-alt text-lg"></i>
+                                      <span class="text-[10px] font-black uppercase tracking-widest">Ver Casetas</span>
                                   </button>
-                                  <button id="btn-share-whatsapp" class="bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-400 py-3 rounded-xl transition-all flex flex-col items-center justify-center gap-1">
-                                      <i class="fab fa-whatsapp"></i>
-                                      <span class="text-[10px] font-bold">WHATSAPP</span>
+                                  <button id="btn-share-whatsapp" class="bg-emerald-600/20 hover:bg-emerald-600/40 border border-emerald-500/40 text-emerald-400 py-4 rounded-2xl transition-all flex flex-col items-center justify-center gap-2 shadow-lg shadow-emerald-500/5">
+                                      <i class="fab fa-whatsapp text-lg"></i>
+                                      <span class="text-[10px] font-black uppercase tracking-widest">Enviar Ruta</span>
                                   </button>
-                                  <button class="bg-slate-800/80 hover:bg-slate-700 border border-slate-700 text-slate-400 py-2 rounded-lg text-[10px] font-bold">DESCARGAR PDF</button>
-                                  <button class="bg-slate-800/80 hover:bg-slate-700 border border-slate-700 text-slate-400 py-2 rounded-lg text-[10px] font-bold">COTIZACIÓN</button>
+                                  <button id="btn-ai-audit" class="col-span-2 bg-gradient-to-r from-violet-600/40 to-indigo-600/40 hover:from-violet-600/60 hover:to-indigo-600/60 border border-violet-500/40 text-white py-4 rounded-2xl transition-all flex items-center justify-center gap-3 shadow-xl shadow-violet-500/10 active:scale-[0.98]">
+                                      <div class="relative">
+                                          <i class="fas fa-microchip text-violet-300"></i>
+                                          <span class="absolute -top-1 -right-1 w-2 h-2 bg-teal-400 rounded-full animate-ping"></span>
+                                      </div>
+                                      <span class="text-xs font-black uppercase tracking-widest">Auditoría Inteligente NOM-012</span>
+                                  </button>
+                                  <button class="bg-slate-900/80 hover:bg-slate-800 border border-slate-700/50 text-slate-500 hover:text-slate-300 py-3 rounded-xl text-[10px] font-bold transition-colors">EXPORTAR PDF</button>
+                                  <button class="bg-slate-900/80 hover:bg-slate-800 border border-slate-700/50 text-slate-500 hover:text-slate-300 py-3 rounded-xl text-[10px] font-bold transition-colors">GENERAR TARIFA</button>
                              </div>
                         </div>
                     </div>
@@ -303,6 +310,65 @@ export function renderPayrollMap(container) {
         btn.addEventListener('click', closeTollsModal);
     });
     document.getElementById('btn-share-whatsapp').addEventListener('click', shareRouteWhatsApp);
+
+    // AI Audit Button
+    const btnAiAudit = document.getElementById('btn-ai-audit');
+    if (btnAiAudit) {
+        btnAiAudit.addEventListener('click', () => {
+             const data = window.currentRouteData;
+             if (!data || !data.origen || !data.destino) {
+                 Swal.fire({
+                     icon: 'info',
+                     title: 'Sin Datos de Ruta',
+                     text: 'Primero debe trazar una ruta en el primer tab para auditar.',
+                     confirmButtonColor: '#4f46e5'
+                 });
+                 return;
+             }
+             
+             Swal.fire({
+                 title: 'Auditoría Inteligente NOM-012',
+                 html: '<div class="text-center py-6"><div class="spinner-border text-indigo-500 mb-4 h-10 w-10 border-4 border-t-transparent animate-spin rounded-full inline-block"></div><p class="text-xs text-slate-500 font-bold uppercase tracking-widest mt-2">Analizando rutas, pesos y clasificaciones SCT...</p></div>',
+                 showConfirmButton: false,
+                 allowOutsideClick: false,
+                 background: '#020617',
+                 color: '#f8fafc'
+             });
+
+             if (window.generateLogisticsReportAI) {
+                 window.generateLogisticsReportAI(data.origen, data.destino, data.waypointNames, data.unitTypeName)
+                 .then(html => {
+                     Swal.fire({
+                         width: '850px',
+                         html: `<div class="bg-[#020617] text-slate-200 p-2 text-left">${html}</div>`,
+                         confirmButtonText: '<i class="fas fa-check"></i> Entendido',
+                         confirmButtonColor: '#4f46e5',
+                         background: '#020617',
+                         color: '#f8fafc'
+                     });
+                 })
+                 .catch(err => {
+                     console.error(err);
+                     Swal.fire({
+                         icon: 'error',
+                         title: 'Falla en IA',
+                         text: 'No se pudo generar la auditoría en este momento.',
+                         background: '#020617',
+                         color: '#f8fafc'
+                     });
+                 });
+             }
+        });
+    }
+
+    // Initialize state
+    window.currentRouteData = {
+        origen: '',
+        destino: '',
+        waypointNames: [],
+        distance: 0,
+        unitTypeName: 'Tractocamión Full (C3-R3)'
+    };
 }
 
 function bindTabsAndUI() {
@@ -455,11 +521,11 @@ function calculateMapRoute() {
     const unitTypeName = unitTypeOptions.options[unitTypeOptions.selectedIndex].text;
 
     const waypointInputs = document.querySelectorAll('.waypoint-input');
-    const waypoints = [];
+    const routeWaypoints = [];
     const waypointNames = [];
     waypointInputs.forEach(input => {
         if (input.value.trim()) {
-            waypoints.push({
+            routeWaypoints.push({
                 location: input.value.trim(),
                 stopover: true
             });
@@ -473,7 +539,7 @@ function calculateMapRoute() {
     const request = {
         origin: origen,
         destination: destino,
-        waypoints: waypoints,
+        waypoints: routeWaypoints,
         travelMode: google.maps.TravelMode.DRIVING,
         provideRouteAlternatives: false,
         avoidTolls: document.getElementById('pref-avoid-tolls').checked,
@@ -717,11 +783,13 @@ function recalculateTotalsFromDraggedRoute(result) {
     document.getElementById('rep-time-total').textContent = formatTime(totalTimeH) + ' (Modificado)';
     document.getElementById('rep-time-drive').textContent = formatTime(drivingTimeH);
 
+    // Actualizar datos globales para auditoría
+    window.currentRouteData.origen = origen;
+    window.currentRouteData.destino = destino;
     window.currentRouteData.distance = distanceValueKm;
+    window.currentRouteData.waypointNames = legWaypoints.slice(1, -1); 
 
     // Volver a calcular casetas con los nuevos puntos arrastrados
-    // Excluir el primer address porque es el origen
-    const arrastrados = legWaypoints.slice(1); 
     triggerTollCalculationAndPayroll(distanceValueKm, window.currentRouteData.unitTypeName);
 }
 
