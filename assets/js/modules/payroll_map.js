@@ -11,7 +11,7 @@ let waypointCount = 0;
 
 export function renderPayrollMap(container) {
     container.innerHTML = `
-        <div class="h-full flex flex-col md:flex-row bg-[#020617] p-3 gap-3 fade-in font-sans text-sm text-slate-200">
+        <div class="h-full flex flex-col md:flex-row bg-[#020617] p-3 gap-3 fade-in font-sans text-sm text-slate-100">
             
             <!-- Panel Izquierdo: Creador Avanzado de Rutas (Premium Dark Mode) -->
             <div class="w-full md:w-[440px] bg-slate-900/90 backdrop-blur-md border border-slate-700/50 flex flex-col overflow-hidden rounded-xl shadow-2xl h-full max-h-[92vh]">
@@ -77,12 +77,29 @@ export function renderPayrollMap(container) {
                                     </label>
                                 </div>
                                 
-                                <div class="pt-3 border-t border-slate-700/50 flex items-center justify-between">
-                                    <span class="text-[11px] font-medium text-slate-400 italic">Crucero (km/h):</span>
-                                    <div class="flex items-center bg-slate-900 rounded-lg border border-slate-700 p-1">
-                                         <button id="btn-speed-down" class="w-7 h-7 flex items-center justify-center rounded text-slate-400 hover:bg-slate-800 hover:text-white transition-all text-lg">-</button>
-                                         <input type="number" id="map-speed" value="70" class="w-10 bg-transparent text-center text-sm text-indigo-400 font-bold focus:outline-none" readonly>
-                                         <button id="btn-speed-up" class="w-7 h-7 flex items-center justify-center rounded text-slate-400 hover:bg-slate-800 hover:text-white transition-all text-lg">+</button>
+                                <div class="pt-3 border-t border-slate-700/50 flex flex-col gap-3">
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-[11px] font-medium text-slate-400 italic">Crucero (km/h):</span>
+                                        <div class="flex items-center bg-slate-900 rounded-lg border border-slate-700 p-1">
+                                             <button id="btn-speed-down" class="w-7 h-7 flex items-center justify-center rounded text-slate-400 hover:bg-slate-800 hover:text-white transition-all text-lg">-</button>
+                                             <input type="number" id="map-speed" value="70" class="w-10 bg-transparent text-center text-sm text-indigo-400 font-bold focus:outline-none" readonly>
+                                             <button id="btn-speed-up" class="w-7 h-7 flex items-center justify-center rounded text-slate-400 hover:bg-slate-800 hover:text-white transition-all text-lg">+</button>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <div class="bg-slate-900/50 p-2 rounded border border-slate-700/50">
+                                            <p class="text-[9px] text-slate-500 uppercase font-black tracking-tighter mb-1">Rendimiento (Km/L)</p>
+                                            <input type="number" id="pref-kpl" value="2.5" step="0.1" class="w-full bg-transparent text-white font-bold focus:outline-none">
+                                        </div>
+                                        <div class="bg-slate-900/50 p-2 rounded border border-slate-700/50">
+                                            <p class="text-[9px] text-slate-500 uppercase font-black tracking-tighter mb-1">Ejes Totales</p>
+                                            <input type="number" id="map-axles" value="6" class="w-full bg-transparent text-white font-bold focus:outline-none">
+                                        </div>
+                                        <div class="bg-slate-900/50 p-2 rounded border border-slate-700/50 col-span-2">
+                                            <p class="text-[9px] text-slate-500 uppercase font-black tracking-tighter mb-1">Peso Bruto Vehicular (Toneladas PBV)</p>
+                                            <input type="number" id="map-weight" value="75" class="w-full bg-transparent text-white font-bold focus:outline-none">
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -137,21 +154,24 @@ export function renderPayrollMap(container) {
                                  <div class="flex items-center gap-3">
                                      <div class="w-8 h-8 rounded-lg bg-indigo-600/20 flex items-center justify-center text-indigo-400 border border-indigo-500/20 font-bold">A</div>
                                      <div class="flex-1">
-                                         <p class="text-[9px] text-slate-500 uppercase tracking-tighter">Punto de Partida</p>
-                                         <p class="text-slate-200 font-bold truncate" id="rep-origen">Cargando...</p>
+                                         <p class="text-[9px] text-slate-400 uppercase tracking-tighter">Punto de Partida</p>
+                                         <p class="text-white font-black truncate" id="rep-origen">Cargando...</p>
                                      </div>
                                  </div>
                                  <div class="w-px h-4 bg-slate-700 ml-4 border-l border-dashed border-slate-600"></div>
                                  <div class="flex items-center gap-3">
                                      <div class="w-8 h-8 rounded-lg bg-pink-600/20 flex items-center justify-center text-pink-400 border border-pink-500/20 font-bold">B</div>
                                      <div class="flex-1">
-                                         <p class="text-[9px] text-slate-500 uppercase tracking-tighter">Destino Logístico</p>
-                                         <p class="text-slate-200 font-bold truncate" id="rep-destino">Cargando...</p>
+                                         <p class="text-[9px] text-slate-400 uppercase tracking-tighter">Destino Logístico</p>
+                                         <p class="text-white font-black truncate" id="rep-destino">Cargando...</p>
                                      </div>
                                  </div>
                                  <div class="mt-2 pt-3 border-t border-white/5 flex justify-between items-center">
                                      <div class="bg-indigo-900/50 px-2 py-1 rounded text-[10px] text-indigo-300 border border-indigo-500/30" id="rep-vehiculo">Sin Unidad</div>
-                                     <div class="text-slate-400 font-mono text-[10px]" id="rep-fecha">00/00/0000</div>
+                                     <div class="flex flex-col items-end">
+                                         <span id="rep-tit-cost" class="text-white font-black text-sm">$0.00</span>
+                                         <div class="text-slate-400 font-mono text-[9px]" id="rep-fecha">00/00/0000</div>
+                                     </div>
                                  </div>
                              </div>
                         </div>
@@ -168,9 +188,10 @@ export function renderPayrollMap(container) {
                                   
                                   <!-- Tiempo -->
                                   <div class="bg-slate-800/40 p-4 rounded-xl border border-white/5 flex flex-col items-center justify-center text-center">
-                                      <p class="text-[10px] text-slate-500 uppercase font-bold tracking-widest mb-1">Tiempo de Tránsito</p>
-                                      <p class="text-2xl font-black text-indigo-400" id="rep-time-total">0:00 <span class="text-xs font-normal text-slate-400">h</span></p>
-                                      <p class="text-[9px] text-slate-500 mt-1" id="rep-time-drive">0h conducción</p>
+                                      <p class="text-[10px] text-slate-400 uppercase font-black tracking-widest mb-1">Tiempo de Tránsito</p>
+                                      <p class="text-2xl font-black text-white" id="rep-time-total">0:00 <span class="text-xs font-normal text-slate-400">h</span></p>
+                                      <p class="text-[9px] text-slate-300 mt-1 font-bold" id="rep-time-drive">0h conducción</p>
+                                      <p id="rep-dist-vacio" class="hidden">0 km</p>
                                   </div>
                              </div>
 
@@ -577,7 +598,7 @@ function calculateMapRoute() {
             
             // Time breakdown
             const drivingTimeH = distanceValueKm / speedKmH;
-            const stopTimeH = waypoints.length * 0.5; // Assume 30 mins per stop for now
+            const stopTimeH = waypointNames.length * 0.5; // Assume 30 mins per stop for now
             const restTimeH = document.getElementById('pref-opt-nom').checked ? Math.floor(drivingTimeH / 5) * 0.5 : 0; // NOM-012 rest (30 min every 5h)
             
             const totalTimeH = drivingTimeH + stopTimeH + restTimeH;
@@ -671,18 +692,25 @@ async function triggerTollCalculationAndPayroll(distanceKm, unitTypeName) {
     // Tires factor per km
     let tiresCost = distanceKm * 0.60;
 
-    // Update Report Table
-    document.getElementById('rep-cost-fuel').textContent = '$' + fuelCost.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-    document.getElementById('rep-cost-driver').textContent = '$' + driverCost.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-    document.getElementById('rep-cost-maint').textContent = '$' + maintCost.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-    document.getElementById('rep-cost-tires').textContent = '$' + tiresCost.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    const repFuel = document.getElementById('rep-cost-fuel');
+    const repDriver = document.getElementById('rep-cost-driver');
+    const repMaint = document.getElementById('rep-cost-maint');
+    const repTires = document.getElementById('rep-cost-tires');
+    const repTotal = document.getElementById('rep-cost-total');
+    const repTitCost = document.getElementById('rep-tit-cost');
+    const repKm = document.getElementById('rep-cost-km');
+
+    if (repFuel) repFuel.textContent = '$' + fuelCost.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    if (repDriver) repDriver.textContent = '$' + driverCost.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    if (repMaint) repMaint.textContent = '$' + maintCost.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    if (repTires) repTires.textContent = '$' + tiresCost.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2});
 
     let masterTotal = tollsCost + fuelCost + driverCost + maintCost + tiresCost;
-    document.getElementById('rep-cost-total').textContent = '$' + masterTotal.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-    document.getElementById('rep-tit-cost').textContent = '$' + masterTotal.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 0}) + ' MXN';
+    if (repTotal) repTotal.textContent = '$' + masterTotal.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    if (repTitCost) repTitCost.textContent = '$' + masterTotal.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 0}) + ' MXN';
 
     let costPerKm = distanceKm > 0 ? (masterTotal / distanceKm) : 0;
-    document.getElementById('rep-cost-km').textContent = '$' + costPerKm.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    if (repKm) repKm.textContent = '$' + costPerKm.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2});
     
     window.currentRouteData.calculatedCosts = {
          tolls: tollsCost, fuel: fuelCost, driver: driverCost, maint: maintCost, tires: tiresCost, total: masterTotal, perKm: costPerKm
