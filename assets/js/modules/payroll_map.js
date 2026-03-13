@@ -11,266 +11,245 @@ let waypointCount = 0;
 
 export function renderPayrollMap(container) {
     container.innerHTML = `
-        <div class="h-full flex flex-col md:flex-row bg-[#020617] p-3 gap-3 fade-in font-sans text-sm text-slate-100">
+        <div class="h-full flex flex-col md:flex-row bg-[#020617] p-2 gap-2 fade-in font-sans text-[13px] text-white overflow-hidden">
             
-            <!-- Panel Izquierdo: Creador Avanzado de Rutas (Premium Dark Mode) -->
-            <div class="w-full md:w-[440px] bg-slate-900/90 backdrop-blur-md border border-slate-700/50 flex flex-col overflow-hidden rounded-xl shadow-2xl h-full max-h-[92vh]">
+            <!-- Panel Izquierdo: Creador Avanzado de Rutas (Ultra Contrast) -->
+            <div class="w-full md:w-[460px] bg-slate-900 border border-slate-700 flex flex-col overflow-hidden rounded-xl shadow-2xl h-full max-h-[92vh]">
                 
-                <!-- TABS (Glassmorphism Header) -->
-                <div class="flex bg-white/5 p-1 gap-1 border-b border-white/5">
-                    <button id="tab-btn-create" class="flex-1 py-3 px-4 rounded-xl text-center font-bold bg-indigo-600/90 text-white shadow-lg shadow-indigo-500/10 focus:outline-none flex items-center justify-center gap-2 text-xs transition-all duration-300">
-                        <i class="fas fa-route text-indigo-300"></i> Diseñar Ruta
+                <!-- Navegación por Tabs (Premium Stylized) -->
+                <div class="flex bg-slate-950 p-1 border-b border-slate-700">
+                    <button id="tab-btn-creator" class="tab-btn flex-1 py-3 text-[10px] font-black uppercase tracking-tighter transition-all rounded-lg bg-emerald-600 text-white shadow-lg shadow-emerald-900/20" data-tab="tab-crear-ruta">
+                        <i class="fas fa-drafting-compass mr-2"></i> Diseñar Ruta
                     </button>
-                    <button id="tab-btn-report" class="flex-1 py-3 px-4 rounded-xl text-center font-bold text-slate-400 hover:bg-white/5 hover:text-slate-100 focus:outline-none flex items-center justify-center gap-2 text-xs transition-all duration-300">
-                        <i class="fas fa-chart-pie"></i> Análisis Ruta
+                    <button id="tab-btn-report" class="tab-btn flex-1 py-3 text-[10px] font-black uppercase tracking-tighter transition-all rounded-lg text-slate-500 hover:text-slate-300" data-tab="tab-reporte-ruta">
+                        <i class="fas fa-chart-pie mr-2"></i> Análisis Ruta
                     </button>
-                    <button id="tab-btn-points" class="flex-1 py-3 px-4 rounded-xl text-center font-bold text-slate-400 hover:bg-white/5 hover:text-slate-100 focus:outline-none flex items-center justify-center gap-2 text-xs transition-all duration-300">
-                        <i class="fas fa-shield-alt"></i> Seguridad
+                    <button id="tab-btn-security" class="tab-btn flex-1 py-3 text-[10px] font-black uppercase tracking-tighter transition-all rounded-lg text-slate-500 hover:text-slate-300" data-tab="tab-seguridad">
+                        <i class="fas fa-shield-alt mr-2"></i> Seguridad
                     </button>
                 </div>
                 
-                <!-- CONTENIDO TABS -->
-                <div class="flex-1 overflow-y-auto custom-scrollbar relative bg-slate-900/50 p-4">
+                <div class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-6 bg-slate-900">
                     
-                    <!-- TAB 1: CREAR RUTA -->
-                    <div id="tab-crear-ruta" class="space-y-5">
-                        
-                        <!-- 1. Selección de Vehículo -->
-                        <div class="group">
-                            <div class="flex items-center gap-2 mb-2 px-1">
-                                <div class="w-1.5 h-1.5 rounded-full bg-teal-400"></div>
-                                <span class="uppercase tracking-widest text-[10px] font-bold text-slate-400">Configuración de Transporte</span>
-                            </div>
-                            <div class="bg-slate-800/50 border border-slate-700/50 rounded-lg p-3 group-hover:border-teal-500/50 transition-colors">
-                                <select id="map-unit-type" class="w-full bg-slate-900 border border-slate-700 text-slate-200 rounded-md p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/50 transition-all">
-                                    <option value="Tractocamión Full (C3-R3)">Tracto Full (C3-R3) - 75T</option>
-                                    <option value="Tractocamión Sencillo (T3-S2)">Tracto Sencillo (T3-S2) - 52T</option>
-                                    <option value="Torton (C3)">Camión Torton (C3) - 32T</option>
-                                    <option value="Automóvil (A2)">Vehículo Utilitario (A2)</option>
-                                </select>
-                            </div>
+                    <!-- TAB 1: CREACIÓN -->
+                    <div id="tab-crear-ruta" class="space-y-6">
+                        <div class="space-y-3">
+                            <label class="text-[10px] font-black text-emerald-400 uppercase tracking-widest flex items-center gap-2">
+                                <div class="w-1 h-3 bg-emerald-500 rounded-full"></div> CONFIGURACIÓN DE TRANSPORTE
+                            </label>
+                            <select id="map-unit-type" class="w-full bg-slate-800 border border-slate-600 text-white text-sm rounded-xl px-4 py-3 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all shadow-inner outline-none">
+                                <option value="t3s2">Tracto Sencillo (T3-S2) - 45T</option>
+                                <option value="t3s3">Tracto Sencillo (T3-S3) - 50T</option>
+                                <option value="t3s2r4">Tracto Full (T3-S2-R4) - 75T</option>
+                                <option value="t3s3r2">Tracto Full (T3-S3-R2) - 75T</option>
+                                <option value="c3r3" selected>Tracto Full (C3-R3) - 75T</option>
+                                <option value="thor">Unidad Liviana (L2) - 3.5T</option>
+                            </select>
                         </div>
 
-                        <!-- 2. Preferencias -->
-                        <div>
-                            <div class="flex items-center gap-2 mb-2 px-1">
-                                <div class="w-1.5 h-1.5 rounded-full bg-indigo-400"></div>
-                                <span class="uppercase tracking-widest text-[10px] font-bold text-slate-400">Parámetros Operativos</span>
-                            </div>
-                            <div class="bg-slate-800/50 border border-slate-700/50 rounded-lg p-4">
-                                <div class="grid grid-cols-2 gap-3 mb-4">
-                                    <label class="flex items-center gap-2 cursor-pointer text-slate-300 hover:text-white transition-colors">
-                                        <input type="checkbox" id="pref-avoid-tolls" class="w-4 h-4 rounded border-slate-700 bg-slate-900 text-indigo-500 focus:ring-indigo-500/30"> 
-                                        <span class="text-xs">Evitar Casetas</span>
+                        <div class="space-y-4 pt-2">
+                            <label class="text-[10px] font-black text-emerald-400 uppercase tracking-widest flex items-center gap-2">
+                                <div class="w-1 h-3 bg-emerald-500 rounded-full"></div> PARÁMETROS OPERATIVOS
+                            </label>
+                            
+                            <div class="grid grid-cols-2 gap-3">
+                                <div class="flex flex-col gap-3 p-3 bg-slate-800 rounded-xl border border-slate-700 shadow-sm">
+                                    <label class="flex items-center gap-3 cursor-pointer group">
+                                        <div class="relative flex items-center">
+                                            <input type="checkbox" id="pref-avoid-tolls" class="peer hidden">
+                                            <div class="w-5 h-5 border-2 border-slate-600 rounded-md peer-checked:bg-emerald-500 peer-checked:border-emerald-500 transition-all flex items-center justify-center">
+                                                <i class="fas fa-check text-[10px] text-white scale-0 peer-checked:scale-100 transition-transform"></i>
+                                            </div>
+                                        </div>
+                                        <span class="text-xs font-bold text-slate-100 group-hover:text-emerald-400 transition-colors">Evitar Casetas</span>
                                     </label>
-                                    <label class="flex items-center gap-2 cursor-pointer text-slate-300 hover:text-white transition-colors">
-                                        <input type="checkbox" id="pref-opt-truck" class="w-4 h-4 rounded border-slate-700 bg-slate-900 text-indigo-500 focus:ring-indigo-500/30" checked> 
-                                        <span class="text-xs">Ruta Pesada</span>
+                                    <label class="flex items-center gap-3 cursor-pointer group">
+                                        <div class="relative flex items-center">
+                                            <input type="checkbox" id="pref-avoid-ferries" class="peer hidden" checked>
+                                            <div class="w-5 h-5 border-2 border-slate-600 rounded-md peer-checked:bg-emerald-500 peer-checked:border-emerald-500 transition-all flex items-center justify-center">
+                                                <i class="fas fa-check text-[10px] text-white scale-0 peer-checked:scale-100 transition-transform"></i>
+                                            </div>
+                                        </div>
+                                        <span class="text-xs font-bold text-slate-100 group-hover:text-emerald-400 transition-colors">Evitar Ferrys</span>
                                     </label>
-                                    <label class="flex items-center gap-2 cursor-pointer text-slate-300 hover:text-white transition-colors">
-                                        <input type="checkbox" id="pref-avoid-ferries" class="w-4 h-4 rounded border-slate-700 bg-slate-900 text-indigo-500 focus:ring-indigo-500/30" checked> 
-                                        <span class="text-xs">Evitar Ferrys</span>
+                                </div>
+                                <div class="flex flex-col gap-3 p-3 bg-slate-800 rounded-xl border border-slate-700 shadow-sm">
+                                    <label class="flex items-center gap-3 cursor-pointer group">
+                                        <div class="relative flex items-center">
+                                            <input type="checkbox" id="pref-heavy-vehicle" class="peer hidden" checked>
+                                            <div class="w-5 h-5 border-2 border-slate-600 rounded-md peer-checked:bg-emerald-500 peer-checked:border-emerald-500 transition-all flex items-center justify-center">
+                                                <i class="fas fa-check text-[10px] text-white scale-0 peer-checked:scale-100 transition-transform"></i>
+                                            </div>
+                                        </div>
+                                        <span class="text-xs font-bold text-slate-100 group-hover:text-emerald-400 transition-colors">Ruta Pesada</span>
                                     </label>
-                                    <label class="flex items-center gap-2 cursor-pointer text-slate-300 hover:text-white transition-colors">
-                                        <input type="checkbox" id="pref-opt-nom" class="w-4 h-4 rounded border-slate-700 bg-slate-900 text-indigo-500 focus:ring-indigo-500/30" checked> 
-                                        <span class="text-xs">Opt. NOM-012</span>
+                                    <label class="flex items-center gap-3 cursor-pointer group">
+                                        <div class="relative flex items-center">
+                                            <input type="checkbox" id="pref-opt-nom" class="peer hidden" checked>
+                                            <div class="w-5 h-5 border-2 border-slate-600 rounded-md peer-checked:bg-emerald-500 peer-checked:border-emerald-500 transition-all flex items-center justify-center">
+                                                <i class="fas fa-check text-[10px] text-white scale-0 peer-checked:scale-100 transition-transform"></i>
+                                            </div>
+                                        </div>
+                                        <span class="text-xs font-bold text-slate-100 group-hover:text-emerald-400 transition-colors">Opt. NOM-012</span>
                                     </label>
                                 </div>
                                 
-                                <div class="pt-3 border-t border-slate-700/50 flex flex-col gap-3">
-                                    <div class="flex items-center justify-between">
-                                        <span class="text-[11px] font-medium text-slate-400 italic">Crucero (km/h):</span>
-                                        <div class="flex items-center bg-slate-900 rounded-lg border border-slate-700 p-1">
-                                             <button id="btn-speed-down" class="w-7 h-7 flex items-center justify-center rounded text-slate-400 hover:bg-slate-800 hover:text-white transition-all text-lg">-</button>
-                                             <input type="number" id="map-speed" value="70" class="w-10 bg-transparent text-center text-sm text-indigo-400 font-bold focus:outline-none" readonly>
-                                             <button id="btn-speed-up" class="w-7 h-7 flex items-center justify-center rounded text-slate-400 hover:bg-slate-800 hover:text-white transition-all text-lg">+</button>
+                                <div class="col-span-2 pt-2 border-t border-slate-700 mt-2 flex flex-col gap-4">
+                                    <div class="flex items-center justify-between bg-slate-800 p-3 rounded-xl border border-slate-700">
+                                        <span class="text-[11px] font-black text-slate-200 uppercase tracking-tighter">Velocidad Crucero:</span>
+                                        <div class="flex items-center bg-slate-900 rounded-lg border border-slate-600 p-1">
+                                             <button id="btn-speed-down" class="w-8 h-8 flex items-center justify-center rounded text-slate-300 hover:bg-slate-700 hover:text-white transition-all text-xl font-black">-</button>
+                                             <input type="number" id="map-speed" value="70" class="w-12 bg-transparent text-center text-sm text-emerald-400 font-black focus:outline-none" readonly>
+                                             <button id="btn-speed-up" class="w-8 h-8 flex items-center justify-center rounded text-slate-300 hover:bg-slate-700 hover:text-white transition-all text-xl font-black">+</button>
                                         </div>
                                     </div>
                                     
-                                    <div class="grid grid-cols-2 gap-2">
-                                        <div class="bg-slate-900/50 p-2 rounded border border-slate-700/50">
-                                            <p class="text-[9px] text-slate-500 uppercase font-black tracking-tighter mb-1">Rendimiento (Km/L)</p>
-                                            <input type="number" id="pref-kpl" value="2.5" step="0.1" class="w-full bg-transparent text-white font-bold focus:outline-none">
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <div class="bg-slate-950 p-3 rounded-xl border border-slate-700 shadow-inner text-center">
+                                            <p class="text-[9px] text-emerald-400 uppercase font-black tracking-widest mb-1">Diesel (Km/L)</p>
+                                            <input type="number" id="pref-kpl" value="2.5" step="0.1" class="w-full bg-slate-800 border-none rounded text-white font-black text-center focus:ring-0">
                                         </div>
-                                        <div class="bg-slate-900/50 p-2 rounded border border-slate-700/50">
-                                            <p class="text-[9px] text-slate-500 uppercase font-black tracking-tighter mb-1">Ejes Totales</p>
-                                            <input type="number" id="map-axles" value="6" class="w-full bg-transparent text-white font-bold focus:outline-none">
+                                        <div class="bg-slate-950 p-3 rounded-xl border border-slate-700 shadow-inner text-center">
+                                            <p class="text-[9px] text-emerald-400 uppercase font-black tracking-widest mb-1">Ejes Totales</p>
+                                            <input type="number" id="map-axles" value="6" class="w-full bg-slate-800 border-none rounded text-white font-black text-center focus:ring-0">
                                         </div>
-                                        <div class="bg-slate-900/50 p-2 rounded border border-slate-700/50 col-span-2">
-                                            <p class="text-[9px] text-slate-500 uppercase font-black tracking-tighter mb-1">Peso Bruto Vehicular (Toneladas PBV)</p>
-                                            <input type="number" id="map-weight" value="75" class="w-full bg-transparent text-white font-bold focus:outline-none">
+                                        <div class="bg-slate-950 p-3 rounded-xl border border-slate-700 shadow-inner col-span-2 text-center">
+                                            <p class="text-[9px] text-emerald-400 uppercase font-black tracking-widest mb-1">Peso Bruto Vehicular (Ton PBV)</p>
+                                            <input type="number" id="map-weight" value="75" class="w-full bg-slate-800 border-none rounded text-white font-black text-center focus:ring-0">
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- 3. Paradas -->
-                        <div>
-                            <div class="flex items-center gap-2 mb-2 px-1">
-                                <div class="w-1.5 h-1.5 rounded-full bg-amber-400"></div>
-                                <span class="uppercase tracking-widest text-[10px] font-bold text-slate-400">Plan de Ruta (Waypoints)</span>
-                            </div>
-                            <div class="bg-slate-800/80 border border-slate-700/50 rounded-xl shadow-inner overflow-hidden">
-                                <div class="px-4 py-2 bg-slate-900/30 flex items-center gap-3">
-                                    <i class="fas fa-circle text-[8px] text-emerald-400"></i>
-                                    <input type="text" id="map-origen" class="bg-transparent w-full py-2 text-sm text-slate-200 placeholder-slate-600 focus:outline-none" placeholder="Origen de despacho...">
-                                    <button class="text-slate-600 hover:text-rose-400 transition-colors" onclick="document.getElementById('map-origen').value=''"><i class="fas fa-times-circle"></i></button>
-                                </div>
-                                
-                                <div id="waypoints-container" class="bg-slate-900/20"></div>
-                                
-                                <div id="btn-add-waypoint" class="px-4 py-3 bg-slate-900/10 hover:bg-slate-700/30 cursor-pointer flex items-center gap-3 transition-all border-y border-white/5">
-                                    <div class="w-6 h-6 rounded-full border border-dashed border-slate-600 flex items-center justify-center text-slate-500">
-                                        <i class="fas fa-plus text-[10px]"></i>
+                        <div class="space-y-4 pt-2">
+                             <label class="text-[10px] font-black text-emerald-400 uppercase tracking-widest flex items-center gap-2">
+                                <div class="w-1 h-3 bg-emerald-500 rounded-full"></div> PLAN DE RUTA (WAYPOINTS)
+                            </label>
+                            
+                            <div class="bg-slate-800 rounded-2xl border border-slate-600 overflow-hidden shadow-xl">
+                                <div class="p-4 space-y-4">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-3 h-3 rounded-full bg-emerald-500 animate-pulse outline outline-emerald-500/30"></div>
+                                        <input type="text" id="map-origen" class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-emerald-500 focus:outline-none transition-all" placeholder="Origen de despacho...">
                                     </div>
-                                    <span class="text-xs text-slate-500 font-medium">Añadir parada estratégica...</span>
+                                    
+                                    <div id="waypoints-container" class="space-y-3"></div>
+                                    
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-3 h-3 rounded-full bg-rose-500 outline outline-rose-500/30"></div>
+                                        <input type="text" id="map-destino" class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-emerald-500 focus:outline-none transition-all" placeholder="Destino final...">
+                                    </div>
                                 </div>
-
-                                <div class="px-4 py-2 bg-slate-900/40 flex items-center gap-3">
-                                    <i class="fas fa-map-marker-alt text-[10px] text-rose-500"></i>
-                                    <input type="text" id="map-destino" class="bg-transparent w-full py-2 text-sm text-slate-200 font-bold placeholder-slate-600 focus:outline-none" placeholder="Destino final...">
-                                    <button class="text-slate-600 hover:text-rose-400 transition-colors" onclick="document.getElementById('map-destino').value=''"><i class="fas fa-times-circle"></i></button>
-                                </div>
+                                <button id="btn-add-waypoint" class="w-full py-4 bg-slate-750 hover:bg-slate-700 text-[10px] font-black text-slate-300 hover:text-white transition-all flex items-center justify-center gap-3 border-t border-slate-600 uppercase">
+                                    <i class="fas fa-plus-circle text-emerald-500"></i> AÑADIR PARADA ESTRATÉGICA...
+                                </button>
                             </div>
                         </div>
 
-                        <!-- Action Buttons -->
-                        <div class="flex gap-4 pt-4 pb-10">
-                            <button id="btn-calc-route" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-xl shadow-xl shadow-indigo-600/20 active:scale-95 transition-all text-sm uppercase tracking-wider">
-                                Generar Ruta Real
+                        <div class="flex gap-4 pt-4 pb-8">
+                            <button id="btn-calc-route" class="flex-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black py-4 rounded-xl shadow-xl shadow-emerald-900/40 active:scale-95 transition-all text-[11px] uppercase tracking-widest flex items-center justify-center gap-3">
+                                <i class="fas fa-route text-lg"></i> GENERAR RUTA REAL
                             </button>
-                            <button id="btn-clear-route" class="w-14 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white border border-slate-700 flex items-center justify-center rounded-xl transition-all active:scale-95">
-                                <i class="fas fa-trash-alt"></i>
+                            <button id="btn-clear-route" class="w-16 bg-slate-800 hover:bg-rose-900 border border-slate-600 text-slate-400 hover:text-white flex items-center justify-center rounded-xl transition-all active:scale-95 group">
+                                <i class="fas fa-trash-alt group-hover:animate-bounce"></i>
                             </button>
                         </div>
-                    </div>
-
-                    <!-- TAB 2: REPORTE RUTA -->
-                    <div id="tab-reporte-ruta" class="space-y-4 hidden">
-                        <!-- Detalles de Ruta Superior (Glass Card) -->
-                        <div class="bg-indigo-600/10 border border-indigo-500/20 rounded-xl p-4 text-xs">
-                             <div class="flex flex-col gap-2">
-                                 <div class="flex items-center gap-3">
-                                     <div class="w-8 h-8 rounded-lg bg-indigo-600/20 flex items-center justify-center text-indigo-400 border border-indigo-500/20 font-bold">A</div>
+                    </                    <!-- TAB 2: REPORTE RUTA -->
+                    <div id="tab-reporte-ruta" class="space-y-6 hidden">
+                        <div class="bg-emerald-600/10 border border-emerald-500/40 rounded-xl p-5 shadow-2xl">
+                             <div class="flex flex-col gap-4">
+                                 <div class="flex items-center gap-4">
+                                     <div class="w-10 h-10 rounded-xl bg-emerald-600 flex items-center justify-center text-white border border-emerald-500 shadow-lg font-black italic">A</div>
                                      <div class="flex-1">
-                                         <p class="text-[9px] text-slate-400 uppercase tracking-tighter">Punto de Partida</p>
-                                         <p class="text-white font-black truncate" id="rep-origen">Cargando...</p>
+                                         <p class="text-[10px] text-emerald-400 font-black uppercase tracking-widest">Punto de Partida</p>
+                                         <p class="text-white text-sm font-black truncate" id="rep-origen">No Definido</p>
                                      </div>
                                  </div>
-                                 <div class="w-px h-4 bg-slate-700 ml-4 border-l border-dashed border-slate-600"></div>
-                                 <div class="flex items-center gap-3">
-                                     <div class="w-8 h-8 rounded-lg bg-pink-600/20 flex items-center justify-center text-pink-400 border border-pink-500/20 font-bold">B</div>
+                                 <div class="w-px h-6 bg-emerald-500/30 ml-5 border-l-2 border-dashed border-emerald-500/50"></div>
+                                 <div class="flex items-center gap-4">
+                                     <div class="w-10 h-10 rounded-xl bg-rose-600 flex items-center justify-center text-white border border-rose-500 shadow-lg font-black italic">B</div>
                                      <div class="flex-1">
-                                         <p class="text-[9px] text-slate-400 uppercase tracking-tighter">Destino Logístico</p>
-                                         <p class="text-white font-black truncate" id="rep-destino">Cargando...</p>
-                                     </div>
-                                 </div>
-                                 <div class="mt-2 pt-3 border-t border-white/5 flex justify-between items-center">
-                                     <div class="bg-indigo-900/50 px-2 py-1 rounded text-[10px] text-indigo-300 border border-indigo-500/30" id="rep-vehiculo">Sin Unidad</div>
-                                     <div class="flex flex-col items-end">
-                                         <span id="rep-tit-cost" class="text-white font-black text-sm">$0.00</span>
-                                         <div class="text-slate-400 font-mono text-[9px]" id="rep-fecha">00/00/0000</div>
+                                         <p class="text-[10px] text-rose-400 font-black uppercase tracking-widest">Destino Logístico</p>
+                                         <p class="text-white text-sm font-black truncate" id="rep-destino">No Definido</p>
                                      </div>
                                  </div>
                              </div>
                         </div>
 
-                        <div class="grid grid-cols-1 gap-3">
-                             <!-- Summary Cards (Visual Layout) -->
-                             <div class="grid grid-cols-2 gap-3">
-                                  <!-- Distancia -->
-                                  <div class="bg-slate-800/40 p-4 rounded-xl border border-white/5 flex flex-col items-center justify-center text-center">
-                                      <p class="text-[10px] text-slate-500 uppercase font-bold tracking-widest mb-1">Recorrido Bruto</p>
-                                      <p class="text-2xl font-black text-white" id="rep-dist-total">0 <span class="text-xs font-normal text-slate-400">km</span></p>
-                                      <p class="text-[9px] text-emerald-400 mt-1 flex items-center gap-1"><i class="fas fa-check-circle"></i> Optimizado</p>
-                                  </div>
-                                  
-                                  <!-- Tiempo -->
-                                  <div class="bg-slate-800/40 p-4 rounded-xl border border-white/5 flex flex-col items-center justify-center text-center">
-                                      <p class="text-[10px] text-slate-400 uppercase font-black tracking-widest mb-1">Tiempo de Tránsito</p>
-                                      <p class="text-2xl font-black text-white" id="rep-time-total">0:00 <span class="text-xs font-normal text-slate-400">h</span></p>
-                                      <p class="text-[9px] text-slate-300 mt-1 font-bold" id="rep-time-drive">0h conducción</p>
-                                      <p id="rep-dist-vacio" class="hidden">0 km</p>
-                                  </div>
-                             </div>
+                        <div class="grid grid-cols-2 gap-4">
+                              <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700 shadow-xl text-center">
+                                  <p class="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1 text-center">Recorrido</p>
+                                  <p class="text-3xl font-black text-white" id="rep-dist-total">0 <span class="text-xs font-normal text-slate-500 uppercase tracking-tighter">km</span></p>
+                                  <span id="rep-dist-vacio" class="hidden">0</span>
+                              </div>
+                              <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700 shadow-xl text-center">
+                                  <p class="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1 text-center">ETA</p>
+                                  <p class="text-3xl font-black text-indigo-400" id="rep-time-total">0:00 <span class="text-xs font-normal text-slate-500 uppercase tracking-tighter">h</span></p>
+                              </div>
+                        </div>
 
-                             <!-- Breakdown (Modern List) -->
-                             <div class="bg-slate-800/60 rounded-xl border border-white/5 overflow-hidden">
-                                  <div class="px-4 py-3 bg-white/5 flex justify-between items-center">
-                                      <span class="text-xs font-bold text-slate-300">ESTRUCTURA DE COSTOS</span>
-                                      <span class="text-sm font-black text-emerald-400" id="rep-cost-total">$0.00</span>
-                                  </div>
-                                  <div class="p-4 space-y-3">
-                                      <div class="flex justify-between items-center text-xs">
-                                          <div class="flex items-center gap-2 text-slate-400"><i class="fas fa-road text-[10px] text-amber-500"></i> Peajes/Casetas</div>
-                                          <span id="rep-cost-tolls" class="text-slate-200 font-semibold">$0.00</span>
-                                      </div>
-                                      <div class="flex justify-between items-center text-xs">
-                                          <div class="flex items-center gap-2 text-slate-400"><i class="fas fa-gas-pump text-[10px] text-blue-500"></i> Combustible</div>
-                                          <span id="rep-cost-fuel" class="text-slate-200 font-semibold">$0.00</span>
-                                      </div>
-                                      <div class="flex justify-between items-center text-xs">
-                                          <div class="flex items-center gap-2 text-slate-400"><i class="fas fa-user-tie text-[10px] text-indigo-500"></i> Viáticos Operador</div>
-                                          <span id="rep-cost-driver" class="text-slate-200 font-semibold">$0.00</span>
-                                      </div>
-                                      <div class="flex justify-between items-center text-xs">
-                                          <div class="flex items-center gap-2 text-slate-400"><i class="fas fa-tools text-[10px] text-slate-500"></i> Mantto. Preventivo</div>
-                                          <span id="rep-cost-maint" class="text-slate-200 font-semibold">$0.00</span>
-                                      </div>
-                                      <div class="flex justify-between items-center text-xs">
-                                          <div class="flex items-center gap-2 text-slate-400"><i class="fas fa-compact-disc text-[10px] text-slate-500"></i> Ciclo de Llantas</div>
-                                          <span id="rep-cost-tires" class="text-slate-200 font-semibold">$0.00</span>
-                                      </div>
-                                      <div class="pt-3 border-t border-white/5 mt-1 flex justify-between items-center">
-                                          <span class="text-[10px] text-slate-500 italic">Factor de Rentabilidad:</span>
-                                          <span class="text-xs font-bold text-indigo-400" id="rep-cost-km">$0.00 / km</span>
-                                      </div>
-                                  </div>
+                        <div class="bg-slate-950 rounded-2xl border-2 border-slate-700 overflow-hidden shadow-2xl">
+                             <div class="px-5 py-4 bg-slate-800 flex justify-between items-center border-b border-slate-700">
+                                 <span class="text-xs font-black text-white uppercase tracking-widest">Costeo Operativo</span>
+                                 <span class="text-lg font-black text-emerald-400" id="rep-cost-total">$0.00</span>
                              </div>
+                             <div class="p-5 space-y-4">
+                                 <div class="flex justify-between items-center text-sm border-b border-slate-800 pb-2">
+                                     <div class="flex items-center gap-3 text-slate-300 font-bold"><i class="fas fa-road text-amber-500"></i> Peajes</div>
+                                     <span id="rep-cost-tolls" class="text-white font-black">$0.00</span>
+                                 </div>
+                                 <div class="flex justify-between items-center text-sm border-b border-slate-800 pb-2">
+                                     <div class="flex items-center gap-3 text-slate-300 font-bold"><i class="fas fa-gas-pump text-blue-500"></i> Combustible</div>
+                                     <span id="rep-cost-fuel" class="text-white font-black">$0.00</span>
+                                 </div>
+                                 <div class="flex justify-between items-center text-sm">
+                                     <div class="flex items-center gap-3 text-slate-300 font-bold"><i class="fas fa-user-tie text-indigo-500"></i> Operador</div>
+                                     <span id="rep-cost-driver" class="text-white font-black">$0.00</span>
+                                 </div>
+                             </div>
+                        </div>
 
-                             <!-- Action Grid -->
-                             <div class="grid grid-cols-2 gap-3 pt-4 pb-6">
-                                  <button id="btn-show-tolls" class="bg-indigo-600/20 hover:bg-indigo-600/40 border border-indigo-500/40 text-indigo-300 py-4 rounded-2xl transition-all flex flex-col items-center justify-center gap-2 shadow-lg shadow-indigo-500/5">
-                                      <i class="fas fa-ticket-alt text-lg"></i>
-                                      <span class="text-[10px] font-black uppercase tracking-widest">Ver Casetas</span>
-                                  </button>
-                                  <button id="btn-share-whatsapp" class="bg-emerald-600/20 hover:bg-emerald-600/40 border border-emerald-500/40 text-emerald-400 py-4 rounded-2xl transition-all flex flex-col items-center justify-center gap-2 shadow-lg shadow-emerald-500/5">
-                                      <i class="fab fa-whatsapp text-lg"></i>
-                                      <span class="text-[10px] font-black uppercase tracking-widest">Enviar Ruta</span>
-                                  </button>
-                                  <button id="btn-ai-audit" class="col-span-2 bg-gradient-to-r from-violet-600/40 to-indigo-600/40 hover:from-violet-600/60 hover:to-indigo-600/60 border border-violet-500/40 text-white py-4 rounded-2xl transition-all flex items-center justify-center gap-3 shadow-xl shadow-violet-500/10 active:scale-[0.98]">
-                                      <div class="relative">
-                                          <i class="fas fa-microchip text-violet-300"></i>
-                                          <span class="absolute -top-1 -right-1 w-2 h-2 bg-teal-400 rounded-full animate-ping"></span>
-                                      </div>
-                                      <span class="text-xs font-black uppercase tracking-widest">Auditoría Inteligente NOM-012</span>
-                                  </button>
-                                  <button class="bg-slate-900/80 hover:bg-slate-800 border border-slate-700/50 text-slate-500 hover:text-slate-300 py-3 rounded-xl text-[10px] font-bold transition-colors">EXPORTAR PDF</button>
-                                  <button class="bg-slate-900/80 hover:bg-slate-800 border border-slate-700/50 text-slate-500 hover:text-slate-300 py-3 rounded-xl text-[10px] font-bold transition-colors">GENERAR TARIFA</button>
-                             </div>
+                        <div class="grid grid-cols-1 gap-4 pb-10">
+                             <button id="btn-show-tolls-list" class="w-full bg-slate-800 hover:bg-slate-700 border border-slate-600 text-white font-black py-4 rounded-xl flex items-center justify-center gap-3 transition-all">
+                                 <i class="fas fa-list-ol text-emerald-500"></i> Listado de Casetas
+                             </button>
+                             <button id="btn-ai-audit" class="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white py-6 rounded-2xl shadow-2xl transition-all flex items-center justify-center gap-4">
+                                 <i class="fas fa-microchip text-2xl animate-pulse"></i>
+                                 <span class="text-sm font-black uppercase tracking-widest">Auditoría Inteligente Gemini</span>
+                             </button>
                         </div>
                     </div>
                 </div>
-            </div>        </div>
+            </div>
+       </div>        </div>
 
-            <!-- Mapa Principal -->
-            <div class="flex-1 bg-white border border-gray-300 overflow-hidden relative drop-shadow-sm min-h-[400px]">
-                <div class="absolute top-2 left-2 z-10 bg-white/90 px-2 py-1 rounded shadow text-xs font-bold text-gray-700 border border-gray-300 hidden md:block">
-                    <i class="fas fa-globe-americas"></i> Mapas EDY Fleet Management
-                </div>
-                <!-- Mini Toolbar -->
-                <div class="absolute top-2 right-2 z-10 bg-white border border-gray-400 shadow flex text-gray-600 rounded">
-                     <button class="px-2 py-1 hover:bg-gray-100 border-r border-gray-300" title="Imprimir"><i class="fas fa-print"></i></button>
-                     <button class="px-2 py-1 hover:bg-gray-100 border-r border-gray-300" title="Centrar"><i class="fas fa-crosshairs"></i></button>
-                     <button class="px-2 py-1 hover:bg-gray-100" id="btn-nav-view" title="Vista Cabina 3D"><i class="fas fa-truck"></i> Dashboard Cabina</button>
+            <!-- Panel Derecho: Google Maps (Ultra Clarity) -->
+            <div class="flex-1 relative bg-[#020617] rounded-xl border border-slate-700 overflow-hidden shadow-2xl min-h-[550px] md:min-h-0">
+                <div id="map-canvas" class="w-full h-full" style="min-height: 550px; background-color: #020617;"></div>
+                
+                <div id="map-loading" class="absolute inset-0 bg-slate-950/90 backdrop-blur-md z-10 flex flex-col items-center justify-center text-white gap-4 hidden">
+                    <div class="spinner border-t-emerald-500 w-16 h-16"></div>
+                    <div class="text-lg font-black tracking-widest animate-pulse uppercase text-emerald-400">Trazando Ruta Logística...</div>
                 </div>
 
-                <div id="map-canvas" class="w-full h-full"></div>
-                <div id="map-loading" class="absolute inset-0 bg-white/70 flex flex-col items-center justify-center z-[1000] hidden">
-                    <img src="logo/logo.png" alt="Loading" class="h-16 w-auto mb-4 animate-pulse sepia">
-                    <div class="spinner border-4 border-gray-400 border-t-blue-600 w-8 h-8 rounded-full animate-spin"></div>
-                    <p class="text-gray-800 font-bold mt-2 font-mono text-sm tracking-widest uppercase">Trazando Ruta Logística...</p>
+                <!-- Legend Overlay -->
+                <div class="absolute bottom-6 right-6 bg-slate-900/95 border border-slate-700 p-5 rounded-2xl shadow-2xl backdrop-blur-xl z-10 hidden md:block">
+                    <div class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-3 border-b border-slate-800 pb-2">Simbología Federal</div>
+                    <div class="space-y-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-3 h-3 rounded-full bg-emerald-500 shadow-lg shadow-emerald-500/20"></div>
+                            <span class="text-[10px] font-black text-slate-200">TRAZO SEGURO</span>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <div class="w-3 h-3 rounded-full bg-indigo-500 shadow-lg shadow-indigo-500/20"></div>
+                            <span class="text-[10px] font-black text-slate-200">FEDERAL / CUOTA</span>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <div class="w-3 h-3 rounded-full bg-amber-500 shadow-lg shadow-amber-500/20"></div>
+                            <span class="text-[10px] font-black text-slate-200">CASETA AUTORIZADA</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -311,10 +290,16 @@ export function renderPayrollMap(container) {
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-white/5 text-slate-300" id="casetas-table-body">
-                                <tr><td colspan="5" class="py-12 text-center text-slate-600 italic">No hay registros dinámicos aún.</td></tr>
+                                <tr><td colspan="5" class="py-12 text-center text-slate-600 italic font-black uppercase tracking-tighter">No hay registros dinámicos aún.</td></tr>
                             </tbody>
                         </table>
                     </div>
+                </div>
+                <!-- Modal Footer -->
+                <div class="px-5 py-4 bg-slate-800/50 border-t border-white/5 flex justify-end">
+                    <button class="modal-casetas-close px-6 py-2 bg-slate-700 hover:bg-slate-600 text-white font-black rounded-lg transition-all text-xs uppercase tracking-widest">
+                        Cerrar Desglose
+                    </button>
                 </div>
             </div>
         </div>
@@ -326,11 +311,19 @@ export function renderPayrollMap(container) {
     
     document.getElementById('btn-calc-route').addEventListener('click', calculateMapRoute);
     document.getElementById('btn-clear-route').addEventListener('click', clearMapRoute);
-    document.getElementById('btn-show-tolls').addEventListener('click', openTollsModal);
+    
+    // Check for both possible IDs (new and old) to ensure compatibility
+    const btnShowTollsList = document.getElementById('btn-show-tolls-list');
+    const btnShowTollsOld = document.getElementById('btn-show-tolls');
+    if (btnShowTollsList) btnShowTollsList.addEventListener('click', openTollsModal);
+    if (btnShowTollsOld) btnShowTollsOld.addEventListener('click', openTollsModal);
+
     document.querySelectorAll('.modal-casetas-close').forEach(btn => {
         btn.addEventListener('click', closeTollsModal);
     });
-    document.getElementById('btn-share-whatsapp').addEventListener('click', shareRouteWhatsApp);
+
+    const btnShareWA = document.getElementById('btn-share-whatsapp');
+    if (btnShareWA) btnShareWA.addEventListener('click', shareRouteWhatsApp);
 
     // AI Audit Button
     const btnAiAudit = document.getElementById('btn-ai-audit');
