@@ -61,7 +61,7 @@ try {
 
         if (role === 'mantenimiento') {
             allNavs.forEach(nav => {
-                if(nav !== 'nav-expenses') document.getElementById(nav)?.classList.add('hidden-section');
+                if(nav !== 'nav-expenses' && nav !== 'nav-payroll-map') document.getElementById(nav)?.classList.add('hidden-section');
             });
         } 
         else if (role === 'direccion_general') {
@@ -80,7 +80,7 @@ try {
         } 
         else if (role === 'otros_usuarios') {
             allNavs.forEach(nav => {
-                document.getElementById(nav)?.classList.add('hidden-section');
+                if(nav !== 'nav-payroll-map') document.getElementById(nav)?.classList.add('hidden-section');
             });
         } 
         else if (role === 'torre_control') {
@@ -92,7 +92,7 @@ try {
         } 
         else if (role === 'contabilidad') {
             allNavs.forEach(nav => {
-                if(nav !== 'nav-expenses' && nav !== 'nav-reports') document.getElementById(nav)?.classList.add('hidden-section');
+                if(nav !== 'nav-expenses' && nav !== 'nav-reports' && nav !== 'nav-payroll-map') document.getElementById(nav)?.classList.add('hidden-section');
             });
         }
         else if (role === 'admin') {
