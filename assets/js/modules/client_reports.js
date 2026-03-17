@@ -187,8 +187,13 @@ async function loadClientReport() {
     // Function to format checkpoint dates beautifully
     const formatCP = (dateStr) => {
         if (!dateStr) return '<span class="text-gray-300">---</span>';
-        const d = new Date(dateStr);
-        return `<span class="font-bold text-gray-700">${d.toLocaleDateString()}</span> <span class="text-gray-400 ml-1">${d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>`;
+        try {
+            const d = new Date(dateStr);
+            if (isNaN(d.getTime())) return '<span class="text-gray-300">---</span>';
+            return `<span class="font-bold text-gray-700">${d.toLocaleDateString('es-MX')}</span> <span class="text-gray-400 ml-1">${d.toLocaleTimeString('es-MX', {hour: '2-digit', minute:'2-digit'})}</span>`;
+        } catch (e) {
+            return '<span class="text-gray-300">---</span>';
+        }
     };
 
     if (type === 'BYD') {
@@ -673,7 +678,13 @@ function generatePDF() {
 
         const formatCPTxt = (dateStr) => {
             if (!dateStr) return '---';
-            return new Date(dateStr).toLocaleString();
+            try {
+                const d = new Date(dateStr);
+                if (isNaN(d.getTime())) return '---';
+                return d.toLocaleString('es-MX', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).replace(',', '');
+            } catch (e) {
+                return '---';
+            }
         };
 
         if (currentType === 'BYD') {
