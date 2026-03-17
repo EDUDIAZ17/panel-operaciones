@@ -107,7 +107,7 @@ try {
 function setActiveNav(id) {
     navButtons.forEach(btn => {
         // Reset styles (Tailwind)
-        btn.classList.remove('bg-indigo-50', 'border-l-4', 'border-indigo-600', 'text-indigo-700 font-black');
+        btn.classList.remove('bg-indigo-50', 'border-l-4', 'border-indigo-600', 'text-indigo-700', 'font-black');
         btn.classList.add('text-slate-600', 'hover:bg-slate-50', 'font-bold');
     });
     // Add active style to selected
