@@ -107,14 +107,14 @@ try {
 function setActiveNav(id) {
     navButtons.forEach(btn => {
         // Reset styles (Tailwind)
-        btn.classList.remove('bg-white/10', 'border-l-4', 'border-emerald-500', 'text-white');
-        btn.classList.add('text-gray-300', 'hover:bg-white/5');
+        btn.classList.remove('bg-indigo-50', 'border-l-4', 'border-indigo-600', 'text-indigo-700 font-black');
+        btn.classList.add('text-slate-600', 'hover:bg-slate-50', 'font-bold');
     });
     // Add active style to selected
     const activeBtn = document.getElementById(id);
     if(activeBtn) {
-        activeBtn.classList.remove('text-gray-300', 'hover:bg-white/5');
-        activeBtn.classList.add('bg-white/10', 'border-l-4', 'border-emerald-500', 'text-white');
+        activeBtn.classList.remove('text-slate-600', 'hover:bg-slate-50', 'font-bold');
+        activeBtn.classList.add('bg-indigo-50', 'border-l-4', 'border-indigo-600', 'text-indigo-700', 'font-black');
     }
 }
 

@@ -145,7 +145,10 @@ function renderTable(element, units) {
         html += `
             <tr class="hover:bg-blue-50/20 transition group">
                 <td class="p-3 align-top">
-                    <div class="font-bold text-gray-800">${unit.economic_number}</div>
+                    <div class="flex items-center justify-between">
+                        <div class="font-bold text-gray-800">${unit.economic_number}</div>
+                        ${canEdit ? `<button onclick="window.openEditModal('${unit.id}')" class="text-blue-500 hover:text-blue-700 transition-colors" title="Editar Asignación"><i class="fas fa-edit text-xs"></i></button>` : ''}
+                    </div>
                     <div class="text-[10px] text-gray-500 uppercase">${unit.status}</div>
                 </td>
                 <td class="p-3 align-top">

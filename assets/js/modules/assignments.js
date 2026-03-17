@@ -210,6 +210,7 @@ function renderRows(units, allOps) {
                 </td>
                 <td class="p-4 text-sm w-48 max-w-[200px]">
                     <div class="font-bold text-orange-600 uppercase truncate" title="${routeStr}">${routeStr}</div>
+                    <div class="text-[10px] text-indigo-600 font-bold mt-0.5">VIAJE/BOL: ${parsedDetails?.viaje || parsedDetails?.bol || '---'}</div>
                     ${locationStr}
                 </td>
                 <td class="p-4 text-sm text-gray-600 w-40">
@@ -331,13 +332,13 @@ window.openEditModal = (unitId) => {
                     <input type="text" id="edit-route" class="w-full border-2 border-gray-200 focus:border-blue-500 outline-none p-2 rounded-lg font-medium" value="${currentRoute}" placeholder="Ej: Autopista 57">
                 </div>
 
-                <!-- Campos Específicos de Clientes (BYD / CHANGAN / ETC) -->
-                <div class="col-span-1" id="field-viaje" style="display: none;">
-                    <label class="block text-xs font-bold text-teal-600 uppercase tracking-wider mb-1">Número de Viaje (CHANGAN)</label>
+                <!-- Campos de Viaje / BOL (Siempre Visibles para integración total) -->
+                <div class="col-span-1" id="field-viaje">
+                    <label class="block text-xs font-bold text-teal-600 uppercase tracking-wider mb-1">Número de Viaje</label>
                     <input type="text" id="edit-viaje" class="w-full border-2 border-teal-100 focus:border-teal-500 outline-none p-2 rounded-lg font-medium bg-teal-50" value="${currentViaje}" placeholder="Ej: VJ-10293">
                 </div>
-                <div class="col-span-1" id="field-bol" style="display: none;">
-                    <label class="block text-xs font-bold text-blue-600 uppercase tracking-wider mb-1">BOL (BYD / OTROS)</label>
+                <div class="col-span-1" id="field-bol">
+                    <label class="block text-xs font-bold text-blue-600 uppercase tracking-wider mb-1">BOL / Referencia</label>
                     <input type="text" id="edit-bol" class="w-full border-2 border-blue-100 focus:border-blue-500 outline-none p-2 rounded-lg font-medium bg-blue-50" value="${currentBol}" placeholder="Ej: BOL-99281">
                 </div>
 
@@ -430,10 +431,7 @@ window.openEditModal = (unitId) => {
     };
     clientSelect.addEventListener('change', () => {
         window.handleDynamicSelect('edit-client', 'clients');
-        updateDynamicFields();
     });
-    // Trigger on load
-    updateDynamicFields();
 }
 
 window.openScheduleModal = () => {
