@@ -690,7 +690,8 @@ function generatePDF() {
             tableColumn = ["BOL", "ECONOMICO", "DESTINO", "FECHA PROG.", "FECHA CARGA", "INSERCION RUTA", "ETA", "ENTREGA FINAL", "STATUS", "COMENTARIOS"];
             currentFilteredUnits.forEach(u => {
                 const destino = u.details?.destino || '---';
-                const fProg = u.details?.scheduled_trip ? formatCPTxt(u.details.scheduled_trip) : '---';
+                const scheduledDate = u.details?.scheduled_trip || u.details?.assignment_date;
+                const fProg = scheduledDate ? formatCPTxt(scheduledDate) : '---';
                 const cp = u.details?.checkpoints || {};
                 const fCarga = cp.trip_load_end ? formatCPTxt(cp.trip_load_end) : (cp.trip_load_arrival ? formatCPTxt(cp.trip_load_arrival) : '---');
                 const fRuta = cp.trip_route_start ? formatCPTxt(cp.trip_route_start) : (cp.trip_load_end ? formatCPTxt(cp.trip_load_end) : '---'); 
@@ -712,9 +713,11 @@ function generatePDF() {
                 ]);
             });
         } else if (currentType === 'CHANGAN') {
-            tableColumn = ["UNIDAD", "OPERADOR", "FECHA CARGA", "CLIENTE", "VIAJE", "ORIGEN", "DESTINO", "ETA", "ESTATUS", "OBSERVACIONES"];
+            tableColumn = ["UNIDAD", "OPERADOR", "FECHA PROG.", "FECHA CARGA", "CLIENTE", "VIAJE", "ORIGEN", "DESTINO", "ETA", "ESTATUS", "OBSERVACIONES"];
             currentFilteredUnits.forEach(u => {
                 const opName = u.operators?.name || 'Sin Asignar';
+                const scheduledDate = u.details?.scheduled_trip || u.details?.assignment_date;
+                const fProg = scheduledDate ? formatCPTxt(scheduledDate) : '---';
                 const cp = u.details?.checkpoints || {};
                 const fCarga = cp.trip_load_end ? formatCPTxt(cp.trip_load_end) : (cp.trip_load_arrival ? formatCPTxt(cp.trip_load_arrival) : '---');
                 const cliente = u.details?.cliente || 'CHANGAN';
@@ -727,6 +730,7 @@ function generatePDF() {
                 tableRows.push([
                     u.economic_number,
                     opName,
+                    fProg,
                     fCarga,
                     cliente,
                     viaje,
@@ -738,9 +742,11 @@ function generatePDF() {
                 ]);
             });
         } else {
-            tableColumn = ["UNIDAD", "TIPO / PLACAS", "OPERADOR", "CLIENTE", "ORIGEN", "DESTINO", "ESTATUS", "OBSERVACIONES"];
+            tableColumn = ["UNIDAD", "TIPO / PLACAS", "OPERADOR", "FECHA PROG.", "CLIENTE", "ORIGEN", "DESTINO", "ESTATUS", "OBSERVACIONES"];
             currentFilteredUnits.forEach(u => {
                 const opName = u.operators?.name || 'Sin Asignar';
+                const scheduledDate = u.details?.scheduled_trip || u.details?.assignment_date;
+                const fProg = scheduledDate ? formatCPTxt(scheduledDate) : '---';
                 const placas = u.placas || '---';
                 const cliente = u.details?.cliente || '---';
                 const origen = u.details?.origen || '---';
@@ -751,6 +757,7 @@ function generatePDF() {
                     u.economic_number,
                     `${u.type} / ${placas}`,
                     opName,
+                    fProg,
                     cliente,
                     origen,
                     destino,
