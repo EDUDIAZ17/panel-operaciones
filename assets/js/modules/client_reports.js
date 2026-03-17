@@ -60,22 +60,6 @@ export async function renderClientReports(container) {
 
                     <select id="client-report-type" class="border border-blue-100 p-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-bold bg-gray-50 text-blue-800 shadow-sm cursor-pointer transition">
                         <option value="TODOS">TODOS LOS CLIENTES</option>
-                        <option value="BYD">BYD</option>
-                        <option value="CHANGAN">CHANGAN</option>
-                        <option value="GEELY">GEELY</option>
-                        <option value="GAC">GAC</option>
-                        <option value="MG">MG</option>
-                        <option value="FORD">FORD</option>
-                        <option value="MOSA">MOSA</option>
-                        <option value="PAASA">PAASA</option>
-                        <option value="GCM">GCM</option>
-                        <option value="BACHOCO">BACHOCO</option>
-                        <option value="NESTLE">NESTLE</option>
-                        <option value="NUTEC">NUTEC</option>
-                        <option value="GRUPESA">GRUPESA</option>
-                        <option value="TEPA">TEPA</option>
-                        <option value="PC BIOLOGICS">PC BIOLOGICS</option>
-                        <option value="Sin Asignación">Sin Asignación</option>
                     </select>
                     <button id="btn-refresh-client-report" class="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white px-4 py-2.5 rounded-xl shadow-lg hover:shadow-blue-500/30 transition-all font-bold group" title="Actualizar Datos">
                         <i class="fas fa-sync-alt group-hover:rotate-180 transition-transform duration-500"></i>
@@ -86,8 +70,7 @@ export async function renderClientReports(container) {
                 </div>
             </div>
 
-            <div class="bg-white/90 backdrop-blur-md rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-gray-100 flex-1 overflow-hidden flex flex-col">
-                <div class="p-4 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white flex justify-between items-center text-xs font-bold text-gray-500">
+            <div class="bg-white/90 backdrop-blur-md rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-gray-100 flex-1 overflow-hidden flex flex-col">                <div class="p-4 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white flex justify-between items-center text-xs font-bold text-gray-500">
                     <div class="flex items-center gap-2">
                         <div class="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>
                         <span id="client-report-title" class="text-blue-900 uppercase tracking-widest">Mostrando Reporte</span>
@@ -106,6 +89,22 @@ export async function renderClientReports(container) {
             </div>
         </div>
     `;
+
+    // Load clients dynamically
+    const { data: clients } = await supabase.from('clients').select('*').order('name');
+    const clientSelect = document.getElementById('client-report-type');
+    if (clients && clientSelect) {
+        clients.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c.name;
+            opt.textContent = c.name;
+            clientSelect.appendChild(opt);
+        });
+        const optSin = document.createElement('option');
+        optSin.value = 'Sin Asignación';
+        optSin.textContent = 'Sin Asignación';
+        clientSelect.appendChild(optSin);
+    }
 
     document.getElementById('client-report-type').addEventListener('change', loadClientReport);
     document.getElementById('filter-status').addEventListener('change', loadClientReport);
