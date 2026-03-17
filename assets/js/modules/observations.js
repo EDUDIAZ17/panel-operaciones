@@ -101,7 +101,7 @@ export async function renderObservations(container) {
 async function setupObsForm() {
     const { data: ops } = await supabase.from('operators').select('id, name').order('name');
     const select = document.getElementById('obs-op-full');
-    if(ops) {
+    if(select && ops) {
         ops.forEach(op => {
             select.innerHTML += `<option value="${op.id}">${op.name}</option>`;
         });
@@ -114,31 +114,35 @@ async function setupObsForm() {
     now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
     document.getElementById('obs-date-full').value = now.toISOString().slice(0, 16);
 
-    document.getElementById('obs-form-full').onsubmit = async (e) => {
-        e.preventDefault();
-        const btn = e.target.querySelector('button');
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Guardando...';
+    const form = document.getElementById('obs-form-full');
+    if (form) {
+        form.onsubmit = async (e) => {
+            e.preventDefault();
+            const btn = e.target.querySelector('button');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Guardando...';
 
-        const data = {
-            operator_id: document.getElementById('obs-op-full').value,
-            type: document.getElementById('obs-type-full').value,
-            incident_date: new Date(document.getElementById('obs-date-full').value).toISOString(),
-            description: document.getElementById('obs-desc-full').value,
-            reported_by: JSON.parse(sessionStorage.getItem('currentUser'))?.name || 'Sistema'
+            const data = {
+                operator_id: document.getElementById('obs-op-full').value,
+                type: document.getElementById('obs-type-full').value,
+                incident_date: new Date(document.getElementById('obs-date-full').value).toISOString(),
+                description: document.getElementById('obs-desc-full').value,
+                reported_by: JSON.parse(sessionStorage.getItem('currentUser'))?.name || 'Sistema'
+            };
+
+            const { error } = await supabase.from('observations').insert(data);
+
+            if (error) {
+                alert("Error: " + error.message);
+            } else {
+                const desc = document.getElementById('obs-desc-full');
+                if (desc) desc.value = '';
+                loadIncidences();
+            }
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-save mr-2"></i> REGISTRAR EN BITÁCORA';
         };
-
-        const { error } = await supabase.from('observations').insert(data);
-
-        if (error) {
-            alert("Error: " + error.message);
-        } else {
-            document.getElementById('obs-desc-full').value = '';
-            loadIncidences();
-        }
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-save mr-2"></i> REGISTRAR EN BITÁCORA';
-    };
+    }
 }
 
 async function loadIncidences() {
@@ -165,10 +169,15 @@ function updateObsStats(data) {
     const diesel = data.filter(i => i.type === 'Diesel' || i.type === 'Logistica').length;
     const critical = data.filter(i => i.type === 'Alcoholimetria' || i.type === 'Accidente').length;
 
-    document.getElementById('obs-stat-total').innerText = total;
-    document.getElementById('obs-stat-conduct').innerText = conduct;
-    document.getElementById('obs-stat-diesel').innerText = diesel;
-    document.getElementById('obs-stat-critical').innerText = critical;
+    const elTotal = document.getElementById('obs-stat-total');
+    const elConduct = document.getElementById('obs-stat-conduct');
+    const elDiesel = document.getElementById('obs-stat-diesel');
+    const elCritical = document.getElementById('obs-stat-critical');
+
+    if (elTotal) elTotal.innerText = total;
+    if (elConduct) elConduct.innerText = conduct;
+    if (elDiesel) elDiesel.innerText = diesel;
+    if (elCritical) elCritical.innerText = critical;
 }
 
 function renderIncidenceCards(data) {

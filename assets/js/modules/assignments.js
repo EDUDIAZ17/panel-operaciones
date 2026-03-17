@@ -62,6 +62,23 @@ export async function renderAssignments(container) {
     const btnSchedule = document.getElementById('btn-schedule');
     if (btnSchedule) btnSchedule.onclick = () => openScheduleModal();
 
+    window.addSchedDestination = () => {
+        const container = document.getElementById('sched-destinations-list');
+        const div = document.createElement('div');
+        div.className = 'flex gap-2 items-center dest-row animate-content-fade-in';
+        div.innerHTML = `
+            <select class="flex-1 border-2 border-gray-200 focus:border-purple-500 outline-none p-2 rounded-lg font-medium sched-dest-item" onchange="window.handleDynamicSelect(this, 'locations')">
+                <option value="">Seleccionar Destino...</option>
+                ${(window.locationsData || []).map(d => `<option value="${d.name}">${d.name}</option>`).join('')}
+                <option value="__NEW__" class="font-bold text-green-600">+ Agregar Nuevo...</option>
+            </select>
+            <button type="button" class="text-red-500 hover:text-red-700 p-2" onclick="this.parentElement.remove()">
+                <i class="fas fa-trash-alt"></i>
+            </button>
+        `;
+        container.appendChild(div);
+    };
+
     document.getElementById('assign-search').addEventListener('keyup', (e) => filterAssignments(e.target.value));
     
     loadTable();
@@ -100,8 +117,10 @@ async function loadTable() {
     renderRows(units, allOps, samsaraData);
 }
 
-window.handleDynamicSelect = async (selectId, tableName) => {
-    const select = document.getElementById(selectId);
+window.handleDynamicSelect = async (selectOrId, tableName) => {
+    const select = (typeof selectOrId === 'string') ? document.getElementById(selectOrId) : selectOrId;
+    if (!select) return;
+
     if (select.value === '__NEW__') {
         const newValue = prompt('Ingresa el nuevo valor:');
         if (newValue && newValue.trim()) {
@@ -117,10 +136,10 @@ window.handleDynamicSelect = async (selectId, tableName) => {
                 select.insertBefore(option, select.querySelector('option[value="__NEW__"]'));
                 select.value = val;
 
-                if (tableName === 'clients') window.clientsData.push({name: val});
-                if (tableName === 'locations') window.locationsData.push({name: val});
-                if (tableName === 'destinations') window.destinationsData.push({name: val});
-                if (tableName === 'unit_statuses') window.statusesData.push({name: val});
+                if (tableName === 'clients') window.clientsData = [...(window.clientsData || []), {name: val}];
+                if (tableName === 'locations') window.locationsData = [...(window.locationsData || []), {name: val}];
+                if (tableName === 'destinations') window.destinationsData = [...(window.destinationsData || []), {name: val}];
+                if (tableName === 'unit_statuses') window.statusesData = [...(window.statusesData || []), {name: val}];
                 if (tableName === 'incident_types' && window.allIncidentTypes) window.allIncidentTypes.push({name: val});
             }
         } else {
@@ -309,13 +328,43 @@ window.openEditModal = (unitId) => {
                     </select>
                 </div>
 
-                <div>
-                    <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1">Destino (Lugar de Entrega)</label>
-                    <select id="edit-dest" class="w-full border-2 border-gray-200 focus:border-blue-500 outline-none p-2 rounded-lg font-medium" onchange="window.handleDynamicSelect('edit-dest', 'locations')">
-                        <option value="">Seleccionar Destino...</option>
-                        ${locations.map(d => `<option value="${d.name}" ${currentDest === d.name ? 'selected' : ''}>${d.name}</option>`).join('')}
-                        <option value="__NEW__" class="font-bold text-green-600">+ Agregar Nuevo Destino...</option>
-                    </select>
+                <div class="col-span-2">
+                    <div class="flex justify-between items-center mb-1">
+                        <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider">Destino(s) / Paradas</label>
+                        <button type="button" class="text-[10px] bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full font-bold hover:bg-blue-200 transition" onclick="window.addEditDestination()">
+                            <i class="fas fa-plus mr-1"></i> Añadir Parada
+                        </button>
+                    </div>
+                    <div id="edit-destinations-list" class="space-y-2">
+                        ${(() => {
+                            const dests = (currentDest || "").split(' | ').filter(v => v);
+                            if (dests.length === 0) {
+                                return `
+                                    <div class="flex gap-2 items-center dest-row">
+                                        <select class="flex-1 border-2 border-gray-200 focus:border-blue-500 outline-none p-2 rounded-lg font-medium edit-dest-item" onchange="window.handleDynamicSelect(this, 'locations')">
+                                            <option value="">Seleccionar Destino...</option>
+                                            ${locations.map(d => `<option value="${d.name}">${d.name}</option>`).join('')}
+                                            <option value="__NEW__" class="font-bold text-green-600">+ Agregar Nuevo...</option>
+                                        </select>
+                                    </div>
+                                `;
+                            }
+                            return dests.map((d, i) => `
+                                <div class="flex gap-2 items-center dest-row">
+                                    <select class="flex-1 border-2 border-gray-200 focus:border-blue-500 outline-none p-2 rounded-lg font-medium edit-dest-item" onchange="window.handleDynamicSelect(this, 'locations')">
+                                        <option value="">Seleccionar Destino...</option>
+                                        ${locations.map(loc => `<option value="${loc.name}" ${loc.name === d ? 'selected' : ''}>${loc.name}</option>`).join('')}
+                                        <option value="__NEW__" class="font-bold text-green-600">+ Agregar Nuevo...</option>
+                                    </select>
+                                    ${i > 0 ? `
+                                    <button type="button" class="text-red-500 hover:text-red-700 p-2" onclick="this.parentElement.remove()">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                    ` : ''}
+                                </div>
+                            `).join('');
+                        })()}
+                    </div>
                 </div>
 
                 <div class="col-span-2">
@@ -361,7 +410,10 @@ window.openEditModal = (unitId) => {
         const newDate = document.getElementById('edit-date').value;
         const cliente = document.getElementById('edit-client').value;
         const origen = document.getElementById('edit-origin').value;
-        const destino = document.getElementById('edit-dest').value;
+
+        const destElements = document.querySelectorAll('.edit-dest-item');
+        const destinationsArray = Array.from(destElements).map(el => el.value).filter(v => v);
+        const destino = destinationsArray.join(' | ');
         const destinatario = document.getElementById('edit-destinatario').value;
         const route = document.getElementById('edit-route').value;
         const comments = document.getElementById('edit-comments').value;
@@ -412,27 +464,27 @@ window.openEditModal = (unitId) => {
 
     // Client select event for dynamic fields
     const clientSelect = document.getElementById('edit-client');
-    const updateDynamicFields = () => {
-        const val = clientSelect.value.toUpperCase();
-        document.getElementById('field-viaje').style.display = val.includes('CHANGAN') ? 'block' : 'none';
-        document.getElementById('field-bol').style.display = val.includes('BYD') || val.includes('CHANGAN') ? 'block' : 'none';
-        
-        // Fix grid span if one is visible
-        const dispViaje = document.getElementById('field-viaje').style.display === 'block';
-        const dispBol = document.getElementById('field-bol').style.display === 'block';
-
-        if(dispViaje && dispBol) {
-            document.getElementById('field-viaje').className = "col-span-1";
-            document.getElementById('field-bol').className = "col-span-1";
-        } else if(dispViaje || dispBol) {
-            if(dispViaje) document.getElementById('field-viaje').className = "col-span-2";
-            if(dispBol) document.getElementById('field-bol').className = "col-span-2";
-        }
-    };
     clientSelect.addEventListener('change', () => {
         window.handleDynamicSelect('edit-client', 'clients');
     });
 }
+
+window.addEditDestination = () => {
+    const container = document.getElementById('edit-destinations-list');
+    const div = document.createElement('div');
+    div.className = 'flex gap-2 items-center dest-row animate-content-fade-in';
+    div.innerHTML = `
+        <select class="flex-1 border-2 border-gray-200 focus:border-blue-500 outline-none p-2 rounded-lg font-medium edit-dest-item" onchange="window.handleDynamicSelect(this, 'locations')">
+            <option value="">Seleccionar Destino...</option>
+            ${(window.locationsData || []).map(d => `<option value="${d.name}">${d.name}</option>`).join('')}
+            <option value="__NEW__" class="font-bold text-green-600">+ Agregar Nuevo...</option>
+        </select>
+        <button type="button" class="text-red-500 hover:text-red-700 p-2" onclick="this.parentElement.remove()">
+            <i class="fas fa-trash-alt"></i>
+        </button>
+    `;
+    container.appendChild(div);
+};
 
 window.openScheduleModal = () => {
     const units = window.unitsData;
@@ -450,7 +502,8 @@ window.openScheduleModal = () => {
     
     // Dynamically loaded generic catalogs
     const clients = window.clientsData || [];
-    const destinations = window.locationsData || [];
+    const destinations = window.destinationsData || []; // fixed reference to destinationsData
+    const locationsList = window.locationsData || [];
 
     const modal = document.createElement('div');
     modal.className = 'fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 fade-in';
@@ -486,18 +539,27 @@ window.openScheduleModal = () => {
                     <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1">Origen (Carga)</label>
                     <select id="sched-origin" class="w-full border-2 border-gray-200 focus:border-purple-500 outline-none p-2 rounded-lg font-medium" onchange="window.handleDynamicSelect('sched-origin', 'locations')">
                         <option value="">Seleccionar Origen...</option>
-                        ${locations.map(d => `<option value="${d.name}">${d.name}</option>`).join('')}
+                        ${locationsList.map(d => `<option value="${d.name}">${d.name}</option>`).join('')}
                         <option value="__NEW__" class="font-bold text-green-600">+ Agregar Nuevo Origen...</option>
                     </select>
                 </div>
 
-                <div>
-                    <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1">Destino (Lugar de Entrega)</label>
-                    <select id="sched-dest" class="w-full border-2 border-gray-200 focus:border-purple-500 outline-none p-2 rounded-lg font-medium" onchange="window.handleDynamicSelect('sched-dest', 'locations')">
-                        <option value="">Seleccionar Destino...</option>
-                        ${locations.map(d => `<option value="${d.name}">${d.name}</option>`).join('')}
-                        <option value="__NEW__" class="font-bold text-green-600">+ Agregar Nuevo Destino...</option>
-                    </select>
+                <div class="col-span-2">
+                    <div class="flex justify-between items-center mb-1">
+                        <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider">Destino(s) / Paradas</label>
+                        <button type="button" class="text-[10px] bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full font-bold hover:bg-indigo-200 transition" onclick="window.addSchedDestination()">
+                            <i class="fas fa-plus mr-1"></i> Añadir Parada
+                        </button>
+                    </div>
+                    <div id="sched-destinations-list" class="space-y-2">
+                        <div class="flex gap-2 items-center dest-row">
+                            <select class="flex-1 border-2 border-gray-200 focus:border-purple-500 outline-none p-2 rounded-lg font-medium sched-dest-item" onchange="window.handleDynamicSelect(this, 'locations')">
+                                <option value="">Seleccionar Destino...</option>
+                                ${window.locationsData.map(d => `<option value="${d.name}">${d.name}</option>`).join('')}
+                                <option value="__NEW__" class="font-bold text-green-600">+ Agregar Nuevo...</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="col-span-2">
@@ -528,7 +590,11 @@ window.openScheduleModal = () => {
         const date = document.getElementById('sched-date').value;
         const cliente = document.getElementById('sched-client').value;
         const origen = document.getElementById('sched-origin').value;
-        const destino = document.getElementById('sched-dest').value;
+        
+        const destElements = document.querySelectorAll('.sched-dest-item');
+        const destinationsArray = Array.from(destElements).map(el => el.value).filter(v => v);
+        const destino = destinationsArray.join(' | ');
+
         const destinatario = document.getElementById('sched-destinatario').value;
         const route = document.getElementById('sched-route').value;
 
