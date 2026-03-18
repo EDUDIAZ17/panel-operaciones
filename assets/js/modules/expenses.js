@@ -95,10 +95,15 @@ export function renderExpenses(container) {
 
                     <div class="border-t pt-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                          <div class="w-full md:w-1/2">
-                            <label class="block text-sm font-medium text-gray-700">Saldo Pendiente Anterior</label>
-                            <div class="flex gap-2">
-                                <input type="number" id="exp-balance" class="block w-1/3 border border-red-200 bg-red-50 rounded-md p-2 shadow-sm" placeholder="0.00">
-                                <textarea id="exp-balance-obs" class="flex-1 border p-2 text-xs rounded-md" placeholder="¿Por qué es este saldo? (Obligatorio si es negativo)"></textarea>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Saldo Pendiente Anterior <span class="text-xs text-gray-400 font-normal ml-1">(Click en +/- para móvil)</span></label>
+                            <div class="flex gap-2 relative">
+                                <div class="relative w-1/3 flex shadow-sm">
+                                    <button type="button" id="btn-toggle-sign" class="bg-red-100 text-red-700 px-3 border border-r-0 border-red-200 rounded-l-md font-bold focus:outline-none focus:ring-2 focus:ring-red-500 hover:bg-red-200 transition" title="Cambiar signo (Positivo/Negativo)">
+                                        <i class="fas fa-exchange-alt"></i> +/-
+                                    </button>
+                                    <input type="number" step="any" id="exp-balance" class="flex-1 min-w-0 block w-full border border-red-200 bg-red-50 rounded-r-md p-2 focus:border-red-500 outline-none transition" placeholder="0.00">
+                                </div>
+                                <textarea id="exp-balance-obs" class="flex-1 border p-2 text-xs rounded-md focus:border-red-500 outline-none" placeholder="¿Por qué es este saldo? (Obl. si es negativo)"></textarea>
                             </div>
                             <p id="balance-warning" class="hidden text-[10px] text-red-600 font-bold mt-1 animate-pulse">⚠️ EL OPERADOR LE DEBE A LA EMPRESA</p>
                         </div>
@@ -171,6 +176,26 @@ export function renderExpenses(container) {
     inputs.forEach(inp => inp.addEventListener('input', calculate));
     
     document.getElementById('btn-send-wa').addEventListener('click', saveAndSend);
+    
+    // Mobile +/- toggle for exp-balance
+    document.getElementById('btn-toggle-sign').addEventListener('click', () => {
+        const inp = document.getElementById('exp-balance');
+        let val = parseFloat(inp.value) || 0;
+        if (val !== 0) {
+            inp.value = (val * -1);
+            calculate(); // Update totals
+        } else {
+            Swal.fire({
+                toast: true,
+                position: 'top',
+                icon: 'info',
+                title: 'Escriba primero la cantidad en "Saldo Pendiente" y luego presione +/- para cambiar su signo a negativo.',
+                showConfirmButton: false,
+                timer: 4000
+            });
+        }
+    });
+
     document.getElementById('btn-ai-report').addEventListener('click', generateAIReport);
     document.getElementById('btn-clear-history').addEventListener('click', clearExpenseHistory);
     document.getElementById('expenses-filter').addEventListener('keyup', filterExpenseHistory);
