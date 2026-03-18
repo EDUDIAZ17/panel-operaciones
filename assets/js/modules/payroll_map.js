@@ -869,12 +869,18 @@ function recalculateTotalsFromDraggedRoute(result) {
     
     let totalDistanceMeters = 0;
     const legWaypoints = [];
+    const viaWaypoints = [];
     const origen = result.request.origin.query || result.request.origin.location.toString();
     const destino = result.request.destination.query || result.request.destination.location.toString();
 
     result.routes[0].legs.forEach(leg => {
         totalDistanceMeters += leg.distance.value;
         if(leg.start_address) legWaypoints.push(leg.start_address);
+        if(leg.via_waypoints && leg.via_waypoints.length > 0) {
+             leg.via_waypoints.forEach(vwp => {
+                 viaWaypoints.push(`${vwp.location.lat()},${vwp.location.lng()}`);
+             });
+        }
 
         leg.steps.forEach(step => {
             const instructions = step.instructions.toLowerCase();
@@ -939,6 +945,7 @@ function recalculateTotalsFromDraggedRoute(result) {
         origen,
         destino,
         waypointNames: legWaypoints.slice(1, -1),
+        viaWaypoints: viaWaypoints,
         distance: distanceValueKm,
         unitTypeName: document.getElementById('map-unit-type').options[document.getElementById('map-unit-type').selectedIndex].text
     };
@@ -1030,12 +1037,20 @@ function shareRouteWhatsApp() {
     
     let mapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(window.currentRouteData.origen)}&destination=${encodeURIComponent(window.currentRouteData.destino)}`;
 
+    let allWaypoints = [];
     if(window.currentRouteData.waypointNames && window.currentRouteData.waypointNames.length > 0) {
         text += `\n*🛑 Paradas Obligatorias:*\n`;
         window.currentRouteData.waypointNames.forEach((w,i) => {
              text += `  ${i+1}. ${w}\n`;
         });
-        const waypointsStr = window.currentRouteData.waypointNames.join('|');
+        allWaypoints.push(...window.currentRouteData.waypointNames);
+    }
+    if (window.currentRouteData.viaWaypoints && window.currentRouteData.viaWaypoints.length > 0) {
+        allWaypoints.push(...window.currentRouteData.viaWaypoints);
+    }
+    
+    if (allWaypoints.length > 0) {
+        const waypointsStr = allWaypoints.join('|');
         mapsUrl += `&waypoints=${encodeURIComponent(waypointsStr)}`;
     }
     
