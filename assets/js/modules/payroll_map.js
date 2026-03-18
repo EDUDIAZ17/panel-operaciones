@@ -787,31 +787,6 @@ async function triggerTollCalculationAndPayroll(distanceKm, unitTypeName) {
     };
 }
 
-function shareRouteWhatsApp() {
-    const data = window.currentRouteData;
-    if (!data || !data.origen || !data.destino) {
-        Swal.fire('Sin Datos', 'Trace una ruta primero para poder compartirla.', 'info');
-        return;
-    }
-
-    // Google Maps Dir URL format: https://www.google.com/maps/dir/Origin/Way1/Way2/Destination
-    let baseUrl = "https://www.google.com/maps/dir/";
-    let path = encodeURIComponent(data.origen) + "/";
-    
-    if (data.waypointNames && data.waypointNames.length > 0) {
-        data.waypointNames.forEach(wp => {
-            path += encodeURIComponent(wp) + "/";
-        });
-    }
-    
-    path += encodeURIComponent(data.destino);
-    const fullUrl = baseUrl + path;
-
-    const message = `*Logística ALEXA - Ruta del Viaje*\n\n📍 *Origen:* ${data.origen}\n🏁 *Destino:* ${data.destino}\n📏 *Recorrido:* ${data.distance.toFixed(0)} km\n🚛 *Unidad:* ${data.unitTypeName}\n\n🗺️ *Ver en Google Maps:*\n${fullUrl}`;
-    
-    const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
-    window.open(waUrl, '_blank');
-}
 
 function populateCasetasModal(tollsArray, totalCost) {
     const tbody = document.getElementById('casetas-table-body');
