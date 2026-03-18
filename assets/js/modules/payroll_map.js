@@ -221,6 +221,10 @@ export function renderPayrollMap(container) {
                                      <span id="rep-cost-driver" class="text-slate-900 font-black">$0.00</span>
                                  </div>
                                  <div class="flex justify-between items-center text-sm border-b border-slate-100 pb-2">
+                                     <div class="flex items-center gap-3 text-slate-600 font-bold"><i class="far fa-credit-card text-emerald-600"></i> Alimentos y Maniobras</div>
+                                     <span id="rep-cost-misc" class="text-slate-900 font-black">$0.00</span>
+                                 </div>
+                                 <div class="flex justify-between items-center text-sm border-b border-slate-100 pb-2">
                                      <div class="flex items-center gap-3 text-slate-600 font-bold"><i class="fas fa-tools text-orange-600"></i> Mantenimiento Prev.</div>
                                      <span id="rep-cost-maint" class="text-slate-900 font-black">$0.00</span>
                                  </div>
@@ -231,7 +235,10 @@ export function renderPayrollMap(container) {
                              </div>
                         </div>
 
-                        <div class="grid grid-cols-1 gap-4 pb-10">
+                        <div class="grid grid-cols-1 gap-4">
+                             <button id="btn-share-whatsapp" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-4 rounded-xl flex items-center justify-center gap-3 transition-all shadow-lg active:scale-95">
+                                 <i class="fab fa-whatsapp text-lg"></i> ENVIAR LINK DE RUTA
+                             </button>
                              <button id="btn-show-tolls-list" class="w-full bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 font-black py-4 rounded-xl flex items-center justify-center gap-3 transition-all shadow-sm">
                                  <i class="fas fa-list-ol text-emerald-600"></i> Listado de Casetas
                              </button>
@@ -624,10 +631,9 @@ function calculateMapRoute() {
                 leg.steps.forEach(step => {
                     const instructions = step.instructions.toLowerCase();
                     if (instructions.includes('cuota') || instructions.includes('peaje') || instructions.includes('toll')) {
-                        const marker = new google.maps.Marker({
+                        const marker = new google.maps.marker.AdvancedMarkerElement({
                             position: step.start_location,
                             map: map,
-                            icon: 'https://maps.google.com/mapfiles/ms/icons/orange-dot.png',
                             title: 'Caseta de Cobro'
                         });
                         window.tollMarkers.push(marker);
@@ -652,8 +658,14 @@ function calculateMapRoute() {
             
             // Populate Reporte Ruta
             const today = new Date().toLocaleDateString('es-MX');
+            const repOrig = document.getElementById('rep-origen');
+            const repDest = document.getElementById('rep-destino');
+            const repDate = document.getElementById('rep-fecha');
+            const repVeh = document.getElementById('rep-vehiculo');
             const repTTotal = document.getElementById('rep-time-total');
             const repTDrive = document.getElementById('rep-time-drive');
+            const repDTotal = document.getElementById('rep-dist-total');
+            const repDVacio = document.getElementById('rep-dist-vacio');
             const repTitCost = document.getElementById('rep-tit-cost');
 
             if (repOrig) repOrig.textContent = origen;
@@ -702,45 +714,55 @@ async function triggerTollCalculationAndPayroll(distanceKm, unitTypeName) {
         populateCasetasModal([]);
     } else {
         try {
-            // This will be handled by Gemini to get detailed info
             if(window.getDetailedTollsAI) {
                 const response = await window.getDetailedTollsAI(origen, destino, waypoints, unitTypeName);
                 if (response && response.tolls) {
                     tollsCost = response.totalCost || 0;
-                    document.getElementById('rep-cost-tolls').textContent = '$' + tollsCost.toLocaleString('es-MX', {minimumFractionDigits: 2});
+                    if (repTolls) repTolls.textContent = '$' + tollsCost.toLocaleString('es-MX', {minimumFractionDigits: 2});
                     populateCasetasModal(response.tolls, tollsCost);
                 } else {
-                    document.getElementById('rep-cost-tolls').textContent = 'Error IA';
+                    if (repTolls) repTolls.textContent = 'Error IA';
                     populateCasetasModal([]);
                 }
             } else {
-                 document.getElementById('rep-cost-tolls').textContent = 'IA No Lista';
+                 if (repTolls) repTolls.textContent = 'IA No Lista';
                  populateCasetasModal([]);
             }
         } catch (e) {
             console.error("Error estimando casetas con IA:", e);
-            document.getElementById('rep-cost-tolls').textContent = 'Error IA';
+            if (repTolls) repTolls.textContent = 'Error IA';
             populateCasetasModal([]);
         }
     }
 
-    // Rendimiento/Fuel based on Unit type (approx)
-    let kpl = Math.max(1, parseFloat(document.getElementById('pref-kpl').value) || 2.5); // Km/L
-    let dieselPrice = 24.50; // Approximated
-    let fuelCost = (distanceKm / kpl) * dieselPrice;
+    // New Operational Parameters from UI
+    const kpl = Math.max(0.1, parseFloat(document.getElementById('pref-kpl').value) || 2.1);
+    const dieselPrice = parseFloat(document.getElementById('pref-diesel-price').value) || 24.5;
+    const rateLoaded = parseFloat(document.getElementById('pref-rate-loaded').value) || 1.8;
+    const rateEmpty = parseFloat(document.getElementById('pref-rate-empty').value) || 1.5;
+    const rateMaint = parseFloat(document.getElementById('pref-rate-maint').value) || 0.85;
+    const rateTires = parseFloat(document.getElementById('pref-rate-tires').value) || 0.6;
+    const rateFood = parseFloat(document.getElementById('pref-rate-food').value) || 0.45;
+    const rateManeuver = parseFloat(document.getElementById('pref-rate-maneuver').value) || 45;
+    const maneuverCount = parseInt(document.getElementById('pref-maneuver-count').value) || 2;
+
+    // Fuel Cost
+    const fuelCost = (distanceKm / kpl) * dieselPrice;
     
-    // Sueldo/Driver (based on km usually)
-    let driverRateKm = document.getElementById('pref-opt-truck').checked ? 1.50 : 1.20; 
-    let driverCost = distanceKm * driverRateKm;
+    // Sueldo Operator (Differentiating between loaded and empty would require trip state, for now we average or use loaded if specified)
+    // For this estimator, we will assume "Cargado" by default as it's the conservative estimate.
+    const driverCost = distanceKm * rateLoaded;
 
-    // Maintenance factor per km
-    let maintCost = distanceKm * 0.85; 
+    // Maintenance & Tires
+    const maintCost = distanceKm * rateMaint;
+    const tiresCost = distanceKm * rateTires;
 
-    // Tires factor per km
-    let tiresCost = distanceKm * 0.60;
+    // Food & Maneuvers (Misc)
+    const miscCost = (distanceKm * rateFood) + (rateManeuver * maneuverCount);
 
     const repFuel = document.getElementById('rep-cost-fuel');
     const repDriver = document.getElementById('rep-cost-driver');
+    const repMisc = document.getElementById('rep-cost-misc');
     const repMaint = document.getElementById('rep-cost-maint');
     const repTires = document.getElementById('rep-cost-tires');
     const repTotal = document.getElementById('rep-cost-total');
@@ -749,10 +771,11 @@ async function triggerTollCalculationAndPayroll(distanceKm, unitTypeName) {
 
     if (repFuel) repFuel.textContent = '$' + fuelCost.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2});
     if (repDriver) repDriver.textContent = '$' + driverCost.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    if (repMisc) repMisc.textContent = '$' + miscCost.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2});
     if (repMaint) repMaint.textContent = '$' + maintCost.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2});
     if (repTires) repTires.textContent = '$' + tiresCost.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2});
 
-    let masterTotal = tollsCost + fuelCost + driverCost + maintCost + tiresCost;
+    let masterTotal = tollsCost + fuelCost + driverCost + maintCost + tiresCost + miscCost;
     if (repTotal) repTotal.textContent = '$' + masterTotal.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2});
     if (repTitCost) repTitCost.textContent = '$' + masterTotal.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' MXN';
 
@@ -760,8 +783,34 @@ async function triggerTollCalculationAndPayroll(distanceKm, unitTypeName) {
     if (repKm) repKm.textContent = '$' + costPerKm.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2});
     
     window.currentRouteData.calculatedCosts = {
-         tolls: tollsCost, fuel: fuelCost, driver: driverCost, maint: maintCost, tires: tiresCost, total: masterTotal, perKm: costPerKm
+         tolls: tollsCost, fuel: fuelCost, driver: driverCost, maint: maintCost, tires: tiresCost, misc: miscCost, total: masterTotal, perKm: costPerKm
     };
+}
+
+function shareRouteWhatsApp() {
+    const data = window.currentRouteData;
+    if (!data || !data.origen || !data.destino) {
+        Swal.fire('Sin Datos', 'Trace una ruta primero para poder compartirla.', 'info');
+        return;
+    }
+
+    // Google Maps Dir URL format: https://www.google.com/maps/dir/Origin/Way1/Way2/Destination
+    let baseUrl = "https://www.google.com/maps/dir/";
+    let path = encodeURIComponent(data.origen) + "/";
+    
+    if (data.waypointNames && data.waypointNames.length > 0) {
+        data.waypointNames.forEach(wp => {
+            path += encodeURIComponent(wp) + "/";
+        });
+    }
+    
+    path += encodeURIComponent(data.destino);
+    const fullUrl = baseUrl + path;
+
+    const message = `*Logística ALEXA - Ruta del Viaje*\n\n📍 *Origen:* ${data.origen}\n🏁 *Destino:* ${data.destino}\n📏 *Recorrido:* ${data.distance.toFixed(0)} km\n🚛 *Unidad:* ${data.unitTypeName}\n\n🗺️ *Ver en Google Maps:*\n${fullUrl}`;
+    
+    const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
+    window.open(waUrl, '_blank');
 }
 
 function populateCasetasModal(tollsArray, totalCost) {
@@ -809,9 +858,6 @@ function recalculateTotalsFromDraggedRoute(result) {
 
     result.routes[0].legs.forEach(leg => {
         totalDistanceMeters += leg.distance.value;
-        
-        // El usuario al arrastrar crea "vía endpoints" o waypoints implícitos
-        // Estos no tienen query de texto directo a veces, usamos location
         if(leg.start_address) legWaypoints.push(leg.start_address);
 
         leg.steps.forEach(step => {
@@ -823,7 +869,6 @@ function recalculateTotalsFromDraggedRoute(result) {
                     title: 'Caseta de Cobro'
                 });
 
-                // Agregar interactividad a la caseta al arrastrar
                 marker.addListener('mouseover', () => {
                     infoWindow.setContent(`<div class="p-1"><p class="font-bold text-orange-600 text-xs"><i class="fas fa-ticket-alt"></i> Caseta de Peaje (Modificada)</p><p class="text-[10px] text-gray-500">Punto de cobro detectado en la nueva ruta.</p></div>`);
                     infoWindow.open(map, marker);
@@ -838,9 +883,8 @@ function recalculateTotalsFromDraggedRoute(result) {
     });
 
     const distanceValueKm = totalDistanceMeters / 1000;
-    const speedKmH = parseFloat(document.getElementById('map-speed').value) || 70;
+    const speedKmH = parseFloat(document.getElementById('map-speed').value) || 75;
     const stopTimeH = legWaypoints.length * 0.5;
-    
     const drivingTimeH = distanceValueKm / speedKmH;
     const restTimeH = document.getElementById('pref-opt-nom').checked ? Math.floor(drivingTimeH / 5) * 0.5 : 0;
     const totalTimeH = drivingTimeH + stopTimeH + restTimeH;
@@ -851,25 +895,38 @@ function recalculateTotalsFromDraggedRoute(result) {
         return `${h}h:${m.toString().padStart(2, '0')}m`;
     }
     
-    // Update Report tab manually since dragged
-    const repDistTotal = document.getElementById('rep-dist-total');
-    const repDistVacio = document.getElementById('rep-dist-vacio');
-    const repTimeTotal = document.getElementById('rep-time-total');
-    const repTimeDrive = document.getElementById('rep-time-drive');
+    // Update Report tab
+    const repOrig = document.getElementById('rep-origen');
+    const repDest = document.getElementById('rep-destino');
+    const repDate = document.getElementById('rep-fecha');
+    const repVeh = document.getElementById('rep-vehiculo');
+    const repTTotal = document.getElementById('rep-time-total');
+    const repTDrive = document.getElementById('rep-time-drive');
+    const repDTotal = document.getElementById('rep-dist-total');
+    const repDVacio = document.getElementById('rep-dist-vacio');
+    const repTitCost = document.getElementById('rep-tit-cost');
 
-    if (repDistTotal) repDistTotal.textContent = distanceValueKm.toLocaleString('es-MX', {maximumFractionDigits: 0}) + ' Kms';
-    if (repDistVacio) repDistVacio.textContent = distanceValueKm.toLocaleString('es-MX', {maximumFractionDigits: 0}) + ' Kms';
+    if (repOrig) repOrig.textContent = origen;
+    if (repDest) repDest.textContent = destino;
+    if (repDate) repDate.textContent = new Date().toLocaleDateString('es-MX');
+    if (repVeh) repVeh.textContent = document.getElementById('map-unit-type').options[document.getElementById('map-unit-type').selectedIndex].text;
     
-    if (repTimeTotal) repTimeTotal.textContent = formatTime(totalTimeH) + ' (Modificado)';
-    if (repTimeDrive) repTimeDrive.textContent = formatTime(drivingTimeH);
+    if (repDTotal) repDTotal.innerHTML = `${distanceValueKm.toLocaleString('es-MX', {maximumFractionDigits: 0})} <span class="text-xs font-normal text-slate-400 uppercase tracking-tighter">km</span>`;
+    if (repDVacio) repDVacio.textContent = distanceValueKm.toLocaleString('es-MX', {maximumFractionDigits: 0});
+    
+    if (repTTotal) repTTotal.innerHTML = `${formatTime(totalTimeH)} <span class="text-xs font-normal text-slate-400 uppercase tracking-tighter">h</span>`;
+    if (repTDrive) repTDrive.textContent = formatTime(drivingTimeH);
+    if (repTitCost) repTitCost.textContent = 'Calculando...';
 
-    // Actualizar datos globales para auditoría
-    window.currentRouteData.origen = origen;
-    window.currentRouteData.destino = destino;
-    window.currentRouteData.distance = distanceValueKm;
-    window.currentRouteData.waypointNames = legWaypoints.slice(1, -1); 
+    // Actualizar datos globales
+    window.currentRouteData = {
+        origen,
+        destino,
+        waypointNames: legWaypoints.slice(1, -1),
+        distance: distanceValueKm,
+        unitTypeName: document.getElementById('map-unit-type').options[document.getElementById('map-unit-type').selectedIndex].text
+    };
 
-    // Volver a calcular casetas con los nuevos puntos arrastrados
     triggerTollCalculationAndPayroll(distanceValueKm, window.currentRouteData.unitTypeName);
 }
 
