@@ -142,13 +142,13 @@ export async function estimateTollsWithAI(origen, destino, paradas = [], unitTyp
     if (unitType === 'torton') axels = "3 ejes (Torton)";
 
     const prompt = `
-        Actúa como un analista logístico experto en rutas terrestres de México.
-        Necesitamos **ESTIMAR EL COSTO TOTAL APROXIMADO DE CASETAS/PEAJES** para un vehículo pesado de **${axels}** 
+        Actúa como un analista logístico experto en rutas terrestres de México con acceso a las tarifas de peaje (casetas) más recientes de CAPUFE y SCT actualizadas a 2024/2025.
+        Necesitamos **ESTIMAR EL COSTO TOTAL EXACTO DE CASETAS/PEAJES** para un vehículo pesado de **${axels}** 
         que viaja desde "${origen}" hacia "${destino}"${paradasText}.
 
         Reglas:
-        1. Considera solo rutas de autopistas de cuota (Federales).
-        2. Proporciona solo la estimación numérica en MXN (Pesos Mexicanos) de las casetas.
+        1. Considera solo rutas de autopistas de cuota (Federales) de México.
+        2. Proporciona la estimación numérica en MXN (Pesos Mexicanos) de las casetas, utilizando los costos reales de CAPUFE más recientes conocidos.
         3. Formato requerido: Devuelve el resultado en un bloque de HTML simple, resaltando el costo total y dando un brevísimo desglose de 1 a 2 líneas de los principales tramos de cobro.
         4. Sé directo, sin introducciones ni conclusiones largas. Usa la etiqueta <b> para resaltar el monto final (ej. <b>$4,500.00 MXN</b>).
     `;
@@ -193,22 +193,22 @@ window.getDetailedTollsAI = async (origen, destino, paradas = [], unitType = 'fu
     if (unitType === 'torton') axels = "3 ejes (Torton)";
 
     const prompt = `
-        Actúa como un analista logístico experto en rutas terrestres de México.
-        Necesitamos obtener el DESGLOSE DE CASETAS/PEAJES para un vehículo pesado de ${axels} 
+        Actúa como un analista logístico experto en rutas terrestres de México con las tarifas de CAPUFE y SCT actualizadas a 2024/2025.
+        Necesitamos obtener el DESGLOSE EXACTO Y REAL DE CASETAS/PEAJES para un vehículo pesado de ${axels} 
         que viaja desde "${origen}" hacia "${destino}"${paradasText}.
 
         Reglas:
-        1. Considera rutas de autopistas de cuota (Federales) más probables.
+        1. Considera rutas de autopistas de cuota (Federales) que enlazan estos puntos.
         2. Proporciona la respuesta ÚNICAMENTE en formato JSON válido, sin texto adicional ni bloques markdown (\`\`\`json).
-        3. El JSON debe cumplir estrictamente esta estructura:
+        3. El JSON debe cumplir estrictamente esta estructura evaluando el precio real actual de CAPUFE para camiones de ${axels}:
         {
             "totalCost": 4500,
             "tolls": [
-                 { "name": "Nombre Caseta 1", "distance": "120", "time": "1h 30m", "cost": 500 },
-                 { "name": "Nombre Caseta 2", "distance": "250", "time": "2h 45m", "cost": 1200 }
+                 { "name": "Nombre exacto de la caseta (ej. Tlalpan)", "distance": "120", "time": "1h 30m", "cost": 500 },
+                 { "name": "Caseta 2", "distance": "250", "time": "2h 45m", "cost": 1200 }
             ]
         }
-        Recuerda: SOLO JSON VÁLIDO. Los costos ("totalCost" y "cost") deben ser números (sin símbolos de peso o comas). "distance" y "time" son strings descriptivos.
+        Recuerda: SOLO JSON VÁLIDO. Los costos ("totalCost" y "cost") deben ser números exactos.
     `;
 
     const modelsToTry = [
