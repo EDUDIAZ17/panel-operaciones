@@ -127,11 +127,52 @@ export function renderPayrollMap(container) {
                                             <input type="number" id="map-weight" value="75" class="w-full bg-white border border-slate-300 rounded text-slate-900 font-black text-center focus:ring-emerald-500">
                                         </div>
                                     </div>
+                                 </div>
+                            </div>
+                        </div>
+
+                        <div class="space-y-4 pt-4 border-t border-slate-200">
+                             <label class="text-[10px] font-black text-emerald-700 uppercase tracking-widest flex items-center gap-2">
+                                <div class="w-1 h-3 bg-emerald-600 rounded-full"></div> CONFIGURACIÓN FINANCIERA (Viáticos)
+                            </label>
+                            
+                            <div class="grid grid-cols-3 gap-2">
+                                <div class="bg-slate-100 p-2 rounded-xl border border-slate-200 shadow-inner text-center">
+                                    <p class="text-[8px] text-slate-700 uppercase font-black mb-1" title="Precio Diesel por Litro">Precio Diesel</p>
+                                    <input type="number" id="pref-diesel-price" value="24.5" step="0.1" class="w-full bg-white border border-slate-300 rounded text-slate-900 font-bold text-center focus:ring-emerald-500 text-xs py-1">
+                                </div>
+                                <div class="bg-slate-100 p-2 rounded-xl border border-slate-200 shadow-inner text-center">
+                                    <p class="text-[8px] text-slate-700 uppercase font-black mb-1" title="Pago Operador (Cargado) x KM">Operador (Carg.)</p>
+                                    <input type="number" id="pref-rate-loaded" value="1.8" step="0.01" class="w-full bg-white border border-slate-300 rounded text-slate-900 font-bold text-center focus:ring-emerald-500 text-xs py-1">
+                                </div>
+                                <div class="bg-slate-100 p-2 rounded-xl border border-slate-200 shadow-inner text-center">
+                                    <p class="text-[8px] text-slate-700 uppercase font-black mb-1" title="Pago Operador (Vacío) x KM">Operador (Vac.)</p>
+                                    <input type="number" id="pref-rate-empty" value="1.5" step="0.01" class="w-full bg-white border border-slate-300 rounded text-slate-900 font-bold text-center focus:ring-emerald-500 text-xs py-1">
+                                </div>
+                                <div class="bg-slate-100 p-2 rounded-xl border border-slate-200 shadow-inner text-center">
+                                    <p class="text-[8px] text-slate-700 uppercase font-black mb-1" title="Mantenimiento x KM">Manto. (Km)</p>
+                                    <input type="number" id="pref-rate-maint" value="0.85" step="0.01" class="w-full bg-white border border-slate-300 rounded text-slate-900 font-bold text-center focus:ring-emerald-500 text-xs py-1">
+                                </div>
+                                <div class="bg-slate-100 p-2 rounded-xl border border-slate-200 shadow-inner text-center">
+                                    <p class="text-[8px] text-slate-700 uppercase font-black mb-1" title="Llantas x KM">Llantas (Km)</p>
+                                    <input type="number" id="pref-rate-tires" value="0.6" step="0.01" class="w-full bg-white border border-slate-300 rounded text-slate-900 font-bold text-center focus:ring-emerald-500 text-xs py-1">
+                                </div>
+                                <div class="bg-slate-100 p-2 rounded-xl border border-slate-200 shadow-inner text-center">
+                                    <p class="text-[8px] text-slate-700 uppercase font-black mb-1" title="Alimentos x KM">Alim. (Km)</p>
+                                    <input type="number" id="pref-rate-food" value="0.45" step="0.01" class="w-full bg-white border border-slate-300 rounded text-slate-900 font-bold text-center focus:ring-emerald-500 text-xs py-1">
+                                </div>
+                                <div class="bg-slate-100 p-2 rounded-xl border border-slate-200 shadow-inner text-center col-span-2">
+                                    <p class="text-[8px] text-slate-700 uppercase font-black mb-1">Costo Maniobra (Unitario)</p>
+                                    <input type="number" id="pref-rate-maneuver" value="45" step="1" class="w-full bg-white border border-slate-300 rounded text-slate-900 font-bold text-center focus:ring-emerald-500 text-xs py-1">
+                                </div>
+                                <div class="bg-slate-100 p-2 rounded-xl border border-slate-200 shadow-inner text-center">
+                                    <p class="text-[8px] text-slate-700 uppercase font-black mb-1">Cant. Maniobras</p>
+                                    <input type="number" id="pref-maneuver-count" value="2" step="1" class="w-full bg-white border border-slate-300 rounded text-slate-900 font-bold text-center focus:ring-emerald-500 text-xs py-1">
                                 </div>
                             </div>
                         </div>
 
-                        <div class="space-y-4 pt-2">
+                        <div class="space-y-4 pt-4 border-t border-slate-200">
                              <label class="text-[10px] font-black text-emerald-700 uppercase tracking-widest flex items-center gap-2">
                                 <div class="w-1 h-3 bg-emerald-600 rounded-full"></div> PLAN DE RUTA (WAYPOINTS)
                             </label>
