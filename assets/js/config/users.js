@@ -10,12 +10,23 @@ const MASTER_ADMIN = {
     role: 'admin' // Admin gets all access
 };
 
+const MASTER_DIRECTOR = {
+    email: 'direccion@alexatransportes.com.mx',
+    password: 'director',
+    name: 'Dirección General',
+    role: 'direccion_general'
+};
+
 export async function authenticate(email, password) {
     const normalizedEmail = email.toLowerCase().trim();
 
     // Special check for master admin to ensure access even if LS/DB is cleared
     if(normalizedEmail === MASTER_ADMIN.email && password === MASTER_ADMIN.password) {
         return { name: MASTER_ADMIN.name, email: MASTER_ADMIN.email, role: MASTER_ADMIN.role, isMaster: true };
+    }
+
+    if(normalizedEmail === MASTER_DIRECTOR.email && password === MASTER_DIRECTOR.password) {
+        return { name: MASTER_DIRECTOR.name, email: MASTER_DIRECTOR.email, role: MASTER_DIRECTOR.role, isMaster: true };
     }
 
     const { data: user, error } = await supabase
