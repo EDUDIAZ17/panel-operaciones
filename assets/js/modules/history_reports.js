@@ -460,10 +460,12 @@ window.openTripDetailsModal = (encodedRowData) => {
     const steps = [
         { label: 'Fecha de Programación', val: parsed.scheduled_trip || parsed.assignment_date },
         { label: 'Llegada a Carga', val: cp.trip_load_arrival || cp.llegadaCarga },
+        { label: 'Inicio de Carga', val: cp.trip_load_start },
         { label: 'Fin de Carga / Ins. Ruta', val: cp.trip_load_end || cp.finCarga },
         { label: 'Inicio de Ruta (Punta a Punta)', val: cp.trip_route_start },
-        { label: 'Llegada a Descarga (ETA Cumplido)', val: cp.trip_unload_arrival },
         { label: 'Fin de Ruta (Punta a Punta)', val: cp.trip_route_end },
+        { label: 'Llegada a Descarga (ETA Cumplido)', val: cp.trip_unload_arrival },
+        { label: 'Inicio de Descarga', val: cp.trip_unload_start },
         { label: 'Fin de Descarga (Entrega Final)', val: cp.trip_unload_end || cp.finDescarga },
         { label: 'Cierre de Viaje en Sistema', val: row.timestamp }
     ];

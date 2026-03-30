@@ -92,6 +92,9 @@ export async function renderClientReports(container) {
 
     // Load clients dynamically
     const { data: clients } = await supabase.from('clients').select('*').order('name');
+    const { data: unitStatuses } = await supabase.from('unit_statuses').select('*').order('name');
+    if (unitStatuses) window.statusesData = unitStatuses;
+    
     const clientSelect = document.getElementById('client-report-type');
     if (clients && clientSelect) {
         clients.forEach(c => {
@@ -492,8 +495,12 @@ window.openClientReportEdit = (id) => {
     const origin = details.origen || '';
     const dest = details.destino || '';
     const fProg = details.scheduled_trip || details.assignment_date || '';
-    const fpETA = details.eta || '';
     const comments = details.comments || '';
+    
+    // Status Data configuration
+    const validStatuses = window.statusesData || [{name: 'En Patio'}, {name: 'Transito'}, {name: 'Cargada'}, {name: 'Vacia'}, {name: 'En Taller'}];
+    const hasCurrent = validStatuses.find(s => s.name === u.status);
+    const renderStatuses = hasCurrent ? validStatuses : [...validStatuses, {name: u.status}];
 
     let container = document.getElementById('cr-modal-container');
     if (!container) {
@@ -504,13 +511,13 @@ window.openClientReportEdit = (id) => {
 
     container.innerHTML = `
         <div class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4 fade-in">
-            <div class="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl scale-in">
+            <div class="bg-white rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl scale-in">
                 <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-blue-50 rounded-t-2xl">
                     <h3 class="text-xl font-black text-blue-900"><i class="fas fa-edit text-blue-500 mr-2"></i> Editar Datos de Reporte - ${u.economic_number}</h3>
                     <button onclick="document.getElementById('cr-modal-container').innerHTML=''" class="text-gray-400 hover:text-red-500 transition"><i class="fas fa-times text-xl"></i></button>
                 </div>
                 <div class="p-6 space-y-4">
-                    <div class="grid grid-cols-2 gap-4">
+                    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
                         <div>
                             <label class="block text-xs font-black text-gray-500 mb-1 uppercase tracking-wider">BOL / Viaje</label>
                             <input type="text" id="cr-edit-bol" value="${bol}" class="w-full border border-blue-100 rounded-xl p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
@@ -526,36 +533,54 @@ window.openClientReportEdit = (id) => {
                         <div>
                             <label class="block text-xs font-black text-gray-500 mb-1 uppercase tracking-wider">Estatus</label>
                             <select id="cr-edit-status" class="w-full border border-blue-100 rounded-xl p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none font-bold">
-                                <option value="En Patio" ${u.status==='En Patio'?'selected':''}>En Patio</option>
-                                <option value="Transito" ${u.status.includes('Transito')?'selected':''}>Transito</option>
-                                <option value="Cargada" ${u.status==='Cargada'?'selected':''}>Cargada</option>
-                                <option value="Vacia" ${u.status==='Vacia'?'selected':''}>Vacia</option>
-                                <option value="En Taller" ${u.status==='En Taller'?'selected':''}>En Taller</option>
+                                ${renderStatuses.map(st => '<option value="' + st.name + '" ' + (u.status === st.name ? 'selected' : '') + '>' + st.name + '</option>').join('')}
                             </select>
                         </div>
                     </div>
                     
-                    <h4 class="text-xs font-black text-blue-500 uppercase mt-6 mb-2 border-b border-blue-100 pb-2">Tiempos y Fechas (Sincroniza con Bitácora)</h4>
-                    <div class="grid grid-cols-2 gap-4">
+                    <h4 class="text-xs font-black text-blue-500 uppercase mt-6 mb-2 border-b border-blue-100 pb-2 flex justify-between items-center">
+                        <span><i class="fas fa-clock"></i> Tiempos Logísticos (Sincroniza con Bitácora)</span>
+                    </h4>
+                    <div class="grid grid-cols-2 lg:grid-cols-3 gap-4">
                         <div class="bg-gray-50 p-3 rounded-xl border border-gray-100">
-                            <label class="block text-[10px] font-bold text-gray-500 mb-1 uppercase">Fecha Programada</label>
-                            <input type="datetime-local" id="cr-edit-fprog" value="${fProg ? new Date(new Date(fProg).getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().slice(0,16) : ''}" class="w-full bg-white border border-gray-200 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                            <label class="block text-[10px] font-bold text-gray-500 mb-1 uppercase">Fecha Programada (Asignación)</label>
+                            <input type="datetime-local" id="cr-edit-fprog" value="${fProg ? new Date(new Date(fProg).getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().slice(0,16) : ''}" class="w-full bg-white border border-gray-200 rounded-base p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
                         </div>
-                        <div class="bg-gray-50 p-3 rounded-xl border border-gray-100">
-                            <label class="block text-[10px] font-bold text-gray-500 mb-1 uppercase">Llegada a Carga</label>
-                            <input type="datetime-local" id="cr-edit-llegadac" value="${cp.trip_load_arrival ? new Date(new Date(cp.trip_load_arrival).getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().slice(0,16) : ''}" class="w-full bg-white border border-gray-200 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                        <div class="bg-blue-50/50 p-3 rounded-xl border border-blue-100">
+                            <label class="block text-[10px] font-bold text-blue-700 mb-1 uppercase">Llegada a Carga</label>
+                            <input type="datetime-local" id="cr-edit-load-arr" value="${cp.trip_load_arrival ? new Date(new Date(cp.trip_load_arrival).getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().slice(0,16) : ''}" class="w-full bg-white border border-gray-200 rounded-base p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
                         </div>
-                        <div class="bg-gray-50 p-3 rounded-xl border border-gray-100">
-                            <label class="block text-[10px] font-bold text-gray-500 mb-1 uppercase">Fin Carga / Ins. Ruta</label>
-                            <input type="datetime-local" id="cr-edit-finc" value="${cp.trip_load_end ? new Date(new Date(cp.trip_load_end).getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().slice(0,16) : ''}" class="w-full bg-white border border-gray-200 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                        <div class="bg-blue-50/50 p-3 rounded-xl border border-blue-100">
+                            <label class="block text-[10px] font-bold text-blue-700 mb-1 uppercase">Inicio de Carga</label>
+                            <input type="datetime-local" id="cr-edit-load-st" value="${cp.trip_load_start ? new Date(new Date(cp.trip_load_start).getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().slice(0,16) : ''}" class="w-full bg-white border border-gray-200 rounded-base p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
                         </div>
-                        <div class="bg-gray-50 p-3 rounded-xl border border-gray-100">
-                            <label class="block text-[10px] font-bold text-gray-500 mb-1 uppercase">ETA (Estimado Llegada)</label>
-                            <input type="datetime-local" id="cr-edit-eta" value="${fpETA ? new Date(new Date(fpETA).getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().slice(0,16) : ''}" class="w-full bg-white border border-gray-200 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                        <div class="bg-blue-50/50 p-3 rounded-xl border border-blue-100">
+                            <label class="block text-[10px] font-bold text-blue-700 mb-1 uppercase">Fin Carga / Ins. Ruta</label>
+                            <input type="datetime-local" id="cr-edit-load-end" value="${cp.trip_load_end ? new Date(new Date(cp.trip_load_end).getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().slice(0,16) : ''}" class="w-full bg-white border border-gray-200 rounded-base p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
                         </div>
-                        <div class="bg-gray-50 p-3 rounded-xl border border-gray-100 col-span-2">
-                            <label class="block text-[10px] font-bold text-gray-500 mb-1 uppercase">Fin Descarga (Entrega Final)</label>
-                            <input type="datetime-local" id="cr-edit-find" value="${cp.trip_unload_end ? new Date(new Date(cp.trip_unload_end).getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().slice(0,16) : ''}" class="w-full bg-white border border-gray-200 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                        
+                        <div class="bg-indigo-50/50 p-3 rounded-xl border border-indigo-100 col-span-1 lg:col-span-2 grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-[10px] font-bold text-indigo-700 mb-1 uppercase">Inicio de Ruta</label>
+                                <input type="datetime-local" id="cr-edit-route-st" value="${cp.trip_route_start ? new Date(new Date(cp.trip_route_start).getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().slice(0,16) : ''}" class="w-full bg-white border border-gray-200 rounded-base p-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-indigo-700 mb-1 uppercase">Fin de Ruta</label>
+                                <input type="datetime-local" id="cr-edit-route-end" value="${cp.trip_route_end ? new Date(new Date(cp.trip_route_end).getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().slice(0,16) : ''}" class="w-full bg-white border border-gray-200 rounded-base p-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+                            </div>
+                        </div>
+
+                        <div class="bg-teal-50/50 p-3 rounded-xl border border-teal-100">
+                            <label class="block text-[10px] font-bold text-teal-700 mb-1 uppercase">Llegada a Descarga (ETA)</label>
+                            <input type="datetime-local" id="cr-edit-unload-arr" value="${cp.trip_unload_arrival || details.eta ? new Date(new Date(cp.trip_unload_arrival || details.eta).getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().slice(0,16) : ''}" class="w-full bg-white border border-gray-200 rounded-base p-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none" />
+                        </div>
+                        <div class="bg-teal-50/50 p-3 rounded-xl border border-teal-100">
+                            <label class="block text-[10px] font-bold text-teal-700 mb-1 uppercase">Inicio de Descarga</label>
+                            <input type="datetime-local" id="cr-edit-unload-st" value="${cp.trip_unload_start ? new Date(new Date(cp.trip_unload_start).getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().slice(0,16) : ''}" class="w-full bg-white border border-gray-200 rounded-base p-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none" />
+                        </div>
+                        <div class="bg-teal-50/50 p-3 rounded-xl border border-teal-100">
+                            <label class="block text-[10px] font-bold text-teal-700 mb-1 uppercase">Fin Descarga (Entrega)</label>
+                            <input type="datetime-local" id="cr-edit-unload-end" value="${cp.trip_unload_end ? new Date(new Date(cp.trip_unload_end).getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().slice(0,16) : ''}" class="w-full bg-white border border-gray-200 rounded-base p-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none" />
                         </div>
                     </div>
 
@@ -593,22 +618,31 @@ window.saveClientReportEdit = async (id) => {
         details.origen = document.getElementById('cr-edit-origen').value;
         details.destino = document.getElementById('cr-edit-destino').value;
         details.scheduled_trip = document.getElementById('cr-edit-fprog').value;
-        details.eta = document.getElementById('cr-edit-eta').value;
+        details.assignment_date = document.getElementById('cr-edit-fprog').value;
         details.comments = document.getElementById('cr-edit-comments').value;
 
-        cp.trip_load_arrival = document.getElementById('cr-edit-llegadac').value;
-        cp.trip_load_end = document.getElementById('cr-edit-finc').value;
-        cp.trip_unload_end = document.getElementById('cr-edit-find').value;
+        // Tiempos Logísticos fully synced with checkpoints
+        cp.trip_load_arrival = document.getElementById('cr-edit-load-arr').value;
+        cp.trip_load_start = document.getElementById('cr-edit-load-st').value;
+        cp.trip_load_end = document.getElementById('cr-edit-load-end').value;
+        cp.trip_route_start = document.getElementById('cr-edit-route-st').value;
+        cp.trip_route_end = document.getElementById('cr-edit-route-end').value;
+        cp.trip_unload_arrival = document.getElementById('cr-edit-unload-arr').value;
+        details.eta = cp.trip_unload_arrival; // Sync ETA with Llegada a Descarga
+        cp.trip_unload_start = document.getElementById('cr-edit-unload-st').value;
+        cp.trip_unload_end = document.getElementById('cr-edit-unload-end').value;
 
         details.checkpoints = cp;
         const newStatus = document.getElementById('cr-edit-status').value;
 
-        // Si se limpió un date, lo pasamos como null para que no rompa el parsing
+        // Clean up empty dates carefully
         if(!details.scheduled_trip) delete details.scheduled_trip;
+        if(!details.assignment_date) delete details.assignment_date;
         if(!details.eta) delete details.eta;
-        if(!cp.trip_load_arrival) delete cp.trip_load_arrival;
-        if(!cp.trip_load_end) delete cp.trip_load_end;
-        if(!cp.trip_unload_end) delete cp.trip_unload_end;
+        
+        ['trip_load_arrival', 'trip_load_start', 'trip_load_end', 'trip_route_start', 'trip_route_end', 'trip_unload_arrival', 'trip_unload_start', 'trip_unload_end'].forEach(key => {
+            if(!cp[key]) delete cp[key];
+        });
 
         const { error } = await supabase.from('units').update({
             details: details,

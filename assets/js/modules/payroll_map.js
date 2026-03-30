@@ -24,9 +24,6 @@ export function renderPayrollMap(container) {
                     <button id="tab-btn-report" class="tab-btn flex-1 py-3 text-[10px] font-black uppercase tracking-tighter transition-all rounded-lg text-slate-400 hover:text-slate-600" data-tab="tab-reporte-ruta">
                         <i class="fas fa-chart-pie mr-2"></i> Análisis Ruta
                     </button>
-                    <button id="tab-btn-security" class="tab-btn flex-1 py-3 text-[10px] font-black uppercase tracking-tighter transition-all rounded-lg text-slate-400 hover:text-slate-600" data-tab="tab-seguridad">
-                        <i class="fas fa-shield-alt mr-2"></i> Seguridad
-                    </button>
                 </div>
                 
                 <div class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-6 bg-white">
@@ -290,28 +287,6 @@ export function renderPayrollMap(container) {
                         </div>
                     </div>
 
-                    <!-- TAB 3: SEGURIDAD -->
-                    <div id="tab-seguridad" class="space-y-6 hidden">
-                         <div class="bg-indigo-600 rounded-2xl p-6 text-white shadow-xl relative overflow-hidden">
-                              <i class="fas fa-shield-virus absolute -right-4 -bottom-4 text-white/10 text-8xl"></i>
-                              <p class="text-[10px] font-black uppercase tracking-[0.2em] mb-2 opacity-80">Módulo de Seguridad</p>
-                              <h3 class="text-xl font-black leading-tight">Seguimiento de Protocolos</h3>
-                              <div class="mt-6 space-y-3">
-                                   <div class="flex items-center justify-between bg-white/10 p-3 rounded-xl backdrop-blur-md">
-                                        <span class="text-xs font-bold font-black">Botón de Pánico</span>
-                                        <div class="w-10 h-5 bg-rose-500 rounded-full relative shadow-inner">
-                                             <div class="w-4 h-4 bg-white rounded-full absolute right-0.5 top-0.5 shadow-sm"></div>
-                                        </div>
-                                   </div>
-                                   <div class="flex items-center justify-between bg-white/10 p-3 rounded-xl backdrop-blur-md">
-                                        <span class="text-xs font-bold font-black">Geo-Cercas Activas</span>
-                                        <div class="w-10 h-5 bg-emerald-500 rounded-full relative shadow-inner">
-                                             <div class="w-4 h-4 bg-white rounded-full absolute right-0.5 top-0.5 shadow-sm"></div>
-                                        </div>
-                                   </div>
-                              </div>
-                         </div>
-                    </div>
                 </div>
             </div>
 
@@ -481,16 +456,14 @@ export function renderPayrollMap(container) {
 function bindTabsAndUI() {
     const tabCreateBtn = document.getElementById('tab-btn-create');
     const tabReportBtn = document.getElementById('tab-btn-report');
-    const tabSecurityBtn = document.getElementById('tab-btn-security');
     const tabPointsBtn = document.getElementById('tab-btn-points');
     
     const tabCreateContent = document.getElementById('tab-crear-ruta');
     const tabReportContent = document.getElementById('tab-reporte-ruta');
-    const tabSecurityContent = document.getElementById('tab-seguridad');
 
     function switchTab(activeBtn, activeContent) {
         // Reset buttons
-        [tabCreateBtn, tabReportBtn, tabPointsBtn, tabSecurityBtn].forEach(btn => {
+        [tabCreateBtn, tabReportBtn, tabPointsBtn].forEach(btn => {
             if(btn) {
                 btn.classList.remove('bg-indigo-600', 'text-white', 'shadow-lg');
                 btn.classList.add('text-slate-500', 'hover:bg-slate-100', 'hover:text-slate-900');
@@ -500,7 +473,6 @@ function bindTabsAndUI() {
         // Hide contents
         if(tabCreateContent) tabCreateContent.classList.add('hidden');
         if(tabReportContent) tabReportContent.classList.add('hidden');
-        if(tabSecurityContent) tabSecurityContent.classList.add('hidden');
         
         // Set active
         if(activeBtn) {
@@ -512,7 +484,6 @@ function bindTabsAndUI() {
 
     if(tabCreateBtn) tabCreateBtn.addEventListener('click', () => switchTab(tabCreateBtn, tabCreateContent));
     if(tabReportBtn) tabReportBtn.addEventListener('click', () => switchTab(tabReportBtn, tabReportContent));
-    if(tabSecurityBtn) tabSecurityBtn.addEventListener('click', () => switchTab(tabSecurityBtn, tabSecurityContent));
     if(tabPointsBtn) tabPointsBtn.addEventListener('click', () => switchTab(tabPointsBtn, null));
 
     // Speed controls
@@ -1035,7 +1006,7 @@ function shareRouteWhatsApp() {
     text += `*🛣️ Origen:* ${window.currentRouteData.origen}\n`;
     text += `*🏁 Destino:* ${window.currentRouteData.destino}\n`;
     
-    let mapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(window.currentRouteData.origen)}&destination=${encodeURIComponent(window.currentRouteData.destino)}`;
+    let mapsUrl = `https://www.google.com/maps/dir/?api=1&travelmode=driving&origin=${encodeURIComponent(window.currentRouteData.origen)}&destination=${encodeURIComponent(window.currentRouteData.destino)}`;
 
     let allWaypoints = [];
     if(window.currentRouteData.waypointNames && window.currentRouteData.waypointNames.length > 0) {
@@ -1046,7 +1017,17 @@ function shareRouteWhatsApp() {
         allWaypoints.push(...window.currentRouteData.waypointNames);
     }
     if (window.currentRouteData.viaWaypoints && window.currentRouteData.viaWaypoints.length > 0) {
-        allWaypoints.push(...window.currentRouteData.viaWaypoints);
+        let vias = window.currentRouteData.viaWaypoints;
+        // Limit viaWaypoints to 8 to avoid Google Maps URL length limits breaking the route
+        if(vias.length > 8) {
+            let sampled = [];
+            let step = Math.ceil(vias.length / 8);
+            for(let i=0; i<vias.length; i+=step) {
+                sampled.push(vias[i]);
+            }
+            vias = sampled;
+        }
+        allWaypoints.push(...vias);
     }
     
     if (allWaypoints.length > 0) {
@@ -1054,11 +1035,10 @@ function shareRouteWhatsApp() {
         mapsUrl += `&waypoints=${encodeURIComponent(waypointsStr)}`;
     }
     
-    if(window.currentRouteData.calculatedCosts) {
-        text += `\n*💰 Viáticos Asignados:*\n`;
-        text += `  Casetas: $${window.currentRouteData.calculatedCosts.tolls.toLocaleString('es-MX', {minimumFractionDigits: 2})}\n`;
-        text += `  Diésel Estimado: $${window.currentRouteData.calculatedCosts.fuel.toLocaleString('es-MX', {minimumFractionDigits: 2})}\n`;
-    }
+    text += `\n*⚠️ Precauciones de Ruta:*\n`;
+    text += `- Respete los límites de velocidad y señalamientos.\n`;
+    text += `- Mantenga comunicación constante en zonas sin cobertura.\n`;
+    text += `- Utilice únicamente los paraderos y casetas autorizadas.\n`;
     
     text += `\n*🗺️ Ver Ruta en Google Maps:*\n${mapsUrl}\n`;
     

@@ -67,6 +67,46 @@ try {
         else if (role === 'direccion_general') {
             document.getElementById('nav-admin')?.classList.add('hidden-section');
             // Can see the rest, editing will be disabled within modules
+            // Re-order nav items and add padlocks to non-expenses sections
+            setTimeout(() => {
+                const nav = document.querySelector('nav');
+                if (nav) {
+                    const dashboard = document.getElementById('nav-dashboard');
+                    const expenses = document.getElementById('nav-expenses');
+                    const reports = document.getElementById('nav-reports');
+                    
+                    if (dashboard) nav.appendChild(dashboard);
+                    if (expenses) nav.appendChild(expenses);
+                    if (reports) nav.appendChild(reports);
+                    
+                    const others = Array.from(nav.children).filter(child => 
+                        !['nav-dashboard', 'nav-expenses', 'nav-reports'].includes(child.id)
+                    );
+                    
+                    others.forEach(child => {
+                        const span = child.querySelector('span');
+                        if (span && !child.querySelector('.fa-lock') && !child.classList.contains('hidden-section')) {
+                            const icon = document.createElement('i');
+                            icon.className = 'fas fa-lock ml-2 text-slate-400';
+                            icon.style.fontSize = '0.7rem';
+                            span.appendChild(icon);
+                        }
+                        nav.appendChild(child);
+                    });
+                }
+            }, 0);
+
+            // Hide action buttons in modules that don't natively check for role
+            const style = document.createElement('style');
+            style.innerHTML = `
+                #view-cameras #btn-new-log,
+                #view-incidents #btn-new-incident,
+                #view-incidents #btn-settings,
+                #view-incidents button[onclick^='window.resolveIncident'] {
+                    display: none !important;
+                }
+            `;
+            document.head.appendChild(style);
         } 
         else if (role === 'rh') {
             allNavs.forEach(nav => {
