@@ -148,7 +148,7 @@ export async function estimateTollsWithAI(origen, destino, paradas = [], unitTyp
 
         Reglas:
         1. Considera solo rutas de autopistas de cuota (Federales) de México.
-        2. Proporciona la estimación numérica en MXN (Pesos Mexicanos) de las casetas, utilizando los costos reales de CAPUFE más recientes conocidos.
+        2. Proporciona la estimación numérica en MXN (Pesos Mexicanos) de las casetas, utilizando los COSTOS REALES DE CARGA PESADA de CAPUFE más recientes conocidos. Mapea la tarifa a categoría C9, C6, etc. según corresponda, la cual es significativamente más cara que la de los autos.
         3. Formato requerido: Devuelve el resultado en un bloque de HTML simple, resaltando el costo total y dando un brevísimo desglose de 1 a 2 líneas de los principales tramos de cobro.
         4. Sé directo, sin introducciones ni conclusiones largas. Usa la etiqueta <b> para resaltar el monto final (ej. <b>$4,500.00 MXN</b>).
     `;
@@ -182,7 +182,7 @@ export async function estimateTollsWithAI(origen, destino, paradas = [], unitTyp
     console.error("All Gemini models failed for tolls. Last error:", lastError);
     throw lastError;
 }
-window.getDetailedTollsAI = async (origen, destino, paradas = [], unitType = 'full') => {
+window.getDetailedTollsAI = async (origen, destino, paradas = [], unitType = 'full', exactTotalCost = null) => {
     let paradasText = '';
     if (paradas.length > 0) {
         paradasText = ` haciendo paradas intermedias en: ${paradas.join(', ')}`;
@@ -198,9 +198,10 @@ window.getDetailedTollsAI = async (origen, destino, paradas = [], unitType = 'fu
         que viaja desde "${origen}" hacia "${destino}"${paradasText}.
 
         Reglas:
-        1. Considera rutas de autopistas de cuota (Federales) que enlazan estos puntos.
+        1. Considera rutas de autopistas de cuota (Federales) que enlazan estos puntos. MUY IMPORTANTE: Asegúrate de NO omitir casetas.
         2. Proporciona la respuesta ÚNICAMENTE en formato JSON válido, sin texto adicional ni bloques markdown (\`\`\`json).
-        3. El JSON debe cumplir estrictamente esta estructura evaluando el precio real actual de CAPUFE para camiones de ${axels}:
+        ${exactTotalCost ? '3. IMPORTANTE: EL PEAJE TOTAL REAL COMPUTADO CON GOOGLE PARA 2026 ES EXACTAMENTE $' + exactTotalCost + ' MXN. ESTE ES UN DATO DURO INMUTABLE. Ajusta el desglose ("tolls") asignando los montos correspondientes a cada plaza para que la suma total sea EXACTAMENTE $' + exactTotalCost + ' MXN. No inventes montos que se desvíen del total.' : '3. El JSON debe cumplir estrictamente esta estructura evaluando el precio comercial REAL actual de CAPUFE (categorías C9, C6, etc.) para camiones de ' + axels + '.'}
+        4. El JSON final debe tener la forma:
         {
             "totalCost": 4500,
             "tolls": [
