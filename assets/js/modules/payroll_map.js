@@ -418,7 +418,9 @@ export function renderPayrollMap(container) {
              });
 
              if (window.generateLogisticsReportAI) {
-                 window.generateLogisticsReportAI(data.origen, data.destino, data.waypointNames, data.unitTypeName)
+                 const axles = document.getElementById('map-axles') ? document.getElementById('map-axles').value : 9;
+                 const weight = document.getElementById('map-weight') ? document.getElementById('map-weight').value : 75;
+                 window.generateLogisticsReportAI(data.origen, data.destino, data.waypointNames, data.geminiUnitType, axles, weight)
                  .then(html => {
                      Swal.fire({
                          width: '850px',
@@ -600,7 +602,12 @@ function calculateMapRoute() {
     const speedKmH = parseFloat(document.getElementById('map-speed').value) || 70;
     const unitTypeOptions = document.getElementById('map-unit-type');
     const unitTypeName = unitTypeOptions.options[unitTypeOptions.selectedIndex].text;
-
+    const unitTypeValue = unitTypeOptions.value;
+    
+    let geminiUnitType = 'full';
+    if (unitTypeValue === 't3s2' || unitTypeValue === 't3s3') geminiUnitType = 'sencillo';
+    if (unitTypeValue === 'thor' || unitTypeValue === 'torton') geminiUnitType = 'torton';
+    
     const waypointInputs = document.querySelectorAll('.waypoint-input');
     const routeWaypoints = [];
     const waypointNames = [];
@@ -693,14 +700,14 @@ function calculateMapRoute() {
             if (repTitCost) repTitCost.textContent = 'Calculando...';
             
             window.currentRouteData = {
-                origen, destino, waypointNames, distance: distanceValueKm, unitTypeName
+                origen, destino, waypointNames, distance: distanceValueKm, unitTypeName, geminiUnitType
             };
             
             // Switch to Report Tab
             document.getElementById('tab-btn-report').click();
             
             // Trigger AI Tolls & Payroll Calc
-            triggerTollCalculationAndPayroll(distanceValueKm, unitTypeName);
+            triggerTollCalculationAndPayroll(distanceValueKm, geminiUnitType);
 
         } else {
             console.error("Directions requests failed: ", status);
@@ -710,7 +717,7 @@ function calculateMapRoute() {
 }
 
 // Nueva función extraída para calcular casetas y no repetir código al arrastrar
-async function triggerTollCalculationAndPayroll(distanceKm, unitTypeName) {
+async function triggerTollCalculationAndPayroll(distanceKm, geminiUnitType) {
     const origen = window.currentRouteData.origen;
     const destino = window.currentRouteData.destino;
     const waypoints = window.currentRouteData.waypointNames;
@@ -726,10 +733,27 @@ async function triggerTollCalculationAndPayroll(distanceKm, unitTypeName) {
         populateCasetasModal([]);
     } else {
         try {
+            // STEP 1: Calcular tarifa real base con Google Routes API (2026)
+            let baseTollCost = 0;
+            try {
+                const routesApiResponse = await fetchTollsViaRoutesAPI(origen, destino, waypoints);
+                baseTollCost = routesApiResponse.costoTotalNumerical || 0;
+            } catch (googleApiErr) {
+                console.warn("Falla al recuperar casetas desde Google API:", googleApiErr);
+            }
+
+            // STEP 2: Aplicar tarifa de carga pesada CAPUFE
+            let exactCalculatedToll = baseTollCost;
+            if (baseTollCost > 0) {
+                if (geminiUnitType === 'torton') exactCalculatedToll = baseTollCost * 1.8;
+                else if (geminiUnitType === 'sencillo') exactCalculatedToll = baseTollCost * 3.0;
+                else exactCalculatedToll = baseTollCost * 4.4; // full
+            }
+
             if(window.getDetailedTollsAI) {
-                const response = await window.getDetailedTollsAI(origen, destino, waypoints, unitTypeName);
+                const response = await window.getDetailedTollsAI(origen, destino, waypoints, geminiUnitType, exactCalculatedToll > 0 ? exactCalculatedToll : null);
                 if (response && response.tolls) {
-                    tollsCost = response.totalCost || 0;
+                    tollsCost = exactCalculatedToll > 0 ? exactCalculatedToll : (response.totalCost || 0);
                     if (repTolls) repTolls.textContent = '$' + tollsCost.toLocaleString('es-MX', {minimumFractionDigits: 2});
                     populateCasetasModal(response.tolls, tollsCost);
                 } else {
@@ -911,6 +935,13 @@ function recalculateTotalsFromDraggedRoute(result) {
     if (repTDrive) repTDrive.textContent = formatTime(drivingTimeH);
     if (repTitCost) repTitCost.textContent = 'Calculando...';
 
+    const unitTypeOptions = document.getElementById('map-unit-type');
+    const unitTypeName = unitTypeOptions.options[unitTypeOptions.selectedIndex].text;
+    const unitTypeValue = unitTypeOptions.value;
+    let geminiUnitType = 'full';
+    if (unitTypeValue === 't3s2' || unitTypeValue === 't3s3') geminiUnitType = 'sencillo';
+    if (unitTypeValue === 'thor' || unitTypeValue === 'torton') geminiUnitType = 'torton';
+
     // Actualizar datos globales
     window.currentRouteData = {
         origen,
@@ -918,10 +949,11 @@ function recalculateTotalsFromDraggedRoute(result) {
         waypointNames: legWaypoints.slice(1, -1),
         viaWaypoints: viaWaypoints,
         distance: distanceValueKm,
-        unitTypeName: document.getElementById('map-unit-type').options[document.getElementById('map-unit-type').selectedIndex].text
+        unitTypeName: unitTypeName,
+        geminiUnitType: geminiUnitType
     };
 
-    triggerTollCalculationAndPayroll(distanceValueKm, window.currentRouteData.unitTypeName);
+    triggerTollCalculationAndPayroll(distanceValueKm, geminiUnitType);
 }
 
 async function fetchTollsViaRoutesAPI(originStr, destinationStr, waypointsArray) {
@@ -1052,7 +1084,10 @@ function shareRouteWhatsApp() {
 async function checkAIRestrictions() {
     const origen = document.getElementById('map-origen').value;
     const destino = document.getElementById('map-destino').value;
-    const unitType = document.getElementById('map-unit-type').value;
+    const unitTypeValue = document.getElementById('map-unit-type').value;
+    let unitType = 'full';
+    if (unitTypeValue === 't3s2' || unitTypeValue === 't3s3') unitType = 'sencillo';
+    if (unitTypeValue === 'thor' || unitTypeValue === 'torton') unitType = 'torton';
 
     if (!origen || !destino) return;
 
@@ -1078,7 +1113,10 @@ async function checkAIRestrictions() {
 async function runNOM012Analysis() {
     const origen = document.getElementById('map-origen').value;
     const destino = document.getElementById('map-destino').value;
-    const unitType = document.getElementById('map-unit-type').value;
+    const unitTypeValue = document.getElementById('map-unit-type').value;
+    let unitType = 'full';
+    if (unitTypeValue === 't3s2' || unitTypeValue === 't3s3') unitType = 'sencillo';
+    if (unitTypeValue === 'thor' || unitTypeValue === 'torton') unitType = 'torton';
     const axles = document.getElementById('map-axles').value;
     const weight = document.getElementById('map-weight').value;
 
