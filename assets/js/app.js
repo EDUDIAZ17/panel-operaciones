@@ -115,7 +115,7 @@ try {
         } 
         else if (role === 'operaciones') {
             allNavs.forEach(nav => {
-                if(nav !== 'nav-assignments' && nav !== 'nav-expenses' && nav !== 'nav-payroll-map') document.getElementById(nav)?.classList.add('hidden-section');
+                if(nav !== 'nav-assignments' && nav !== 'nav-expenses' && nav !== 'nav-payroll-map' && nav !== 'nav-admin') document.getElementById(nav)?.classList.add('hidden-section');
             });
         } 
         else if (role === 'otros_usuarios') {
