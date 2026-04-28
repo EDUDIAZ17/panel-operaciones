@@ -41,7 +41,8 @@ try {
                 'direccion_general': 'Dirección General',
                 'contabilidad': 'Contabilidad',
                 'otros_usuarios': 'Usuario General',
-                'admin': 'Admin'
+                'admin': 'Admin',
+                'atc': 'Atención a Clientes'
             };
             return map[role] || role.toUpperCase();
         };
@@ -134,6 +135,12 @@ try {
             allNavs.forEach(nav => {
                 if(nav !== 'nav-expenses' && nav !== 'nav-reports' && nav !== 'nav-payroll-map') document.getElementById(nav)?.classList.add('hidden-section');
             });
+        }
+        else if (role === 'atc') {
+            allNavs.forEach(nav => {
+                if(nav !== 'nav-client-reports') document.getElementById(nav)?.classList.add('hidden-section');
+            });
+            // Hide edit actions naturally handled by window.userRole checks in modules
         }
         else if (role === 'admin') {
             // Everything is visible

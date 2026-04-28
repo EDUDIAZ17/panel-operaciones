@@ -115,7 +115,7 @@ export async function renderClientReports(container) {
         if(e.key === 'Enter') loadClientReport();
     });
     document.getElementById('btn-refresh-client-report').addEventListener('click', loadClientReport);
-    document.getElementById('btn-print-client-report').addEventListener('click', generatePDF);
+    document.getElementById('btn-print-client-report').addEventListener('click', exportReport);
 
     loadClientReport();
 }
@@ -664,7 +664,136 @@ window.saveClientReportEdit = async (id) => {
     }
 };
 
-function generatePDF() {
+function exportReport() {
+    if (currentFilteredUnits.length === 0) {
+        alert("No hay datos para exportar.");
+        return;
+    }
+
+    Swal.fire({
+        title: 'Exportar Reporte',
+        text: 'Selecciona el formato de exportación',
+        icon: 'question',
+        showDenyButton: true,
+        showCancelButton: true,
+        confirmButtonText: '<i class="fas fa-file-pdf"></i> PDF',
+        denyButtonText: '<i class="fas fa-file-excel"></i> Excel',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#e74c3c',
+        denyButtonColor: '#27ae60'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            executePDFExport();
+        } else if (result.isDenied) {
+            executeExcelExport();
+        }
+    });
+}
+
+function executeExcelExport() {
+    let tableColumn = [];
+    let tableRows = [];
+
+    const formatCPTxt = (dateStr) => {
+        if (!dateStr) return '---';
+        try {
+            const d = new Date(dateStr);
+            if (isNaN(d.getTime())) return '---';
+            return d.toLocaleString('es-MX', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).replace(',', '');
+        } catch (e) {
+            return '---';
+        }
+    };
+
+    if (currentType === 'BYD') {
+        tableColumn = ["BOL", "ECONOMICO", "DESTINO", "FECHA PROG.", "FECHA CARGA", "INSERCION RUTA", "ETA", "ENTREGA FINAL", "STATUS", "COMENTARIOS"];
+        currentFilteredUnits.forEach(u => {
+            const destino = u.details?.destino || '---';
+            const scheduledDate = u.details?.scheduled_trip || u.details?.assignment_date;
+            const fProg = scheduledDate ? formatCPTxt(scheduledDate) : '---';
+            const cp = u.details?.checkpoints || {};
+            const fCarga = cp.trip_load_end ? formatCPTxt(cp.trip_load_end) : (cp.trip_load_arrival ? formatCPTxt(cp.trip_load_arrival) : '---');
+            const fRuta = cp.trip_route_start ? formatCPTxt(cp.trip_route_start) : (cp.trip_load_end ? formatCPTxt(cp.trip_load_end) : '---'); 
+            const eta = u.details?.eta ? formatCPTxt(u.details.eta) : (cp.trip_unload_arrival ? formatCPTxt(cp.trip_unload_arrival) : '---');
+            const fEntrega = cp.trip_unload_end ? formatCPTxt(cp.trip_unload_end) : '---';
+            const comentarios = u.details?.comments || '';
+
+            tableRows.push([
+                u.details?.bol || u.details?.viaje || '---',
+                u.economic_number,
+                destino,
+                fProg,
+                fCarga,
+                fRuta,
+                eta,
+                fEntrega,
+                u.status,
+                comentarios
+            ]);
+        });
+    } else if (currentType === 'CHANGAN') {
+        tableColumn = ["UNIDAD", "OPERADOR", "FECHA PROG.", "FECHA CARGA", "CLIENTE", "VIAJE", "ORIGEN", "DESTINO", "ETA", "ESTATUS", "OBSERVACIONES"];
+        currentFilteredUnits.forEach(u => {
+            const opName = u.operators?.name || 'Sin Asignar';
+            const scheduledDate = u.details?.scheduled_trip || u.details?.assignment_date;
+            const fProg = scheduledDate ? formatCPTxt(scheduledDate) : '---';
+            const cp = u.details?.checkpoints || {};
+            const fCarga = cp.trip_load_end ? formatCPTxt(cp.trip_load_end) : (cp.trip_load_arrival ? formatCPTxt(cp.trip_load_arrival) : '---');
+            const cliente = u.details?.cliente || 'CHANGAN';
+            const viaje = u.details?.viaje || u.details?.bol || '---';
+            const origen = u.details?.origen || '---';
+            const destino = u.details?.destino || '---';
+            const eta = u.details?.eta ? formatCPTxt(u.details.eta) : (cp.trip_unload_arrival ? formatCPTxt(cp.trip_unload_arrival) : '---');
+            const obs = u.details?.comments || '';
+
+            tableRows.push([
+                u.economic_number,
+                opName,
+                fProg,
+                fCarga,
+                cliente,
+                viaje,
+                origen,
+                destino,
+                eta,
+                u.status,
+                obs
+            ]);
+        });
+    } else {
+        tableColumn = ["UNIDAD", "TIPO / PLACAS", "OPERADOR", "FECHA PROG.", "CLIENTE", "ORIGEN", "DESTINO", "ESTATUS", "OBSERVACIONES"];
+        currentFilteredUnits.forEach(u => {
+            const opName = u.operators?.name || 'Sin Asignar';
+            const scheduledDate = u.details?.scheduled_trip || u.details?.assignment_date;
+            const fProg = scheduledDate ? formatCPTxt(scheduledDate) : '---';
+            const placas = u.placas || '---';
+            const cliente = u.details?.cliente || '---';
+            const origen = u.details?.origen || '---';
+            const destino = u.details?.destino || '---';
+            const obs = u.details?.comments || '';
+
+            tableRows.push([
+                u.economic_number,
+                `${u.type} / ${placas}`,
+                opName,
+                fProg,
+                cliente,
+                origen,
+                destino,
+                u.status,
+                obs
+            ]);
+        });
+    }
+
+    const wsData = [tableColumn, ...tableRows];
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Reporte");
+    XLSX.writeFile(wb, `Reporte_Torre_Control_${currentType}_${Date.now()}.xlsx`);
+}
+
+function executePDFExport() {
     if (currentFilteredUnits.length === 0) {
         alert("No hay datos para exportar.");
         return;
