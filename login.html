@@ -4,6 +4,9 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Login - Panel Operaciones</title>
+    <!-- Security Headers -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
     <!-- Fonts -->
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap"
@@ -11,17 +14,16 @@
     />
     <style>
       :root {
-        --primary: #10b981; /* Emerald-500 */
+        --primary: #10b981;
+        --primary-hover: #059669;
         --bg-dark: #0f172a;
         --bg-card: #1e293b;
         --text-main: #f8fafc;
+        --danger: #ef4444;
+        --warning: #f59e0b;
       }
 
-      * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
 
       body {
         background-color: var(--bg-dark);
@@ -32,17 +34,11 @@
         align-items: center;
         justify-content: center;
         overflow: hidden;
-        background-image: radial-gradient(
-          circle at 50% 50%,
-          #1e1b4b 0%,
-          #0f172a 100%
-        );
+        background-image: radial-gradient(circle at 50% 50%, #1e1b4b 0%, #0f172a 100%);
       }
 
       .login-container {
-        width: 100%;
-        max-width: 400px;
-        padding: 2rem;
+        width: 100%; max-width: 420px; padding: 2rem;
         background: rgba(30, 41, 59, 0.7);
         backdrop-filter: blur(10px);
         border-radius: 16px;
@@ -52,199 +48,140 @@
       }
 
       @keyframes slideUp {
-        from {
-          transform: translateY(20px);
-          opacity: 0;
-        }
-        to {
-          transform: translateY(0);
-          opacity: 1;
-        }
+        from { transform: translateY(20px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
       }
 
-      .logo {
-        text-align: center;
-        margin-bottom: 2rem;
-      }
-
+      .logo { text-align: center; margin-bottom: 2rem; }
       .logo h1 {
-        font-weight: 800;
-        font-size: 1.8rem;
+        font-weight: 800; font-size: 1.8rem;
         background: linear-gradient(to right, #34d399, #10b981);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
         margin-bottom: 0.5rem;
       }
+      .logo p { color: #94a3b8; font-size: 0.9rem; }
 
-      .logo p {
-        color: #94a3b8;
-        font-size: 0.9rem;
-      }
+      .form-group { margin-bottom: 1.5rem; }
+      .form-group label { display: block; margin-bottom: 0.5rem; font-size: 0.85rem; color: #cbd5e1; }
 
-      .form-group {
-        margin-bottom: 1.5rem;
-      }
-
-      .form-group label {
-        display: block;
-        margin-bottom: 0.5rem;
-        font-size: 0.85rem;
-        color: #cbd5e1;
-      }
-
-      input {
-        width: 100%;
-        padding: 0.75rem;
+      input, select {
+        width: 100%; padding: 0.75rem;
         background: rgba(15, 23, 42, 0.6);
         border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 8px;
-        color: white;
-        font-size: 1rem;
-        transition: all 0.2s;
+        border-radius: 8px; color: white; font-size: 1rem; transition: all 0.2s;
       }
+      input:focus, select:focus {
+        outline: none; border-color: var(--primary);
+        box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+      }
+      select option { background-color: var(--bg-card); color: var(--text-main); }
 
-      input:focus {
-        outline: none;
-        border-color: var(--primary);
-        box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+      .password-wrapper { position: relative; }
+      .password-wrapper input { padding-right: 40px; }
+      .toggle-password {
+        position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+        background: none; border: none; color: #94a3b8; cursor: pointer;
+        font-size: 1rem; padding: 4px; width: auto;
       }
+      .toggle-password:hover { color: #cbd5e1; }
 
-      button {
-        width: 100%;
-        padding: 0.85rem;
-        background: var(--primary);
-        color: white;
-        border: none;
-        border-radius: 8px;
-        font-weight: 600;
-        font-size: 1rem;
-        cursor: pointer;
-        transition: background 0.2s;
-      }
+      .pw-strength { height: 4px; border-radius: 2px; margin-top: 8px; background: rgba(255,255,255,0.1); overflow: hidden; }
+      .pw-strength-bar { height: 100%; width: 0%; border-radius: 2px; transition: all 0.3s ease; }
+      .pw-strength-text { font-size: 0.7rem; margin-top: 4px; color: #94a3b8; text-align: right; }
 
-      button:hover {
-        background: #059669; /* Emerald-600 */
+      button[type="submit"] {
+        width: 100%; padding: 0.85rem; background: var(--primary);
+        color: white; border: none; border-radius: 8px;
+        font-weight: 600; font-size: 1rem; cursor: pointer; transition: all 0.2s;
       }
+      button[type="submit"]:hover:not(:disabled) { background: var(--primary-hover); }
+      button[type="submit"]:disabled { opacity: 0.5; cursor: not-allowed; }
 
-      select option {
-        background-color: var(--bg-card);
-        color: var(--text-main);
-      }
+      .tab-btn { padding: 0.5rem; flex: 1; border: none; border-radius: 6px; font-weight: 600; font-size: 0.9rem; cursor: pointer; transition: all 0.2s; }
 
       .error-msg {
-        color: #ef4444;
-        font-size: 0.85rem;
-        margin-top: 1rem;
-        text-align: center;
-        display: none;
+        color: var(--danger); font-size: 0.85rem; margin-top: 1rem;
+        text-align: center; display: none;
+        background: rgba(239, 68, 68, 0.1); padding: 0.5rem;
+        border-radius: 8px; border: 1px solid rgba(239, 68, 68, 0.2);
       }
+
+      .lockout-msg {
+        color: var(--warning); font-size: 0.8rem; margin-top: 0.5rem;
+        text-align: center; display: none; animation: pulse 1.5s infinite;
+      }
+
+      @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+      @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+      .shake { animation: shake 0.3s ease 2; }
+
+      .security-badge {
+        display: flex; align-items: center; justify-content: center; gap: 6px;
+        margin-top: 1.5rem; font-size: 0.7rem; color: #475569;
+      }
+      .security-badge svg { width: 14px; height: 14px; fill: #475569; }
     </style>
   </head>
   <body>
     <div class="login-container">
       <div class="logo">
-        <img
-          src="./logo/logo.png"
-          alt="Panel Alexa Logo"
+        <img src="./logo/logo.png" alt="Panel Alexa Logo"
           style="max-height: 80px; margin: 0 auto 1rem auto; display: block"
-          onerror="this.style.display = 'none'"
-        />
+          onerror="this.style.display = 'none'" />
         <h1>PANEL ALEXA</h1>
         <p>Logística y Transporte</p>
       </div>
 
-      <!-- Tab Toggle for Login/Register -->
-      <div
-        style="
-          display: flex;
-          gap: 10px;
-          margin-bottom: 1.5rem;
-          background: rgba(15, 23, 42, 0.5);
-          padding: 5px;
-          border-radius: 8px;
-        "
-      >
-        <button
-          id="tab-login"
-          style="background: var(--primary); padding: 0.5rem; flex: 1"
-        >
-          Ingresar
-        </button>
-        <button
-          id="tab-register"
-          style="
-            background: transparent;
-            color: #94a3b8;
-            padding: 0.5rem;
-            flex: 1;
-          "
-        >
-          Crear Cuenta
-        </button>
+      <!-- Tab Toggle -->
+      <div style="display: flex; gap: 10px; margin-bottom: 1.5rem; background: rgba(15, 23, 42, 0.5); padding: 5px; border-radius: 8px;">
+        <button id="tab-login" class="tab-btn" style="background: var(--primary); color: white">Ingresar</button>
+        <button id="tab-register" class="tab-btn" style="background: transparent; color: #94a3b8">Crear Cuenta</button>
       </div>
+
+      <!-- LOGIN FORM -->
       <form id="login-form">
         <div class="form-group">
           <label>Usuario / Correo</label>
-          <input
-            type="email"
-            id="email"
-            required
-            placeholder="correo@alexatransportes.com.mx"
-          />
+          <input type="email" id="email" required autocomplete="email" placeholder="correo@alexatransportes.com.mx" />
         </div>
         <div class="form-group">
           <label>Contraseña</label>
-          <input
-            type="password"
-            id="password"
-            required
-            placeholder="••••••••"
-          />
+          <div class="password-wrapper">
+            <input type="password" id="password" required autocomplete="current-password" placeholder="••••••••" />
+            <button type="button" class="toggle-password" tabindex="-1" onclick="togglePasswordVisibility('password', this)">👁</button>
+          </div>
         </div>
-        <button type="submit">Iniciar Sesión</button>
+        <button type="submit" id="login-submit-btn">Iniciar Sesión</button>
         <p id="error-msg" class="error-msg">Credenciales incorrectas</p>
+        <p id="lockout-msg" class="lockout-msg"></p>
       </form>
 
+      <!-- REGISTER FORM -->
       <form id="register-form" style="display: none">
         <div class="form-group">
           <label>Nombre Completo</label>
-          <input type="text" id="reg-name" required placeholder="Juan Pérez" />
+          <input type="text" id="reg-name" required placeholder="Juan Pérez" autocomplete="name" />
         </div>
         <div class="form-group">
           <label>Correo Electrónico (@alexatransportes.com.mx)</label>
-          <input
-            type="email"
-            id="reg-email"
-            required
+          <input type="email" id="reg-email" required
             pattern=".+@alexatransportes\.com\.mx"
             title="Debe ser un correo con dominio @alexatransportes.com.mx"
-            placeholder="nombre@alexatransportes.com.mx"
-          />
+            placeholder="nombre@alexatransportes.com.mx" autocomplete="email" />
         </div>
         <div class="form-group">
           <label>Contraseña</label>
-          <input
-            type="password"
-            id="reg-password"
-            required
-            placeholder="••••••••"
-          />
+          <div class="password-wrapper">
+            <input type="password" id="reg-password" required minlength="8" autocomplete="new-password"
+              placeholder="Mínimo 8 caracteres, 1 mayúscula, 1 número" />
+            <button type="button" class="toggle-password" tabindex="-1" onclick="togglePasswordVisibility('reg-password', this)">👁</button>
+          </div>
+          <div class="pw-strength"><div class="pw-strength-bar" id="pw-strength-bar"></div></div>
+          <div class="pw-strength-text" id="pw-strength-text"></div>
         </div>
         <div class="form-group">
           <label>Rol</label>
-          <select
-            id="reg-role"
-            required
-            style="
-              width: 100%;
-              padding: 0.75rem;
-              background: rgba(15, 23, 42, 0.6);
-              border: 1px solid rgba(255, 255, 255, 0.1);
-              border-radius: 8px;
-              color: white;
-              font-size: 1rem;
-            "
-          >
+          <select id="reg-role" required>
             <option value="" disabled selected>Selecciona tu rol</option>
             <option value="operaciones">Operaciones</option>
             <option value="torre_control">Torre de Control</option>
@@ -254,101 +191,128 @@
             <option value="otros_usuarios">Otros Usuarios</option>
           </select>
         </div>
-        <button type="submit">Registrarme</button>
+        <button type="submit" id="reg-submit-btn">Registrarme</button>
         <p id="reg-error-msg" class="error-msg">Error al registrar</p>
       </form>
+
+      <div class="security-badge">
+        <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>
+        Conexión cifrada · SHA-256
+      </div>
     </div>
+
+    <script>
+      function togglePasswordVisibility(inputId, btn) {
+        const input = document.getElementById(inputId);
+        if (input.type === 'password') { input.type = 'text'; btn.textContent = '🔒'; }
+        else { input.type = 'password'; btn.textContent = '👁'; }
+      }
+
+      const regPw = document.getElementById('reg-password');
+      const strengthBar = document.getElementById('pw-strength-bar');
+      const strengthText = document.getElementById('pw-strength-text');
+      if (regPw) {
+        regPw.addEventListener('input', () => {
+          const pw = regPw.value; let score = 0;
+          if (pw.length >= 8) score++; if (pw.length >= 12) score++;
+          if (/[A-Z]/.test(pw)) score++; if (/[0-9]/.test(pw)) score++;
+          if (/[^A-Za-z0-9]/.test(pw)) score++;
+          const percent = (score / 5) * 100;
+          strengthBar.style.width = percent + '%';
+          if (score <= 1) { strengthBar.style.background = '#ef4444'; strengthText.textContent = 'Muy débil'; strengthText.style.color = '#ef4444'; }
+          else if (score <= 2) { strengthBar.style.background = '#f59e0b'; strengthText.textContent = 'Débil'; strengthText.style.color = '#f59e0b'; }
+          else if (score <= 3) { strengthBar.style.background = '#eab308'; strengthText.textContent = 'Aceptable'; strengthText.style.color = '#eab308'; }
+          else if (score <= 4) { strengthBar.style.background = '#22c55e'; strengthText.textContent = 'Fuerte'; strengthText.style.color = '#22c55e'; }
+          else { strengthBar.style.background = '#10b981'; strengthText.textContent = 'Muy fuerte'; strengthText.style.color = '#10b981'; }
+          if (pw.length === 0) { strengthBar.style.width = '0%'; strengthText.textContent = ''; }
+        });
+      }
+    </script>
 
     <script type="module">
       import { authenticate, registerUser } from "./assets/js/config/users.js";
 
-      // Toggle views with tabs
       const tabLogin = document.getElementById("tab-login");
       const tabRegister = document.getElementById("tab-register");
       const formLogin = document.getElementById("login-form");
       const formRegister = document.getElementById("register-form");
 
       tabRegister.addEventListener("click", (e) => {
-        e.preventDefault();
-        formLogin.style.display = "none";
-        formRegister.style.display = "block";
-        tabRegister.style.background = "var(--primary)";
-        tabRegister.style.color = "white";
-        tabLogin.style.background = "transparent";
-        tabLogin.style.color = "#94a3b8";
+        e.preventDefault(); formLogin.style.display = "none"; formRegister.style.display = "block";
+        tabRegister.style.background = "var(--primary)"; tabRegister.style.color = "white";
+        tabLogin.style.background = "transparent"; tabLogin.style.color = "#94a3b8";
       });
-
       tabLogin.addEventListener("click", (e) => {
-        e.preventDefault();
-        formRegister.style.display = "none";
-        formLogin.style.display = "block";
-        tabLogin.style.background = "var(--primary)";
-        tabLogin.style.color = "white";
-        tabRegister.style.background = "transparent";
-        tabRegister.style.color = "#94a3b8";
+        e.preventDefault(); formRegister.style.display = "none"; formLogin.style.display = "block";
+        tabLogin.style.background = "var(--primary)"; tabLogin.style.color = "white";
+        tabRegister.style.background = "transparent"; tabRegister.style.color = "#94a3b8";
       });
 
       // Login
-      document
-        .getElementById("login-form")
-        .addEventListener("submit", async (e) => {
-          e.preventDefault();
-          const email = document.getElementById("email").value;
-          const password = document.getElementById("password").value;
-          const submitBtn = e.target.querySelector('button[type="submit"]');
+      document.getElementById("login-form").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const email = document.getElementById("email").value;
+        const password = document.getElementById("password").value;
+        const submitBtn = document.getElementById("login-submit-btn");
+        const errEl = document.getElementById("error-msg");
+        const lockEl = document.getElementById("lockout-msg");
 
-          submitBtn.disabled = true;
-          submitBtn.textContent = "Conectando...";
+        submitBtn.disabled = true; submitBtn.textContent = "Verificando...";
+        errEl.style.display = "none"; lockEl.style.display = "none";
 
+        try {
           const user = await authenticate(email, password);
-
           if (user) {
-            // Save session
             sessionStorage.setItem("currentUser", JSON.stringify(user));
             window.location.href = "index.html";
           } else {
-            const err = document.getElementById("error-msg");
-            err.style.display = "block";
-            err.classList.add("shake");
-            setTimeout(() => err.classList.remove("shake"), 500);
-            submitBtn.disabled = false;
-            submitBtn.textContent = "Iniciar Sesión";
+            errEl.textContent = "Correo o contraseña incorrectos.";
+            errEl.style.display = "block";
+            errEl.classList.add("shake");
+            setTimeout(() => errEl.classList.remove("shake"), 600);
           }
-        });
+        } catch (err) {
+          lockEl.textContent = "🔒 " + err.message;
+          lockEl.style.display = "block";
+        } finally {
+          submitBtn.disabled = false; submitBtn.textContent = "Iniciar Sesión";
+        }
+      });
 
       // Register
-      document
-        .getElementById("register-form")
-        .addEventListener("submit", async (e) => {
-          e.preventDefault();
-          const name = document.getElementById("reg-name").value;
-          const email = document.getElementById("reg-email").value;
-          const password = document.getElementById("reg-password").value;
-          const role = document.getElementById("reg-role").value;
-          const submitBtn = e.target.querySelector('button[type="submit"]');
+      document.getElementById("register-form").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const name = document.getElementById("reg-name").value.trim();
+        const email = document.getElementById("reg-email").value.trim();
+        const password = document.getElementById("reg-password").value;
+        const role = document.getElementById("reg-role").value;
+        const submitBtn = document.getElementById("reg-submit-btn");
+        const errEl = document.getElementById("reg-error-msg");
+        errEl.style.display = "none";
 
-          if (!email.toLowerCase().endsWith("@alexatransportes.com.mx")) {
-            alert("Solo se permiten correos @alexatransportes.com.mx");
-            return;
-          }
+        if (!email.toLowerCase().endsWith("@alexatransportes.com.mx")) {
+          errEl.textContent = "Solo se permiten correos @alexatransportes.com.mx";
+          errEl.style.display = "block"; return;
+        }
 
-          submitBtn.disabled = true;
-          submitBtn.textContent = "Registrando...";
+        submitBtn.disabled = true; submitBtn.textContent = "Registrando...";
 
+        try {
           const success = await registerUser({ name, email, password, role });
-
           if (success) {
-            alert("Cuenta creada exitosamente. Ahora puedes iniciar sesión.");
-            tabLogin.click();
-          } else {
-            const err = document.getElementById("reg-error-msg");
-            err.textContent =
-              "El correo ya está registrado u ocurrió un error de conexión.";
-            err.style.display = "block";
+            errEl.style.display = "block"; errEl.style.color = "#10b981";
+            errEl.style.background = "rgba(16,185,129,0.1)"; errEl.style.borderColor = "rgba(16,185,129,0.2)";
+            errEl.textContent = "✅ Cuenta creada exitosamente. Ahora inicia sesión.";
+            setTimeout(() => tabLogin.click(), 2000);
           }
-          submitBtn.disabled = false;
-          submitBtn.textContent = "Registrarme";
-        });
+        } catch (err) {
+          errEl.textContent = err.message || "Error al crear la cuenta.";
+          errEl.style.display = "block"; errEl.style.color = "#ef4444";
+          errEl.style.background = "rgba(239,68,68,0.1)"; errEl.style.borderColor = "rgba(239,68,68,0.2)";
+        } finally {
+          submitBtn.disabled = false; submitBtn.textContent = "Registrarme";
+        }
+      });
     </script>
   </body>
 </html>

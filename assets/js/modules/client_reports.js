@@ -485,6 +485,13 @@ window.openAIRoute = async (origen, destino) => {
 };
 
 window.openClientReportEdit = (id) => {
+    // Defense in depth: block edit for unauthorized roles even if UI is bypassed
+    const allowedEditRoles = ['admin', 'torre_control', 'operaciones'];
+    if (!allowedEditRoles.includes(window.userRole)) {
+        Swal.fire({ icon: 'error', title: 'Acceso Denegado', text: 'Tu rol no tiene permisos para editar reportes de clientes.' });
+        return;
+    }
+
     const u = currentFilteredUnits.find(unit => unit.id === id);
     if (!u) return;
 

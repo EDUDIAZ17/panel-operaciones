@@ -22,6 +22,29 @@ const state = {
     currentView: 'dashboard'
 };
 
+// --- Session Security ---
+const SESSION_TIMEOUT_MS = 8 * 60 * 60 * 1000; // 8 hours
+
+function validateSession() {
+    const currentUser = JSON.parse(sessionStorage.getItem('currentUser'));
+    if (!currentUser) return false;
+    
+    // Check session timeout
+    if (currentUser.loginAt && (Date.now() - currentUser.loginAt > SESSION_TIMEOUT_MS)) {
+        sessionStorage.removeItem('currentUser');
+        window.location.href = 'login.html';
+        return false;
+    }
+    return true;
+}
+
+// Check session every 5 minutes
+setInterval(() => {
+    if (!validateSession()) {
+        window.location.href = 'login.html';
+    }
+}, 5 * 60 * 1000);
+
 // Config User Display
 try {
     const currentUser = JSON.parse(sessionStorage.getItem('currentUser'));
@@ -140,7 +163,31 @@ try {
             allNavs.forEach(nav => {
                 if(nav !== 'nav-client-reports') document.getElementById(nav)?.classList.add('hidden-section');
             });
-            // Hide edit actions naturally handled by window.userRole checks in modules
+
+            // Add read-only badge to client reports nav
+            setTimeout(() => {
+                const crNav = document.getElementById('nav-client-reports');
+                if (crNav) {
+                    const span = crNav.querySelector('span');
+                    if (span && !crNav.querySelector('.fa-eye')) {
+                        const icon = document.createElement('i');
+                        icon.className = 'fas fa-eye ml-2 text-emerald-400';
+                        icon.style.fontSize = '0.7rem';
+                        icon.title = 'Solo lectura';
+                        span.appendChild(icon);
+                    }
+                }
+            }, 0);
+
+            // Inject CSS to hide ALL edit buttons for ATC
+            const atcStyle = document.createElement('style');
+            atcStyle.innerHTML = `
+                button[onclick*='openClientReportEdit'],
+                #view-client-reports .fa-edit {
+                    display: none !important;
+                }
+            `;
+            document.head.appendChild(atcStyle);
         }
         else if (role === 'admin') {
             // Everything is visible

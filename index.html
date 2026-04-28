@@ -4,25 +4,16 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Panel de Operaciones Logísticas</title>
-    <!-- Error Handler for Mobile Debugging -->
+    <!-- Security Meta Tags -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <!-- Error Handler (silent logging for production) -->
     <script>
       window.onerror = function (message, source, lineno, colno, error) {
-        alert(
-          "CRITICAL JS ERROR: " +
-            message +
-            "\nArchivo: " +
-            source +
-            "\nLinea: " +
-            lineno,
-        );
+        console.error('JS Error:', message, 'at', source, ':', lineno);
       };
       window.addEventListener("unhandledrejection", function (event) {
-        alert(
-          "PROMISE ERROR: " +
-            (event.reason && event.reason.message
-              ? event.reason.message
-              : event.reason),
-        );
+        console.error('Promise Error:', event.reason);
       });
     </script>
     <!-- Tailwind CSS -->
