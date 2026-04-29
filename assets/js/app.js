@@ -272,9 +272,15 @@ function loadView(view) {
             renderHistoryReports(contentArea);
             break;
         case 'atc-reports':
+            console.log("Loading ATC Reports view...");
             pageTitle.textContent = 'Reporte Logístico Integral (ATC)';
             setActiveNav('nav-atc-reports');
-            renderATCReports(contentArea);
+            try {
+                renderATCReports(contentArea);
+            } catch (err) {
+                console.error("Error calling renderATCReports:", err);
+                contentArea.innerHTML = `<div class="p-10 text-red-500">Error al iniciar el módulo ATC: ${err.message}</div>`;
+            }
             break;
         case 'payroll-map':
             pageTitle.textContent = 'Mapa Logístico (Torre / Operaciones / RH)';
