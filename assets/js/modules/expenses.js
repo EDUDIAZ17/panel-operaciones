@@ -201,7 +201,9 @@ export function renderExpenses(container) {
     document.getElementById('expenses-filter').addEventListener('keyup', filterExpenseHistory);
     
     const currentUser = JSON.parse(sessionStorage.getItem('currentUser'));
-    if (currentUser && ['admin', 'torre_control', 'contabilidad', 'direccion_general', 'mantenimiento'].includes(currentUser.role)) {
+    const userRole = currentUser?.role ? currentUser.role.toLowerCase().trim() : '';
+    
+    if (currentUser && ['admin', 'torre_control', 'contabilidad', 'direccion_general', 'mantenimiento', 'manto', 'maintenance'].includes(userRole)) {
         document.getElementById('btn-export-excel').classList.remove('hidden');
         document.getElementById('btn-export-excel').addEventListener('click', window.exportExcelExpenses);
     }

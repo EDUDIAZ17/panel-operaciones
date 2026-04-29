@@ -75,18 +75,22 @@ try {
         if (displayEl) displayEl.textContent = `Bienvenido, ${currentUser.name}`;
 
         // Role-based UI restrictions
-        const role = currentUser.role;
-        window.userRole = role; // Export role to window so other modules can handle granular element visibility (e.g. hiding edit buttons)
+        const role = currentUser.role ? currentUser.role.toLowerCase().trim() : '';
+        window.userRole = role; 
+        console.log("SISTEMA: Rol de usuario detectado ->", role);
 
         const allNavs = [
             'nav-assignments', 'nav-trip-logs', 'nav-expenses', 'nav-reports', 
             'nav-client-reports', 'nav-atc-reports', 'nav-history-reports', 'nav-observations', 
             'nav-cameras', 'nav-incidents', 'nav-admin', 'nav-payroll-map'
-        ]; // nav-dashboard is always visible to everyone
+        ];
 
-        if (role === 'mantenimiento') {
+        if (role === 'mantenimiento' || role === 'manto' || role === 'maintenance') {
+            console.log("SISTEMA: Aplicando configuración para Mantenimiento");
             allNavs.forEach(nav => {
-                if(nav !== 'nav-expenses' && nav !== 'nav-reports' && nav !== 'nav-payroll-map') document.getElementById(nav)?.classList.add('hidden-section');
+                if(nav !== 'nav-expenses' && nav !== 'nav-reports' && nav !== 'nav-payroll-map') {
+                    document.getElementById(nav)?.classList.add('hidden-section');
+                }
             });
         } 
         else if (role === 'direccion_general') {
