@@ -712,7 +712,10 @@ window.openFinishTripModal = (unitId) => {
             }
         }
 
-        if (missingFields.length > 0) {
+        // Permiso especial: Si el estatus es VACIA o contiene VACIO, permitimos terminar sin todos los tiempos
+        const isVacio = unit.status === 'Vacia' || unit.status.toUpperCase().includes('VACIO');
+
+        if (missingFields.length > 0 && !isVacio) {
             let errorHtml = `<div class="text-left text-sm text-gray-700 mb-2">Para terminar el viaje, necesitas llenar los siguientes campos:</div>
                 <ul class="list-disc pl-5 text-left text-red-600 font-bold mb-4 text-sm">
                     ${missingFields.map(f => `<li>${f}</li>`).join('')}
