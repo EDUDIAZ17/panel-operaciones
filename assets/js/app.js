@@ -7,6 +7,7 @@ import { renderObservations } from './modules/observations.js';
 import { renderCameras } from './modules/cameras.js';
 import { renderIncidents } from './modules/incidents.js';
 import { renderClientReports } from './modules/client_reports.js';
+import { renderATCReports } from './modules/atc_reports.js';
 import { renderHistoryReports } from './modules/history_reports.js';
 import { renderTripLogs } from './modules/trip_logs.js';
 import { renderPayrollMap } from './modules/payroll_map.js';
@@ -79,7 +80,7 @@ try {
 
         const allNavs = [
             'nav-assignments', 'nav-trip-logs', 'nav-expenses', 'nav-reports', 
-            'nav-client-reports', 'nav-history-reports', 'nav-observations', 
+            'nav-client-reports', 'nav-atc-reports', 'nav-history-reports', 'nav-observations', 
             'nav-cameras', 'nav-incidents', 'nav-admin', 'nav-payroll-map'
         ]; // nav-dashboard is always visible to everyone
 
@@ -161,7 +162,7 @@ try {
         }
         else if (role === 'atc') {
             allNavs.forEach(nav => {
-                if(nav !== 'nav-client-reports') document.getElementById(nav)?.classList.add('hidden-section');
+                if(nav !== 'nav-client-reports' && nav !== 'nav-atc-reports') document.getElementById(nav)?.classList.add('hidden-section');
             });
 
             // Add read-only badge to client reports nav
@@ -270,6 +271,11 @@ function loadView(view) {
             setActiveNav('nav-history-reports');
             renderHistoryReports(contentArea);
             break;
+        case 'atc-reports':
+            pageTitle.textContent = 'Reporte Logístico Integral (ATC)';
+            setActiveNav('nav-atc-reports');
+            renderATCReports(contentArea);
+            break;
         case 'payroll-map':
             pageTitle.textContent = 'Mapa Logístico (Torre / Operaciones / RH)';
             setActiveNav('nav-payroll-map');
@@ -333,6 +339,7 @@ attachNav('nav-admin', 'admin');
 attachNav('nav-cameras', 'cameras');
 attachNav('nav-incidents', 'incidents');
 attachNav('nav-client-reports', 'client-reports');
+attachNav('nav-atc-reports', 'atc-reports');
 attachNav('nav-history-reports', 'history-reports');
 attachNav('nav-payroll-map', 'payroll-map');
 

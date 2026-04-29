@@ -166,9 +166,9 @@ async function fetchAndUpdate() {
         return;
     }
 
-    // Ubicacion cache: Fetch Samsara Data only every 1 hour (3600000ms), except first time
+    // Ubicacion cache: Fetch Samsara Data every 2 minutes (120,000ms), except first time
     const now = Date.now();
-    if (samsaraData.length === 0 || (now - lastSamsaraFetchTime > 3600000)) {
+    if (samsaraData.length === 0 || (now - lastSamsaraFetchTime > 120000)) {
         samsaraData = await fetchSamsaraLocations();
         lastSamsaraFetchTime = now;
     }

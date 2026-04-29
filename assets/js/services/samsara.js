@@ -6,7 +6,7 @@ import { supabase } from './supabaseClient.js';
  */
 async function fetchFromEdgeFunction(endpoint) {
     try {
-        const { data, error } = await supabase.functions.invoke('dynamic-endpoint', {
+        const { data, error } = await supabase.functions.invoke('samsara-proxy', {
             body: { endpoint }
         });
 
