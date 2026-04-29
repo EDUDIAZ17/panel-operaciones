@@ -92,11 +92,10 @@ export async function authenticate(email, password) {
 export async function registerUser(userData) {
     const normalizedEmail = userData.email.toLowerCase().trim();
     
-    // Block privileged roles from self-registration
+    // Block privileged roles from self-registration if NOT an institutional email
     const blockedRoles = ['admin'];
-    if (blockedRoles.includes(userData.role)) {
-        console.error('Attempted registration with blocked role:', userData.role);
-        throw new Error('Este rol no permite auto-registro. Contacta al administrador.');
+    if (blockedRoles.includes(userData.role) && !normalizedEmail.endsWith('@alexatransportes.com.mx')) {
+        throw new Error('Solo cuentas institucionales pueden solicitar este rol.');
     }
 
     // Validate email domain
