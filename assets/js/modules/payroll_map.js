@@ -1074,7 +1074,7 @@ function shareRouteWhatsApp() {
     
     text += `\n*🗺️ Ver Ruta en Google Maps:*\n${mapsUrl}\n`;
     
-    text += `\nPor favor, confirme de recibido y registre la salida en su App de Operador (EDY). Buen viaje.`;
+    text += `\nPor favor, confirme de recibido y reporte cualquier incidencia. Buen viaje.`;
     
     const encoded = encodeURIComponent(text);
     // Para simplificar, abrir WhatsApp Web/App hacia el usuario
@@ -1181,41 +1181,4 @@ function geocodeLatLng(latLng) {
     });
 }
 
-function startMobileNavigation() {
-    const origen = document.getElementById('map-origen').value;
-    const destino = document.getElementById('map-destino').value;
 
-    if (!origen || !destino) {
-        Swal.fire('Atención', 'Calcule la ruta primero antes de iniciar la navegación.', 'warning');
-        return;
-    }
-
-    const waypointInputs = document.querySelectorAll('.waypoint-input');
-    const waypoints = [];
-    waypointInputs.forEach(input => {
-        if (input.value.trim()) {
-            waypoints.push(input.value.trim());
-        }
-    });
-
-    // Guardar para la App EDY (offline-first simulator)
-    localStorage.setItem('edy_pending_route', JSON.stringify({
-        origen,
-        destino,
-        waypoints
-    }));
-
-    Swal.fire({
-        title: 'Navegación Cabina',
-        text: 'Se ha preparado la ruta para la aplicación integral de Cabina.',
-        icon: 'success',
-        showCancelButton: true,
-        confirmButtonText: '<i class="fas fa-truck"></i> Abrir App EDY',
-        cancelButtonText: 'Cancelar',
-        confirmButtonColor: '#4f46e5'
-    }).then((res) => {
-        if(res.isConfirmed) {
-            window.open('edy_app.html', '_blank');
-        }
-    });
-}

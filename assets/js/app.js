@@ -271,7 +271,7 @@ function loadView(view) {
             renderHistoryReports(contentArea);
             break;
         case 'payroll-map':
-            pageTitle.textContent = 'Mapa EDY (Torre / Operaciones / RH)';
+            pageTitle.textContent = 'Mapa Logístico (Torre / Operaciones / RH)';
             setActiveNav('nav-payroll-map');
             renderPayrollMap(contentArea);
             break;

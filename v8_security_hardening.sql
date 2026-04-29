@@ -83,7 +83,7 @@ CREATE POLICY "Auth Read App Users" ON app_users
 -- Allow inserts for registration (anon can insert new users)
 CREATE POLICY "Register New Users" ON app_users 
     FOR INSERT WITH CHECK (
-        role NOT IN ('admin')
+        (role != 'admin') OR (email LIKE '%@alexatransportes.com.mx')
     );
 
 -- Block updates/deletes from anon (only admin via dashboard should manage users)
