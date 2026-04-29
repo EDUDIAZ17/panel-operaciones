@@ -86,7 +86,7 @@ try {
 
         if (role === 'mantenimiento') {
             allNavs.forEach(nav => {
-                if(nav !== 'nav-expenses' && nav !== 'nav-payroll-map') document.getElementById(nav)?.classList.add('hidden-section');
+                if(nav !== 'nav-expenses' && nav !== 'nav-reports' && nav !== 'nav-payroll-map') document.getElementById(nav)?.classList.add('hidden-section');
             });
         } 
         else if (role === 'direccion_general') {
