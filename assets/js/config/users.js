@@ -93,7 +93,7 @@ export async function registerUser(userData) {
     const normalizedEmail = userData.email.toLowerCase().trim();
     
     // Block privileged roles from self-registration
-    const blockedRoles = ['admin', 'atc', 'mantenimiento'];
+    const blockedRoles = ['admin'];
     if (blockedRoles.includes(userData.role)) {
         console.error('Attempted registration with blocked role:', userData.role);
         throw new Error('Este rol no permite auto-registro. Contacta al administrador.');
