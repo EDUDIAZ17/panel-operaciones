@@ -25,14 +25,15 @@ async function reverseGeocode(lat, lng, elementId) {
     try {
         geocoder.geocode({ location: { lat, lng } }, (results, status) => {
             if (status === "OK" && results[0]) {
-                // Try to get a short locality or route
-                let shortAddress = results[0].formatted_address.split(',').slice(0, 2).join(', ');
-                const localityMatch = results.find(r => r.types.includes('locality') || r.types.includes('sublocality') || r.types.includes('route'));
-                if (localityMatch) shortAddress = localityMatch.formatted_address.split(',')[0];
+                // Use a precise address format (Street, City, State)
+                let preciseAddress = results[0].formatted_address.split(',').slice(0, 3).join(', ');
 
-                geoCache.set(key, shortAddress);
+                geoCache.set(key, preciseAddress);
                 const el = document.getElementById(elementId);
-                if (el) el.innerText = shortAddress;
+                if (el) {
+                    el.innerText = preciseAddress;
+                    el.title = results[0].formatted_address; // Full address on hover
+                }
             } else {
                 geoCache.set(key, 'GPS Activo');
                 const el = document.getElementById(elementId);
@@ -166,9 +167,9 @@ async function fetchAndUpdate() {
         return;
     }
 
-    // Ubicacion cache: Fetch Samsara Data every 2 minutes (120,000ms), except first time
+    // Ubicacion cache: Fetch Samsara Data every 1 minuto (60,000ms), except first time
     const now = Date.now();
-    if (samsaraData.length === 0 || (now - lastSamsaraFetchTime > 120000)) {
+    if (samsaraData.length === 0 || (now - lastSamsaraFetchTime > 60000)) {
         samsaraData = await fetchSamsaraLocations();
         lastSamsaraFetchTime = now;
     }
@@ -258,7 +259,7 @@ function renderRows(units, container) {
         let city = '<span class="text-[10px] text-gray-600">No Signal</span>';
         
         if (samsaraVeh && samsaraVeh.location) {
-            city = `<span id="${geoId}" class="text-[10px] block truncate text-purple-300 font-bold w-32 mx-auto" title="Ubicación GPS">Obteniendo...</span>`;
+            city = `<span id="${geoId}" class="text-[9px] block text-purple-300 font-bold w-full mx-auto leading-tight px-1 mt-1" title="Ubicación GPS">Obteniendo...</span>`;
             setTimeout(() => reverseGeocode(samsaraVeh.location.latitude, samsaraVeh.location.longitude, geoId), 100);
         }
 
