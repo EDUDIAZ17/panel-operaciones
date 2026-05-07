@@ -21,13 +21,14 @@ async function reverseGeocodeStatic(lat, lng, elementId) {
     try {
         geocoder.geocode({ location: { lat, lng } }, (results, status) => {
             if (status === "OK" && results[0]) {
-                let shortAddress = results[0].formatted_address.split(',').slice(0, 2).join(', ');
-                const localityMatch = results.find(r => r.types.includes('locality') || r.types.includes('sublocality') || r.types.includes('route'));
-                if (localityMatch) shortAddress = localityMatch.formatted_address.split(',')[0];
+                let preciseAddress = results[0].formatted_address.split(',').slice(0, 3).join(', ');
 
-                geoCache.set(key, shortAddress);
+                geoCache.set(key, preciseAddress);
                 const el = document.getElementById(elementId);
-                if (el) el.innerText = shortAddress;
+                if (el) {
+                    el.innerText = preciseAddress;
+                    el.title = results[0].formatted_address;
+                }
             } else {
                 geoCache.set(key, 'GPS Activo');
                 const el = document.getElementById(elementId);
