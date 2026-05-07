@@ -548,7 +548,8 @@ function initMap() {
         zoom: 5,
         center: mexicoCenter,
         mapId: '62e666a4666cf647', // ID for advanced markers
-        mapTypeControl: false,
+        mapTypeId: 'hybrid',
+        mapTypeControl: true,
         streetViewControl: false,
         fullscreenControl: false
     });
