@@ -713,8 +713,19 @@ function executeExcelExport() {
         }
     };
 
+    const getExportLocation = (u) => {
+        const samsaraVeh = currentSamsaraData.find(v => v.name && (v.name.includes(u.economic_number) || (u.placas && v.name.includes(u.placas))));
+        if (samsaraVeh && samsaraVeh.location) {
+            const lat = samsaraVeh.location.latitude;
+            const lng = samsaraVeh.location.longitude;
+            const key = `${lat.toFixed(3)},${lng.toFixed(3)}`;
+            return geoCache.has(key) ? geoCache.get(key) : `Coords: ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+        }
+        return 'Sin GPS';
+    };
+
     if (currentType === 'BYD') {
-        tableColumn = ["BOL", "ECONOMICO", "DESTINO", "FECHA PROG.", "FECHA CARGA", "INSERCION RUTA", "ETA", "ENTREGA FINAL", "STATUS", "COMENTARIOS"];
+        tableColumn = ["BOL", "ECONOMICO", "DESTINO", "FECHA PROG.", "FECHA CARGA", "INSERCION RUTA", "ETA", "ENTREGA FINAL", "STATUS", "UBICACION", "COMENTARIOS"];
         currentFilteredUnits.forEach(u => {
             const destino = u.details?.destino || '---';
             const scheduledDate = u.details?.scheduled_trip || u.details?.assignment_date;
@@ -736,11 +747,12 @@ function executeExcelExport() {
                 eta,
                 fEntrega,
                 u.status,
+                getExportLocation(u),
                 comentarios
             ]);
         });
     } else if (currentType === 'CHANGAN') {
-        tableColumn = ["UNIDAD", "OPERADOR", "FECHA PROG.", "FECHA CARGA", "CLIENTE", "VIAJE", "ORIGEN", "DESTINO", "ETA", "ESTATUS", "OBSERVACIONES"];
+        tableColumn = ["UNIDAD", "OPERADOR", "FECHA PROG.", "FECHA CARGA", "CLIENTE", "VIAJE", "ORIGEN", "DESTINO", "ETA", "ESTATUS", "UBICACION", "OBSERVACIONES"];
         currentFilteredUnits.forEach(u => {
             const opName = u.operators?.name || 'Sin Asignar';
             const scheduledDate = u.details?.scheduled_trip || u.details?.assignment_date;
@@ -765,11 +777,12 @@ function executeExcelExport() {
                 destino,
                 eta,
                 u.status,
+                getExportLocation(u),
                 obs
             ]);
         });
     } else {
-        tableColumn = ["UNIDAD", "TIPO / PLACAS", "OPERADOR", "FECHA PROG.", "CLIENTE", "ORIGEN", "DESTINO", "ESTATUS", "OBSERVACIONES"];
+        tableColumn = ["UNIDAD", "TIPO / PLACAS", "OPERADOR", "FECHA PROG.", "CLIENTE", "ORIGEN", "DESTINO", "ESTATUS", "UBICACION", "OBSERVACIONES"];
         currentFilteredUnits.forEach(u => {
             const opName = u.operators?.name || 'Sin Asignar';
             const scheduledDate = u.details?.scheduled_trip || u.details?.assignment_date;
@@ -789,6 +802,7 @@ function executeExcelExport() {
                 origen,
                 destino,
                 u.status,
+                getExportLocation(u),
                 obs
             ]);
         });
@@ -857,8 +871,19 @@ function executePDFExport() {
             }
         };
 
+        const getExportLocation = (u) => {
+            const samsaraVeh = currentSamsaraData.find(v => v.name && (v.name.includes(u.economic_number) || (u.placas && v.name.includes(u.placas))));
+            if (samsaraVeh && samsaraVeh.location) {
+                const lat = samsaraVeh.location.latitude;
+                const lng = samsaraVeh.location.longitude;
+                const key = `${lat.toFixed(3)},${lng.toFixed(3)}`;
+                return geoCache.has(key) ? geoCache.get(key) : `Coords: ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+            }
+            return 'Sin GPS';
+        };
+
         if (currentType === 'BYD') {
-            tableColumn = ["BOL", "ECONOMICO", "DESTINO", "FECHA PROG.", "FECHA CARGA", "INSERCION RUTA", "ETA", "ENTREGA FINAL", "STATUS", "COMENTARIOS"];
+            tableColumn = ["BOL", "ECONOMICO", "DESTINO", "FECHA PROG.", "FECHA CARGA", "INSERCION RUTA", "ETA", "ENTREGA FINAL", "STATUS", "UBICACION", "COMENTARIOS"];
             currentFilteredUnits.forEach(u => {
                 const destino = u.details?.destino || '---';
                 const scheduledDate = u.details?.scheduled_trip || u.details?.assignment_date;
@@ -880,11 +905,12 @@ function executePDFExport() {
                     eta,
                     fEntrega,
                     u.status,
+                    getExportLocation(u),
                     comentarios
                 ]);
             });
         } else if (currentType === 'CHANGAN') {
-            tableColumn = ["UNIDAD", "OPERADOR", "FECHA PROG.", "FECHA CARGA", "CLIENTE", "VIAJE", "ORIGEN", "DESTINO", "ETA", "ESTATUS", "OBSERVACIONES"];
+            tableColumn = ["UNIDAD", "OPERADOR", "FECHA PROG.", "FECHA CARGA", "CLIENTE", "VIAJE", "ORIGEN", "DESTINO", "ETA", "ESTATUS", "UBICACION", "OBSERVACIONES"];
             currentFilteredUnits.forEach(u => {
                 const opName = u.operators?.name || 'Sin Asignar';
                 const scheduledDate = u.details?.scheduled_trip || u.details?.assignment_date;
@@ -909,11 +935,12 @@ function executePDFExport() {
                     destino,
                     eta,
                     u.status,
+                    getExportLocation(u),
                     obs
                 ]);
             });
         } else {
-            tableColumn = ["UNIDAD", "TIPO / PLACAS", "OPERADOR", "FECHA PROG.", "CLIENTE", "ORIGEN", "DESTINO", "ESTATUS", "OBSERVACIONES"];
+            tableColumn = ["UNIDAD", "TIPO / PLACAS", "OPERADOR", "FECHA PROG.", "CLIENTE", "ORIGEN", "DESTINO", "ESTATUS", "UBICACION", "OBSERVACIONES"];
             currentFilteredUnits.forEach(u => {
                 const opName = u.operators?.name || 'Sin Asignar';
                 const scheduledDate = u.details?.scheduled_trip || u.details?.assignment_date;
@@ -933,6 +960,7 @@ function executePDFExport() {
                     origen,
                     destino,
                     u.status,
+                    getExportLocation(u),
                     obs
                 ]);
             });

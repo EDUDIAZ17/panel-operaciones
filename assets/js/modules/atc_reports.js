@@ -309,7 +309,7 @@ function exportATCReport() {
 function executeExcelExport() {
     try {
         const tableColumn = [
-            "UNIDAD", "OPERADOR", "CLIENTE", "VIAJE / BOL", "ORIGEN", "DESTINO", "STATUS", 
+            "UNIDAD", "OPERADOR", "CLIENTE", "VIAJE / BOL", "ORIGEN", "DESTINO", "STATUS", "UBICACION",
             "LLEGADA CARGA", "INICIO CARGA", "FIN CARGA", 
             "INICIO RUTA", "FIN RUTA", 
             "LLEGADA DESC. (ETA)", "INICIO DESC.", "FIN DESC. (ENTREGA)", 
@@ -325,6 +325,17 @@ function executeExcelExport() {
             } catch (e) { return '---'; }
         };
 
+        const getExportLocation = (u) => {
+            const samsaraVeh = currentSamsaraData.find(v => v.name && (v.name.includes(u.economic_number) || (u.placas && v.name.includes(u.placas))));
+            if (samsaraVeh && samsaraVeh.location) {
+                const lat = samsaraVeh.location.latitude;
+                const lng = samsaraVeh.location.longitude;
+                const key = `${lat.toFixed(3)},${lng.toFixed(3)}`;
+                return geoCache.has(key) ? geoCache.get(key) : `Coords: ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+            }
+            return 'Sin GPS';
+        };
+
         const tableRows = currentFilteredUnits.map(u => {
             const det = u.details || {};
             const cp = det.checkpoints || {};
@@ -336,6 +347,7 @@ function executeExcelExport() {
                 det.origen || '---',
                 det.destino || '---',
                 u.status || '---',
+                getExportLocation(u),
                 formatDateTxt(cp.trip_load_arrival),
                 formatDateTxt(cp.trip_load_start),
                 formatDateTxt(cp.trip_load_end),
@@ -375,7 +387,7 @@ function executePDFExport() {
         doc.text(`Cliente: ${currentType} | Fecha: ${new Date().toLocaleString()}`, 14, 30);
 
         const tableColumn = [
-            "Unidad", "Operador", "Cliente", "Viaje", "Destino", "Status",
+            "Unidad", "Operador", "Cliente", "Viaje", "Destino", "Status", "Ubicación",
             "Lleg. Carga", "Fin Carga", "Ini. Ruta", "Fin Ruta", "Lleg. Desc.", "Entrega"
         ];
 
@@ -388,6 +400,17 @@ function executePDFExport() {
             } catch (e) { return '---'; }
         };
 
+        const getExportLocation = (u) => {
+            const samsaraVeh = currentSamsaraData.find(v => v.name && (v.name.includes(u.economic_number) || (u.placas && v.name.includes(u.placas))));
+            if (samsaraVeh && samsaraVeh.location) {
+                const lat = samsaraVeh.location.latitude;
+                const lng = samsaraVeh.location.longitude;
+                const key = `${lat.toFixed(3)},${lng.toFixed(3)}`;
+                return geoCache.has(key) ? geoCache.get(key) : `Coords: ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+            }
+            return 'Sin GPS';
+        };
+
         const tableRows = currentFilteredUnits.map(u => {
             const det = u.details || {};
             const cp = det.checkpoints || {};
@@ -398,6 +421,7 @@ function executePDFExport() {
                 det.viaje || det.bol || '---',
                 det.destino || '---',
                 u.status || '---',
+                getExportLocation(u),
                 formatDateTxt(cp.trip_load_arrival),
                 formatDateTxt(cp.trip_load_end),
                 formatDateTxt(cp.trip_route_start),
