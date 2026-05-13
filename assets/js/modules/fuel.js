@@ -1017,11 +1017,26 @@ function renderHistoryData(records) {
                                         ? r.monto_cobro.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' })
                                         : '—'}
                                 </td>
+                                <td class="px-4 py-3 text-center space-x-1">
+                                    <button class="btn-hist-print text-indigo-600 hover:text-indigo-800 transition px-1" data-id="${r.id}" title="Imprimir Reporte"><i class="fas fa-print"></i></button>
+                                    <button class="btn-hist-edit text-blue-600 hover:text-blue-800 transition px-1" data-id="${r.id}" title="Editar"><i class="fas fa-edit"></i></button>
+                                    <button class="btn-hist-delete text-red-600 hover:text-red-800 transition px-1" data-id="${r.id}" title="Borrar"><i class="fas fa-trash"></i></button>
+                                </td>
                             </tr>`;
                     }).join('')}
                 </tbody>
             </table>
         </div>`;
+
+    wrap.querySelectorAll('.btn-hist-print').forEach(btn => {
+        btn.addEventListener('click', () => printHistoryReport(records.find(r => r.id === btn.dataset.id)));
+    });
+    wrap.querySelectorAll('.btn-hist-edit').forEach(btn => {
+        btn.addEventListener('click', () => openEditHistoryModal(records.find(r => r.id === btn.dataset.id)));
+    });
+    wrap.querySelectorAll('.btn-hist-delete').forEach(btn => {
+        btn.addEventListener('click', () => deleteHistoryRecord(btn.dataset.id));
+    });
 }
 
 // ================================================================
