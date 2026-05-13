@@ -156,9 +156,9 @@ async function loadAuthSection() {
 
                 <!-- Precio por litro -->
                 <div>
-                    <label class="block text-xs font-bold text-gray-500 mb-1">PRECIO POR LITRO ($) *</label>
+                    <label class="block text-xs font-bold text-gray-500 mb-1">PRECIO POR LITRO ($) (Opcional)</label>
                     <input type="number" id="fuel-precio" class="w-full border p-3 rounded-xl bg-gray-50"
-                        min="0" step="0.01" placeholder="Ej: 27.78" required />
+                        min="0" step="0.01" placeholder="Ej: 27.78" />
                 </div>
 
                 <!-- Ubicación -->
@@ -240,10 +240,10 @@ async function saveAutorizacion() {
     const operadorId = document.getElementById('fuel-operador')?.value;
     const fecha     = document.getElementById('fuel-fecha')?.value;
     const actual    = parseFloat(document.getElementById('fuel-actual')?.value);
-    const precio    = parseFloat(document.getElementById('fuel-precio')?.value);
+    const precio    = parseFloat(document.getElementById('fuel-precio')?.value) || 0;
     const elaboro   = document.getElementById('fuel-elaboro')?.value?.trim();
 
-    if (!unidadId || !operadorId || !fecha || isNaN(actual) || isNaN(precio) || !elaboro) {
+    if (!unidadId || !operadorId || !fecha || isNaN(actual) || !elaboro) {
         Swal.fire({ icon: 'warning', title: 'Campos requeridos', text: 'Complete todos los campos obligatorios (*).', confirmButtonColor: '#f97316' });
         return;
     }
@@ -590,6 +590,29 @@ function openRegistrarCargaModal(auth) {
                             class="w-full border-2 border-gray-200 p-3 rounded-xl bg-gray-50 text-lg font-bold transition"
                             min="0" step="0.001" placeholder="0.000" />
                     </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 mb-1">PRECIO REAL POR LITRO</label>
+                        <input type="number" id="modal-precio-litro" value="${auth.precio_litro || 0}"
+                            class="w-full border-2 border-gray-200 p-3 rounded-xl bg-gray-50 text-lg font-bold transition" min="0" step="0.01" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 mb-1">EVIDENCIA (Foto del ticket)</label>
+                        <input type="file" id="modal-evidencia" accept="image/*"
+                            class="w-full border-2 border-gray-200 p-3 rounded-xl bg-gray-50 text-xs transition" />
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 mb-1">UBICACIÓN (Maps URL)</label>
+                        <input type="text" id="modal-ubicacion" value="${auth.ubicacion_url || ''}"
+                            class="w-full border-2 border-gray-200 p-3 rounded-xl bg-gray-50 text-sm" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 mb-1">NOTAS / OBSERVACIONES</label>
+                        <input type="text" id="modal-notas" value="${auth.notas || ''}"
+                            class="w-full border-2 border-gray-200 p-3 rounded-xl bg-gray-50 text-sm" />
+                    </div>
                 </div>
 
                 <!-- Semáforo en tiempo real -->
@@ -617,10 +640,12 @@ function openRegistrarCargaModal(auth) {
 
     const bombaInput = document.getElementById('modal-litros-bomba');
     const bosonInput = document.getElementById('modal-litros-boson');
+    const precioInput = document.getElementById('modal-precio-litro');
 
     const updatePreview = () => {
         const bomba = parseFloat(bombaInput?.value) || 0;
         const boson = parseFloat(bosonInput?.value) || 0;
+        const precioReal = parseFloat(precioInput?.value) || 0;
         const preview = document.getElementById('modal-semaforo-preview');
         if (!preview) return;
 
@@ -644,11 +669,11 @@ function openRegistrarCargaModal(auth) {
             semaforo = 'rojo';
             bgClass  = 'bg-red-50 border-red-300';
             icon     = '🔴';
-            const mto = (Math.abs(diff) * auth.precio_litro).toLocaleString('es-MX', { style: 'currency', currency: 'MXN' });
+            const mto = (Math.abs(diff) * precioReal).toLocaleString('es-MX', { style: 'currency', currency: 'MXN' });
             texto    = `DESVÍO CONFIRMADO — Cobro estimado: ${mto}`;
         }
 
-        const monto = semaforo === 'rojo' ? Math.abs(diff) * auth.precio_litro : 0;
+        const monto = semaforo === 'rojo' ? Math.abs(diff) * precioReal : 0;
 
         preview.className = `rounded-xl p-4 border text-center transition-all ${bgClass}`;
         preview.classList.remove('hidden');
@@ -665,10 +690,16 @@ function openRegistrarCargaModal(auth) {
         updatePreview();
     });
     bosonInput?.addEventListener('input', updatePreview);
+    precioInput?.addEventListener('input', updatePreview);
 
     document.getElementById('btn-save-carga')?.addEventListener('click', async () => {
         const bomba = parseFloat(bombaInput?.value);
         const boson = parseFloat(bosonInput?.value);
+        const precioReal = parseFloat(precioInput?.value) || 0;
+        const ubicacion = document.getElementById('modal-ubicacion')?.value?.trim() || null;
+        const notas = document.getElementById('modal-notas')?.value?.trim() || null;
+        const fileInput = document.getElementById('modal-evidencia');
+        const file = fileInput.files.length > 0 ? fileInput.files[0] : null;
 
         if (isNaN(bomba) || isNaN(boson) || bomba <= 0 || boson <= 0) {
             Swal.fire({ icon: 'warning', title: 'Campos requeridos', text: 'Ingrese los litros de bomba y BOSON.', confirmButtonColor: '#3b82f6' });
@@ -688,13 +719,27 @@ function openRegistrarCargaModal(auth) {
             if (!isConfirmed) return;
         }
 
-        await saveRegistroCarga(auth, bomba, boson, modal);
+        await saveRegistroCarga(auth, bomba, boson, precioReal, ubicacion, notas, file, modal);
     });
 }
 
-async function saveRegistroCarga(auth, litrosBomba, litrosBoson, modal) {
+async function saveRegistroCarga(auth, litrosBomba, litrosBoson, precioReal, ubicacion, notas, file, modal) {
     const btn = document.getElementById('btn-save-carga');
     if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Guardando...'; }
+
+    let evidencia_url = auth.evidencia_url || null;
+
+    if (file) {
+        const ext = file.name.split('.').pop();
+        const fileName = `${auth.id}_${Date.now()}.${ext}`;
+        const { data: uploadData, error: uploadError } = await supabase.storage.from('evidencias').upload(`combustible/${fileName}`, file);
+        if (!uploadError) {
+            const { data: publicData } = supabase.storage.from('evidencias').getPublicUrl(`combustible/${fileName}`);
+            if (publicData) evidencia_url = publicData.publicUrl;
+        } else {
+            console.warn('Error subiendo evidencia:', uploadError);
+        }
+    }
 
     const diferencia  = litrosBomba - litrosBoson;
     const porcentaje  = Math.abs(diferencia / litrosBomba) * 100;
@@ -702,13 +747,17 @@ async function saveRegistroCarga(auth, litrosBomba, litrosBoson, modal) {
     if (porcentaje <= 2)      semaforo = 'verde';
     else if (porcentaje <= 4) semaforo = 'amarillo';
     else                      semaforo = 'rojo';
-    const monto = semaforo === 'rojo' ? Math.abs(diferencia) * auth.precio_litro : 0;
+    const monto = semaforo === 'rojo' ? Math.abs(diferencia) * precioReal : 0;
 
     const { error } = await supabase
         .from('cargas_combustible')
         .update({
             litros_bomba:          litrosBomba,
             litros_boson:          litrosBoson,
+            precio_litro:          precioReal,
+            ubicacion_url:         ubicacion,
+            notas:                 notas,
+            evidencia_url:         evidencia_url,
             diferencia_litros:     diferencia,
             porcentaje_diferencia: porcentaje,
             semaforo,
@@ -939,6 +988,7 @@ function renderHistoryData(records) {
                         <th class="px-4 py-3 text-right">% Dif</th>
                         <th class="px-4 py-3 text-center">Estado</th>
                         <th class="px-4 py-3 text-right">Monto Cobro</th>
+                        <th class="px-4 py-3 text-center">Acciones</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100">
@@ -1074,4 +1124,258 @@ async function markExpiredAuthorizations() {
         .update({ status: 'vencido' })
         .eq('status', 'pendiente_carga')
         .lt('creado_en', cutoff);
+}
+
+// ================================================================
+// EDICIÓN Y ELIMINACIÓN (HISTORIAL)
+// ================================================================
+
+function openEditHistoryModal(record) {
+    const container = document.getElementById('fuel-modal-container');
+    const modal     = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] fade-in';
+
+    modal.innerHTML = `
+        <div class="bg-white rounded-2xl w-full max-w-lg shadow-2xl mx-4 overflow-hidden max-h-[90vh] overflow-y-auto">
+            <div class="bg-blue-600 text-white p-5">
+                <h3 class="text-xl font-black">Editar Registro (Historial)</h3>
+                <p class="text-blue-100 text-sm mt-1">Folio: ${record.id.slice(0,8).toUpperCase()}</p>
+            </div>
+            <div class="p-6 space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 mb-1">LITROS BOMBA</label>
+                        <input type="number" id="edit-bomba" class="w-full border-2 border-gray-200 p-2 rounded-xl bg-gray-50 font-bold" min="0" step="0.001" value="${record.litros_bomba || 0}" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 mb-1">LITROS BOSON</label>
+                        <input type="number" id="edit-boson" class="w-full border-2 border-gray-200 p-2 rounded-xl bg-gray-50 font-bold" min="0" step="0.001" value="${record.litros_boson || 0}" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 mb-1">PRECIO/LITRO</label>
+                        <input type="number" id="edit-precio" class="w-full border-2 border-gray-200 p-2 rounded-xl bg-gray-50 font-bold" min="0" step="0.01" value="${record.precio_litro || 0}" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 mb-1">NUEVA EVIDENCIA (Foto)</label>
+                        <input type="file" id="edit-evidencia" accept="image/*" class="w-full border-2 border-gray-200 p-2 rounded-xl bg-gray-50 text-xs" />
+                        ${record.evidencia_url ? `<a href="${record.evidencia_url}" target="_blank" class="text-[10px] text-blue-600 underline mt-1 inline-block">Ver actual</a>` : ''}
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 mb-1">UBICACIÓN (Maps URL)</label>
+                    <input type="text" id="edit-ubicacion" class="w-full border-2 border-gray-200 p-2 rounded-xl bg-gray-50" value="${record.ubicacion_url || ''}" />
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 mb-1">NOTAS</label>
+                    <input type="text" id="edit-notas" class="w-full border-2 border-gray-200 p-2 rounded-xl bg-gray-50" value="${record.notas || ''}" />
+                </div>
+                <div class="flex gap-3 pt-4">
+                    <button class="flex-1 py-3 text-gray-500 font-bold hover:bg-gray-100 rounded-xl transition" onclick="this.closest('.fixed').remove()">Cancelar</button>
+                    <button id="btn-save-edit" class="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-xl shadow-lg transition flex justify-center items-center gap-2">
+                        <i class="fas fa-save"></i> Guardar Cambios
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    container.appendChild(modal);
+
+    document.getElementById('btn-save-edit').addEventListener('click', async () => {
+        const btn = document.getElementById('btn-save-edit');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+
+        const bomba = parseFloat(document.getElementById('edit-bomba').value) || 0;
+        const boson = parseFloat(document.getElementById('edit-boson').value) || 0;
+        const precio = parseFloat(document.getElementById('edit-precio').value) || 0;
+        const ubicacion = document.getElementById('edit-ubicacion').value.trim();
+        const notas = document.getElementById('edit-notas').value.trim();
+        const fileInput = document.getElementById('edit-evidencia');
+        const file = fileInput.files.length > 0 ? fileInput.files[0] : null;
+
+        let evidencia_url = record.evidencia_url;
+
+        if (file) {
+            const ext = file.name.split('.').pop();
+            const fileName = `${record.id}_${Date.now()}.${ext}`;
+            const { data: uploadData, error: uploadError } = await supabase.storage.from('evidencias').upload(`combustible/${fileName}`, file);
+            if (!uploadError) {
+                const { data: publicData } = supabase.storage.from('evidencias').getPublicUrl(`combustible/${fileName}`);
+                if (publicData) evidencia_url = publicData.publicUrl;
+            } else {
+                console.warn('Error subiendo evidencia editada:', uploadError);
+            }
+        }
+
+        const diferencia = bomba - boson;
+        const porcentaje = Math.abs(diferencia / (bomba || 1)) * 100;
+        let semaforo = 'verde';
+        if (porcentaje > 2 && porcentaje <= 4) semaforo = 'amarillo';
+        else if (porcentaje > 4) semaforo = 'rojo';
+        
+        const monto = semaforo === 'rojo' ? Math.abs(diferencia) * precio : 0;
+
+        const { error } = await supabase.from('cargas_combustible').update({
+            litros_bomba: bomba,
+            litros_boson: boson,
+            precio_litro: precio,
+            diferencia_litros: diferencia,
+            porcentaje_diferencia: porcentaje,
+            semaforo: semaforo,
+            monto_cobro: monto,
+            ubicacion_url: ubicacion,
+            notas: notas,
+            evidencia_url: evidencia_url
+        }).eq('id', record.id);
+
+        if (error) {
+            Swal.fire('Error', error.message, 'error');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-save"></i> Guardar Cambios';
+        } else {
+            modal.remove();
+            applyHistoryFilters();
+            Swal.fire({ icon: 'success', title: 'Registro actualizado', timer: 1500, showConfirmButton: false });
+        }
+    });
+}
+
+async function deleteHistoryRecord(id) {
+    const { value: password } = await Swal.fire({
+        title: 'Eliminar Registro',
+        text: 'Ingrese la contraseña de seguridad para confirmar:',
+        input: 'password',
+        inputPlaceholder: 'Contraseña',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        cancelButtonText: 'Cancelar'
+    });
+
+    if (!password) return;
+
+    if (password !== 'BORRAR') {
+        Swal.fire('Error', 'Contraseña incorrecta', 'error');
+        return;
+    }
+
+    const { error } = await supabase.from('cargas_combustible').delete().eq('id', id);
+    if (error) {
+        Swal.fire('Error', error.message, 'error');
+    } else {
+        Swal.fire('Eliminado', 'El registro ha sido eliminado correctamente', 'success');
+        applyHistoryFilters();
+    }
+}
+
+async function printHistoryReport(record) {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    
+    doc.setFontSize(16);
+    doc.setFont(undefined, 'bold');
+    doc.text('REPORTE INDIVIDUAL DE CARGA Y DESVÍO', 105, 20, { align: 'center' });
+    
+    doc.setFontSize(10);
+    doc.setFont(undefined, 'normal');
+    doc.text(`Generado: ${new Date().toLocaleString('es-MX')}`, 105, 26, { align: 'center' });
+    
+    doc.setDrawColor(200);
+    doc.line(15, 30, 195, 30);
+
+    doc.setFontSize(12);
+    doc.setFont(undefined, 'bold');
+    doc.text('DATOS DE LA CARGA', 15, 40);
+    
+    doc.setFontSize(10);
+    doc.setFont(undefined, 'normal');
+    const fechaStr = new Date(record.fecha_carga).toLocaleString('es-MX');
+    
+    doc.text(`Folio: #${record.id.slice(0,8).toUpperCase()}`, 15, 48);
+    doc.text(`Fecha: ${fechaStr}`, 15, 54);
+    doc.text(`Unidad: ${record.units?.economic_number} (${record.units?.type})`, 15, 60);
+    doc.text(`Operador: ${record.operators?.name}`, 15, 66);
+    if (record.remolque) doc.text(`Remolque: ${record.remolque}`, 15, 72);
+
+    doc.setFontSize(12);
+    doc.setFont(undefined, 'bold');
+    doc.text('ANÁLISIS DE COMBUSTIBLE', 110, 40);
+    
+    doc.setFontSize(10);
+    doc.setFont(undefined, 'normal');
+    doc.text(`Capacidad del Tanque: ${record.capacidad_maxima || 0} L`, 110, 48);
+    doc.text(`Litros Autorizados: ${(record.litros_autorizar||0).toFixed(2)} L`, 110, 54);
+    doc.text(`Precio por Litro: $${record.precio_litro || 0}`, 110, 60);
+    
+    doc.line(15, 80, 195, 80);
+
+    doc.setFontSize(12);
+    doc.setFont(undefined, 'bold');
+    doc.text('RESULTADO (BOMBA VS SENSOR)', 15, 90);
+    
+    doc.setFontSize(11);
+    doc.setFont(undefined, 'normal');
+    doc.text(`Litros Despachados (Bomba): ${(record.litros_bomba||0).toFixed(2)} L`, 15, 98);
+    doc.text(`Litros Recibidos (BOSON): ${(record.litros_boson||0).toFixed(2)} L`, 15, 104);
+    
+    doc.setFont(undefined, 'bold');
+    const diff = (record.diferencia_litros||0);
+    doc.text(`Diferencia: ${diff > 0 ? '+' : ''}${diff.toFixed(2)} L`, 110, 98);
+    doc.text(`Porcentaje de Desvío: ${(record.porcentaje_diferencia||0).toFixed(2)}%`, 110, 104);
+
+    let sColor = [0,0,0], sText = '';
+    if (record.semaforo === 'verde') { sColor = [22,163,74]; sText = 'DENTRO DE TOLERANCIA'; }
+    else if (record.semaforo === 'amarillo') { sColor = [202,138,4]; sText = 'EN REVISIÓN'; }
+    else { sColor = [220,38,38]; sText = 'DESVÍO CONFIRMADO'; }
+
+    doc.setTextColor(sColor[0], sColor[1], sColor[2]);
+    doc.text(`ESTADO: ${sText}`, 15, 114);
+    
+    if (record.monto_cobro > 0) {
+        doc.text(`MONTO A COBRAR: $${record.monto_cobro.toLocaleString('es-MX', { minimumFractionDigits: 2 })} MXN`, 110, 114);
+    }
+    doc.setTextColor(0);
+
+    doc.line(15, 122, 195, 122);
+
+    doc.setFontSize(11);
+    doc.setFont(undefined, 'bold');
+    doc.text('OBSERVACIONES', 15, 132);
+    doc.setFontSize(10);
+    doc.setFont(undefined, 'normal');
+    doc.text(record.notas || 'Sin notas.', 15, 140, { maxWidth: 170 });
+
+    if (record.evidencia_url) {
+        doc.setFontSize(11);
+        doc.setFont(undefined, 'bold');
+        doc.text('EVIDENCIA FOTOGRÁFICA', 15, 160);
+        
+        try {
+            const imgData = await new Promise((resolve) => {
+                const img = new Image();
+                img.crossOrigin = 'Anonymous';
+                img.src = record.evidencia_url;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0);
+                    resolve(canvas.toDataURL('image/jpeg'));
+                };
+                img.onerror = () => resolve(null);
+            });
+            if (imgData) {
+                // Resize while keeping aspect ratio
+                doc.addImage(imgData, 'JPEG', 15, 165, 100, 100, undefined, 'FAST');
+            } else {
+                doc.setFont(undefined, 'normal');
+                doc.text('(No se pudo cargar la imagen)', 15, 170);
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    doc.save(`Reporte_Carga_${record.units?.economic_number}_${record.id.slice(0,6)}.pdf`);
 }
