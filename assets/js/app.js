@@ -11,6 +11,7 @@ import { renderATCReports } from './modules/atc_reports.js';
 import { renderHistoryReports } from './modules/history_reports.js';
 import { renderTripLogs } from './modules/trip_logs.js';
 import { renderPayrollMap } from './modules/payroll_map.js';
+import { renderFuel } from './modules/fuel.js';
 import { supabase } from './services/supabaseClient.js';
 
 // DOM Elements
@@ -80,8 +81,8 @@ try {
         console.log("SISTEMA: Rol de usuario detectado ->", role);
 
         const allNavs = [
-            'nav-assignments', 'nav-trip-logs', 'nav-expenses', 'nav-reports', 
-            'nav-client-reports', 'nav-atc-reports', 'nav-history-reports', 'nav-observations', 
+            'nav-assignments', 'nav-trip-logs', 'nav-expenses', 'nav-fuel', 'nav-reports',
+            'nav-client-reports', 'nav-atc-reports', 'nav-history-reports', 'nav-observations',
             'nav-cameras', 'nav-incidents', 'nav-admin', 'nav-payroll-map'
         ];
 
@@ -144,7 +145,7 @@ try {
         } 
         else if (role === 'operaciones') {
             allNavs.forEach(nav => {
-                if(nav !== 'nav-assignments' && nav !== 'nav-expenses' && nav !== 'nav-payroll-map' && nav !== 'nav-admin') document.getElementById(nav)?.classList.add('hidden-section');
+                if(nav !== 'nav-assignments' && nav !== 'nav-expenses' && nav !== 'nav-fuel' && nav !== 'nav-payroll-map' && nav !== 'nav-admin') document.getElementById(nav)?.classList.add('hidden-section');
             });
         } 
         else if (role === 'otros_usuarios') {
@@ -161,7 +162,7 @@ try {
         } 
         else if (role === 'contabilidad') {
             allNavs.forEach(nav => {
-                if(nav !== 'nav-expenses' && nav !== 'nav-reports' && nav !== 'nav-payroll-map') document.getElementById(nav)?.classList.add('hidden-section');
+                if(nav !== 'nav-expenses' && nav !== 'nav-fuel' && nav !== 'nav-reports' && nav !== 'nav-payroll-map') document.getElementById(nav)?.classList.add('hidden-section');
             });
         }
         else if (role === 'atc') {
@@ -291,6 +292,11 @@ function loadView(view) {
             setActiveNav('nav-payroll-map');
             renderPayrollMap(contentArea);
             break;
+        case 'fuel':
+            pageTitle.textContent = 'Control de Combustible';
+            setActiveNav('nav-fuel');
+            renderFuel(contentArea);
+            break;
     }
 }
 
@@ -352,6 +358,7 @@ attachNav('nav-client-reports', 'client-reports');
 attachNav('nav-atc-reports', 'atc-reports');
 attachNav('nav-history-reports', 'history-reports');
 attachNav('nav-payroll-map', 'payroll-map');
+attachNav('nav-fuel', 'fuel');
 
 const logoutBtn = document.getElementById('logout-btn');
 if (logoutBtn) {

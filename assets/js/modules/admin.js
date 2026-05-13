@@ -73,6 +73,7 @@ export async function renderAdmin(container) {
                                     <th class="px-6 py-4">Eco #</th>
                                     <th class="px-6 py-4">Tipo</th>
                                     <th class="px-6 py-4">Placas</th>
+                                    <th class="px-6 py-4 text-right">Capacidad (L)</th>
                                     <th class="px-6 py-4">Estatus</th>
                                     <th class="px-6 py-4 text-right">Acciones</th>
                                 </tr>
@@ -223,7 +224,7 @@ async function loadOperators() {
 async function loadUnits() {
     const list = document.getElementById('admin-units-body');
     const { data: units } = await supabase.from('units').select('*').order('economic_number');
-    
+
     if(!units) return;
 
     list.innerHTML = units.map(u => `
@@ -231,6 +232,11 @@ async function loadUnits() {
             <td class="px-6 py-4 font-bold text-gray-800">${u.economic_number}</td>
             <td class="px-6 py-4 text-sm text-gray-600">${u.type}</td>
             <td class="px-6 py-4 text-sm font-mono">${u.placas || '---'}</td>
+            <td class="px-6 py-4 text-right">
+                <span class="text-sm font-bold text-orange-700 bg-orange-50 px-2 py-1 rounded border border-orange-100">
+                    ${u.capacidad_tanque_litros ? u.capacidad_tanque_litros.toLocaleString('es-MX') + ' L' : '—'}
+                </span>
+            </td>
             <td class="px-6 py-4">
                 <span class="text-xs uppercase font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded border border-blue-100">${u.status}</span>
             </td>
@@ -332,19 +338,19 @@ function openUnitModal(unit = null) {
     const modal = document.createElement('div');
     modal.className = 'fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] fade-in';
     modal.innerHTML = `
-        <div class="bg-white rounded-2xl p-8 w-[400px] shadow-2xl scale-in">
+        <div class="bg-white rounded-2xl p-8 w-[440px] shadow-2xl scale-in">
             <h3 class="text-xl font-bold mb-6 text-gray-800">${unit ? 'Editar' : 'Registro de'} Unidad</h3>
             <div class="space-y-4">
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs font-bold text-gray-500 mb-1">ECONÓMICO</label>
-                        <input type="text" id="modal-unit-eco" class="w-full border p-3 rounded-xl bg-gray-50" value="${unit ? unit.economic_number : ''}" required placeholder="M-101" />
+                        <input type="text" id="modal-unit-eco" class="w-full border p-3 rounded-xl bg-gray-50" value="${unit ? unit.economic_number : ''}" required placeholder="ATM01" />
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-gray-500 mb-1">TIPO</label>
                         <select id="modal-unit-type" class="w-full border p-3 rounded-xl bg-gray-50">
-                            <option value="Madrina" ${unit?.type === 'Madrina' ? 'selected' : ''}>Madrina</option>
-                            <option value="Pipa" ${unit?.type === 'Pipa' ? 'selected' : ''}>Pipa</option>
+                            <option value="Madrina"    ${unit?.type === 'Madrina'    ? 'selected' : ''}>Madrina</option>
+                            <option value="Pipa"       ${unit?.type === 'Pipa'       ? 'selected' : ''}>Pipa</option>
                             <option value="Contenedor" ${unit?.type === 'Contenedor' ? 'selected' : ''}>Contenedor</option>
                         </select>
                     </div>
@@ -352,6 +358,13 @@ function openUnitModal(unit = null) {
                 <div>
                     <label class="block text-xs font-bold text-gray-500 mb-1">PLACAS</label>
                     <input type="text" id="modal-unit-placas" class="w-full border p-3 rounded-xl bg-gray-50" value="${unit ? (unit.placas || '') : ''}" placeholder="ABC-1234" />
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 mb-1">CAPACIDAD DEL TANQUE (litros)</label>
+                    <input type="number" id="modal-unit-capacidad" class="w-full border p-3 rounded-xl bg-gray-50"
+                        value="${unit ? (unit.capacidad_tanque_litros || 0) : 0}"
+                        min="0" step="1" placeholder="900" />
+                    <p class="text-[10px] text-gray-400 mt-1">Madrinas = 900 L · Pipas = 1500 L (editable por admin)</p>
                 </div>
             </div>
             <div class="mt-8 flex justify-end gap-3">
@@ -363,17 +376,20 @@ function openUnitModal(unit = null) {
     container.appendChild(modal);
 
     document.getElementById('save-unit-btn').onclick = async () => {
-        const economic_number = document.getElementById('modal-unit-eco').value;
-        const type = document.getElementById('modal-unit-type').value;
-        const placas = document.getElementById('modal-unit-placas').value;
+        const economic_number        = document.getElementById('modal-unit-eco').value.trim();
+        const type                   = document.getElementById('modal-unit-type').value;
+        const placas                 = document.getElementById('modal-unit-placas').value.trim();
+        const capacidad_tanque_litros = parseFloat(document.getElementById('modal-unit-capacidad').value) || 0;
 
-        if(!economic_number) return;
+        if (!economic_number) return;
 
-        const { error } = unit 
-            ? await supabase.from('units').update({ economic_number, type, placas }).eq('id', unit.id)
-            : await supabase.from('units').insert({ economic_number, type, placas, status: 'Sin Operador' });
+        const payload = { economic_number, type, placas, capacidad_tanque_litros };
 
-        if(error) alert(error.message);
+        const { error } = unit
+            ? await supabase.from('units').update(payload).eq('id', unit.id)
+            : await supabase.from('units').insert({ ...payload, status: 'Sin Operador' });
+
+        if (error) alert(error.message);
         else {
             modal.remove();
             loadUnits();
