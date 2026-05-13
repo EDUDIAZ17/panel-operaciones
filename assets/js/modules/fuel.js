@@ -654,26 +654,26 @@ function openRegistrarCargaModal(auth) {
 
         if (bomba <= 0) { preview.classList.add('hidden'); return; }
 
-        const diff = bomba - boson;
-        const pct  = Math.abs(diff / bomba) * 100;
+        const diff = boson - bomba;
+        const pct  = Math.abs(diff / (bomba || 1)) * 100;
 
         let bgClass, icon, texto, semaforo;
-        if (pct <= 2) {
+        if (diff >= 0 || pct <= 2) {
             semaforo = 'verde';
             bgClass  = 'bg-green-50 border-green-300';
             icon     = '🟢';
-            texto    = 'DENTRO DE TOLERANCIA';
-        } else if (pct <= 4) {
+            texto    = diff > 0 ? 'A FAVOR / OK' : 'DENTRO DE TOLERANCIA';
+        } else if (diff < 0 && pct <= 4) {
             semaforo = 'amarillo';
             bgClass  = 'bg-yellow-50 border-yellow-300';
             icon     = '🟡';
-            texto    = 'EN REVISIÓN — Posible anomalía';
+            texto    = 'EN REVISIÓN — Faltante';
         } else {
             semaforo = 'rojo';
             bgClass  = 'bg-red-50 border-red-300';
             icon     = '🔴';
             const mto = (Math.abs(diff) * precioReal).toLocaleString('es-MX', { style: 'currency', currency: 'MXN' });
-            texto    = `DESVÍO CONFIRMADO — Cobro estimado: ${mto}`;
+            texto    = `FALTANTE CONFIRMADO — Cobro estimado: ${mto}`;
         }
 
         const monto = semaforo === 'rojo' ? Math.abs(diff) * precioReal : 0;
@@ -751,12 +751,16 @@ async function saveRegistroCarga(auth, litrosBomba, litrosBoson, precioReal, ubi
         }
     }
 
-    const diferencia  = litrosBomba - litrosBoson;
-    const porcentaje  = Math.abs(diferencia / litrosBomba) * 100;
+    const diferencia  = litrosBoson - litrosBomba;
+    const porcentaje  = Math.abs(diferencia / (litrosBomba || 1)) * 100;
     let semaforo;
-    if (porcentaje <= 2)      semaforo = 'verde';
-    else if (porcentaje <= 4) semaforo = 'amarillo';
-    else                      semaforo = 'rojo';
+    if (diferencia >= 0 || porcentaje <= 2) {
+        semaforo = 'verde';
+    } else if (diferencia < 0 && porcentaje <= 4) {
+        semaforo = 'amarillo';
+    } else {
+        semaforo = 'rojo';
+    }
     const monto = semaforo === 'rojo' ? Math.abs(diferencia) * precioReal : 0;
 
     const { error } = await supabase
@@ -1262,11 +1266,11 @@ function openEditHistoryModal(record) {
             }
         }
 
-        const diferencia = bomba - boson;
+        const diferencia = boson - bomba;
         const porcentaje = Math.abs(diferencia / (bomba || 1)) * 100;
         let semaforo = 'verde';
-        if (porcentaje > 2 && porcentaje <= 4) semaforo = 'amarillo';
-        else if (porcentaje > 4) semaforo = 'rojo';
+        if (diferencia < 0 && porcentaje > 2 && porcentaje <= 4) semaforo = 'amarillo';
+        else if (diferencia < 0 && porcentaje > 4) semaforo = 'rojo';
         
         const monto = semaforo === 'rojo' ? Math.abs(diferencia) * precio : 0;
 
@@ -1380,9 +1384,9 @@ async function printHistoryReport(record) {
     doc.text(`Porcentaje de Desvío: ${(record.porcentaje_diferencia||0).toFixed(2)}%`, 110, 104);
 
     let sColor = [0,0,0], sText = '';
-    if (record.semaforo === 'verde') { sColor = [22,163,74]; sText = 'DENTRO DE TOLERANCIA'; }
-    else if (record.semaforo === 'amarillo') { sColor = [202,138,4]; sText = 'EN REVISIÓN'; }
-    else { sColor = [220,38,38]; sText = 'DESVÍO CONFIRMADO'; }
+    if (record.semaforo === 'verde') { sColor = [22,163,74]; sText = diff > 0 ? 'A FAVOR / OK' : 'DENTRO DE TOLERANCIA'; }
+    else if (record.semaforo === 'amarillo') { sColor = [202,138,4]; sText = 'EN REVISIÓN - Faltante'; }
+    else { sColor = [220,38,38]; sText = 'FALTANTE CONFIRMADO'; }
 
     doc.setTextColor(sColor[0], sColor[1], sColor[2]);
     doc.text(`ESTADO: ${sText}`, 15, 114);
