@@ -317,14 +317,129 @@ async function saveAutorizacion() {
                         class="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-600 font-bold transition text-sm">
                         Cerrar
                     </button>
-                    <button onclick="window.print()"
-                        class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-bold transition text-sm flex items-center gap-1">
-                        <i class="fas fa-print"></i> Imprimir
+                    <button id="btn-print-auth-ticket"
+                        class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold transition text-sm flex items-center gap-1">
+                        <i class="fas fa-file-pdf"></i> Descargar Ticket PDF
                     </button>
                 </div>
             </div>
         `;
         ticket.scrollIntoView({ behavior: 'smooth' });
+
+        document.getElementById('btn-print-auth-ticket')?.addEventListener('click', async () => {
+            const btn = document.getElementById('btn-print-auth-ticket');
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Generando...';
+            btn.disabled = true;
+
+            try {
+                const { jsPDF } = window.jspdf;
+                // Formato de ticket tipo POS (80mm x 170mm)
+                const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [80, 170] });
+                
+                // Intentar cargar logo (./logo/logo.png)
+                const logoData = await new Promise(resolve => {
+                    const img = new Image();
+                    img.src = './logo/logo.png';
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0);
+                        resolve(canvas.toDataURL('image/png'));
+                    };
+                    img.onerror = () => resolve(null);
+                });
+
+                let startY = 10;
+                if (logoData) {
+                    // Logo de 30x30mm centrado (80/2 - 15 = 25)
+                    doc.addImage(logoData, 'PNG', 25, startY, 30, 30);
+                    startY += 34;
+                }
+
+                doc.setFontSize(12);
+                doc.setFont(undefined, 'bold');
+                doc.text('ALEXA TRANSPORTES', 40, startY, { align: 'center' });
+                
+                startY += 5;
+                doc.setFontSize(8);
+                doc.setFont(undefined, 'normal');
+                doc.text('AUTOTRANSPORTES Y LOGÍSTICA', 40, startY, { align: 'center' });
+                startY += 3.5;
+                doc.text('ESPECIALIZADA', 40, startY, { align: 'center' });
+                
+                startY += 6;
+                doc.setDrawColor(0);
+                doc.setLineDash([1, 1], 0);
+                doc.line(5, startY, 75, startY);
+                
+                startY += 6;
+                doc.setFontSize(10);
+                doc.setFont(undefined, 'bold');
+                doc.text('TICKET DE AUTORIZACIÓN', 40, startY, { align: 'center' });
+                
+                startY += 5;
+                doc.setFontSize(9);
+                doc.text(`FOLIO: #${data.id.slice(0, 8).toUpperCase()}`, 40, startY, { align: 'center' });
+
+                startY += 4;
+                doc.setLineDash([], 0);
+                doc.line(5, startY, 75, startY);
+
+                startY += 6;
+                doc.setFontSize(9);
+                doc.setFont(undefined, 'normal');
+                doc.text(`Fecha: ${fechaStr}`, 5, startY); startY += 5;
+                doc.text(`Unidad: ${eco}`, 5, startY); startY += 5;
+                doc.text(`Operador: ${opName}`, 5, startY); startY += 5;
+                if (data.remolque) {
+                    doc.text(`Remolque: ${data.remolque}`, 5, startY); startY += 5;
+                }
+                
+                startY += 2;
+                doc.setLineDash([1, 1], 0);
+                doc.line(5, startY, 75, startY);
+                startY += 6;
+
+                doc.text(`Tanque actual: ${actual.toFixed(2)} L`, 5, startY); startY += 5;
+                doc.text(`Capacidad máx: ${cap.toFixed(2)} L`, 5, startY); startY += 5;
+                
+                startY += 3;
+                doc.setFontSize(11);
+                doc.setFont(undefined, 'bold');
+                doc.text(`AUTORIZADO: ${litros_autorizar.toFixed(2)} L`, 40, startY, { align: 'center' });
+                
+                startY += 6;
+                doc.setFontSize(9);
+                doc.setFont(undefined, 'normal');
+                doc.text(`Precio est: ${precioFmt}/L`, 5, startY); startY += 5;
+
+                if (data.notas) {
+                    startY += 2;
+                    doc.text(`Notas: ${data.notas}`, 5, startY, { maxWidth: 70 });
+                    startY += 10;
+                }
+                
+                startY += 2;
+                doc.setLineDash([], 0);
+                doc.line(5, startY, 75, startY);
+                startY += 6;
+
+                doc.setFontSize(8);
+                doc.text('ESTE TICKET ES UN COMPROBANTE', 40, startY, { align: 'center' });
+                startY += 4;
+                doc.text('INTERNO DE AUTORIZACIÓN', 40, startY, { align: 'center' });
+
+                doc.save(`Ticket_Combustible_${eco}_${data.id.slice(0,6)}.pdf`);
+            } catch (err) {
+                console.error(err);
+                Swal.fire('Error', 'No se pudo generar el ticket PDF', 'error');
+            } finally {
+                btn.innerHTML = '<i class="fas fa-file-pdf"></i> Descargar Ticket PDF';
+                btn.disabled = false;
+            }
+        });
     }
 }
 
