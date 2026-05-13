@@ -11,7 +11,7 @@ import { renderATCReports } from './modules/atc_reports.js';
 import { renderHistoryReports } from './modules/history_reports.js';
 import { renderTripLogs } from './modules/trip_logs.js';
 import { renderPayrollMap } from './modules/payroll_map.js';
-import { renderFuel } from './modules/fuel.js';
+import { renderFuel } from './modules/fuel.js?v=10.0';
 import { supabase } from './services/supabaseClient.js';
 
 // DOM Elements
