@@ -595,10 +595,13 @@ function openRegistrarCargaModal(auth) {
                         <input type="number" id="modal-precio-litro" value="${auth.precio_litro || 0}"
                             class="w-full border-2 border-gray-200 p-3 rounded-xl bg-gray-50 text-lg font-bold transition" min="0" step="0.01" />
                     </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 mb-1">EVIDENCIA (Foto del ticket)</label>
-                        <input type="file" id="modal-evidencia" accept="image/*"
-                            class="w-full border-2 border-gray-200 p-3 rounded-xl bg-gray-50 text-xs transition" />
+                    <div class="col-span-full">
+                        <label class="block text-xs font-bold text-gray-500 mb-1">EVIDENCIAS FOTOGRÁFICAS (Hasta 3)</label>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <input type="file" id="modal-evidencia-1" accept="image/*" class="w-full border-2 border-gray-200 p-2 rounded-xl bg-gray-50 text-xs transition" />
+                            <input type="file" id="modal-evidencia-2" accept="image/*" class="w-full border-2 border-gray-200 p-2 rounded-xl bg-gray-50 text-xs transition" />
+                            <input type="file" id="modal-evidencia-3" accept="image/*" class="w-full border-2 border-gray-200 p-2 rounded-xl bg-gray-50 text-xs transition" />
+                        </div>
                     </div>
                 </div>
 
@@ -698,8 +701,10 @@ function openRegistrarCargaModal(auth) {
         const precioReal = parseFloat(precioInput?.value) || 0;
         const ubicacion = document.getElementById('modal-ubicacion')?.value?.trim() || null;
         const notas = document.getElementById('modal-notas')?.value?.trim() || null;
-        const fileInput = document.getElementById('modal-evidencia');
-        const file = fileInput.files.length > 0 ? fileInput.files[0] : null;
+        const f1 = document.getElementById('modal-evidencia-1')?.files[0];
+        const f2 = document.getElementById('modal-evidencia-2')?.files[0];
+        const f3 = document.getElementById('modal-evidencia-3')?.files[0];
+        const filesArray = [f1, f2, f3];
 
         if (isNaN(bomba) || isNaN(boson) || bomba <= 0 || boson <= 0) {
             Swal.fire({ icon: 'warning', title: 'Campos requeridos', text: 'Ingrese los litros de bomba y BOSON.', confirmButtonColor: '#3b82f6' });
@@ -719,25 +724,30 @@ function openRegistrarCargaModal(auth) {
             if (!isConfirmed) return;
         }
 
-        await saveRegistroCarga(auth, bomba, boson, precioReal, ubicacion, notas, file, modal);
+        await saveRegistroCarga(auth, bomba, boson, precioReal, ubicacion, notas, filesArray, modal);
     });
 }
 
-async function saveRegistroCarga(auth, litrosBomba, litrosBoson, precioReal, ubicacion, notas, file, modal) {
+async function saveRegistroCarga(auth, litrosBomba, litrosBoson, precioReal, ubicacion, notas, filesArray, modal) {
     const btn = document.getElementById('btn-save-carga');
     if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Guardando...'; }
 
-    let evidencia_url = auth.evidencia_url || null;
+    let urls = [auth.evidencia_url || null, auth.evidencia_url_2 || null, auth.evidencia_url_3 || null];
 
-    if (file) {
-        const ext = file.name.split('.').pop();
-        const fileName = `${auth.id}_${Date.now()}.${ext}`;
-        const { data: uploadData, error: uploadError } = await supabase.storage.from('evidencias').upload(`combustible/${fileName}`, file);
-        if (!uploadError) {
-            const { data: publicData } = supabase.storage.from('evidencias').getPublicUrl(`combustible/${fileName}`);
-            if (publicData) evidencia_url = publicData.publicUrl;
-        } else {
-            console.warn('Error subiendo evidencia:', uploadError);
+    if (filesArray && filesArray.length > 0) {
+        for (let i = 0; i < 3; i++) {
+            if (filesArray[i]) {
+                const f = filesArray[i];
+                const ext = f.name.split('.').pop();
+                const fileName = `${auth.id}_${Date.now()}_${i}.${ext}`;
+                const { error: uploadError } = await supabase.storage.from('evidencias').upload(`combustible/${fileName}`, f);
+                if (!uploadError) {
+                    const { data: publicData } = supabase.storage.from('evidencias').getPublicUrl(`combustible/${fileName}`);
+                    if (publicData) urls[i] = publicData.publicUrl;
+                } else {
+                    console.warn(`Error subiendo evidencia ${i+1}:`, uploadError);
+                }
+            }
         }
     }
 
@@ -757,7 +767,9 @@ async function saveRegistroCarga(auth, litrosBomba, litrosBoson, precioReal, ubi
             precio_litro:          precioReal,
             ubicacion_url:         ubicacion,
             notas:                 notas,
-            evidencia_url:         evidencia_url,
+            evidencia_url:         urls[0],
+            evidencia_url_2:       urls[1],
+            evidencia_url_3:       urls[2],
             diferencia_litros:     diferencia,
             porcentaje_diferencia: porcentaje,
             semaforo,
@@ -1170,10 +1182,25 @@ function openEditHistoryModal(record) {
                         <label class="block text-xs font-bold text-gray-500 mb-1">PRECIO/LITRO</label>
                         <input type="number" id="edit-precio" class="w-full border-2 border-gray-200 p-2 rounded-xl bg-gray-50 font-bold" min="0" step="0.01" value="${record.precio_litro || 0}" />
                     </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 mb-1">NUEVA EVIDENCIA (Foto)</label>
-                        <input type="file" id="edit-evidencia" accept="image/*" class="w-full border-2 border-gray-200 p-2 rounded-xl bg-gray-50 text-xs" />
-                        ${record.evidencia_url ? `<a href="${record.evidencia_url}" target="_blank" class="text-[10px] text-blue-600 underline mt-1 inline-block">Ver actual</a>` : ''}
+                    <div class="col-span-full">
+                        <label class="block text-xs font-bold text-gray-500 mb-1">EVIDENCIAS FOTOGRÁFICAS (Hasta 3)</label>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <div class="border-2 border-gray-200 p-2 rounded-xl bg-gray-50">
+                                <label class="block text-[10px] text-gray-500 font-bold mb-1">Evidencia 1</label>
+                                <input type="file" id="edit-evidencia-1" accept="image/*" class="w-full text-[10px]" />
+                                ${record.evidencia_url ? `<div class="mt-2 flex items-center justify-between"><a href="${record.evidencia_url}" target="_blank" class="text-[10px] text-blue-600 underline">Ver actual</a><label class="text-[10px] text-red-600 font-bold cursor-pointer"><input type="checkbox" id="del-ev-1"> Eliminar</label></div>` : ''}
+                            </div>
+                            <div class="border-2 border-gray-200 p-2 rounded-xl bg-gray-50">
+                                <label class="block text-[10px] text-gray-500 font-bold mb-1">Evidencia 2</label>
+                                <input type="file" id="edit-evidencia-2" accept="image/*" class="w-full text-[10px]" />
+                                ${record.evidencia_url_2 ? `<div class="mt-2 flex items-center justify-between"><a href="${record.evidencia_url_2}" target="_blank" class="text-[10px] text-blue-600 underline">Ver actual</a><label class="text-[10px] text-red-600 font-bold cursor-pointer"><input type="checkbox" id="del-ev-2"> Eliminar</label></div>` : ''}
+                            </div>
+                            <div class="border-2 border-gray-200 p-2 rounded-xl bg-gray-50">
+                                <label class="block text-[10px] text-gray-500 font-bold mb-1">Evidencia 3</label>
+                                <input type="file" id="edit-evidencia-3" accept="image/*" class="w-full text-[10px]" />
+                                ${record.evidencia_url_3 ? `<div class="mt-2 flex items-center justify-between"><a href="${record.evidencia_url_3}" target="_blank" class="text-[10px] text-blue-600 underline">Ver actual</a><label class="text-[10px] text-red-600 font-bold cursor-pointer"><input type="checkbox" id="del-ev-3"> Eliminar</label></div>` : ''}
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div>
@@ -1206,20 +1233,32 @@ function openEditHistoryModal(record) {
         const precio = parseFloat(document.getElementById('edit-precio').value) || 0;
         const ubicacion = document.getElementById('edit-ubicacion').value.trim();
         const notas = document.getElementById('edit-notas').value.trim();
-        const fileInput = document.getElementById('edit-evidencia');
-        const file = fileInput.files.length > 0 ? fileInput.files[0] : null;
+        const f1 = document.getElementById('edit-evidencia-1')?.files[0];
+        const f2 = document.getElementById('edit-evidencia-2')?.files[0];
+        const f3 = document.getElementById('edit-evidencia-3')?.files[0];
+        const filesArray = [f1, f2, f3];
 
-        let evidencia_url = record.evidencia_url;
+        let urls = [record.evidencia_url || null, record.evidencia_url_2 || null, record.evidencia_url_3 || null];
 
-        if (file) {
-            const ext = file.name.split('.').pop();
-            const fileName = `${record.id}_${Date.now()}.${ext}`;
-            const { data: uploadData, error: uploadError } = await supabase.storage.from('evidencias').upload(`combustible/${fileName}`, file);
-            if (!uploadError) {
-                const { data: publicData } = supabase.storage.from('evidencias').getPublicUrl(`combustible/${fileName}`);
-                if (publicData) evidencia_url = publicData.publicUrl;
-            } else {
-                console.warn('Error subiendo evidencia editada:', uploadError);
+        // Handle deletions
+        if (document.getElementById('del-ev-1')?.checked) urls[0] = null;
+        if (document.getElementById('del-ev-2')?.checked) urls[1] = null;
+        if (document.getElementById('del-ev-3')?.checked) urls[2] = null;
+
+        if (filesArray && filesArray.length > 0) {
+            for (let i = 0; i < 3; i++) {
+                if (filesArray[i]) {
+                    const f = filesArray[i];
+                    const ext = f.name.split('.').pop();
+                    const fileName = `${record.id}_${Date.now()}_${i}.${ext}`;
+                    const { error: uploadError } = await supabase.storage.from('evidencias').upload(`combustible/${fileName}`, f);
+                    if (!uploadError) {
+                        const { data: publicData } = supabase.storage.from('evidencias').getPublicUrl(`combustible/${fileName}`);
+                        if (publicData) urls[i] = publicData.publicUrl;
+                    } else {
+                        console.warn(`Error subiendo evidencia ${i+1}:`, uploadError);
+                    }
+                }
             }
         }
 
@@ -1241,7 +1280,9 @@ function openEditHistoryModal(record) {
             monto_cobro: monto,
             ubicacion_url: ubicacion,
             notas: notas,
-            evidencia_url: evidencia_url
+            evidencia_url: urls[0],
+            evidencia_url_2: urls[1],
+            evidencia_url_3: urls[2]
         }).eq('id', record.id);
 
         if (error) {
@@ -1360,35 +1401,42 @@ async function printHistoryReport(record) {
     doc.setFont(undefined, 'normal');
     doc.text(record.notas || 'Sin notas.', 15, 140, { maxWidth: 170 });
 
-    if (record.evidencia_url) {
+    let yOffset = 160;
+    const urls = [record.evidencia_url, record.evidencia_url_2, record.evidencia_url_3].filter(Boolean);
+
+    if (urls.length > 0) {
         doc.setFontSize(11);
         doc.setFont(undefined, 'bold');
-        doc.text('EVIDENCIA FOTOGRÁFICA', 15, 160);
-        
-        try {
-            const imgData = await new Promise((resolve) => {
-                const img = new Image();
-                img.crossOrigin = 'Anonymous';
-                img.src = record.evidencia_url;
-                img.onload = () => {
-                    const canvas = document.createElement('canvas');
-                    canvas.width = img.width;
-                    canvas.height = img.height;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0);
-                    resolve(canvas.toDataURL('image/jpeg'));
-                };
-                img.onerror = () => resolve(null);
-            });
-            if (imgData) {
-                // Resize while keeping aspect ratio
-                doc.addImage(imgData, 'JPEG', 15, 165, 100, 100, undefined, 'FAST');
-            } else {
-                doc.setFont(undefined, 'normal');
-                doc.text('(No se pudo cargar la imagen)', 15, 170);
+        doc.text('EVIDENCIA FOTOGRÁFICA', 15, yOffset);
+        yOffset += 5;
+
+        for (let i = 0; i < urls.length; i++) {
+            try {
+                const imgData = await new Promise((resolve) => {
+                    const img = new Image();
+                    img.crossOrigin = 'Anonymous';
+                    img.src = urls[i];
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0);
+                        resolve(canvas.toDataURL('image/jpeg'));
+                    };
+                    img.onerror = () => resolve(null);
+                });
+                if (imgData) {
+                    if (yOffset > 200) {
+                        doc.addPage();
+                        yOffset = 20;
+                    }
+                    doc.addImage(imgData, 'JPEG', 15, yOffset, 80, 80, undefined, 'FAST');
+                    yOffset += 85;
+                }
+            } catch (e) {
+                console.error(e);
             }
-        } catch (e) {
-            console.error(e);
         }
     }
 
