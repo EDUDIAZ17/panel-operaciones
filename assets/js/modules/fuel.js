@@ -367,13 +367,21 @@ async function loadPendingList() {
 
     const { data: pending, error } = await supabase
         .from('cargas_combustible')
-        .select('*, units(economic_number, type), operators(name)')
+        .select('*, units(economic_number, type, capacidad_tanque_litros), operators(name)')
         .eq('status', 'pendiente_carga')
         .order('creado_en', { ascending: false });
 
     if (error) {
         list.innerHTML = `<div class="text-red-500 text-center py-4 font-bold">Error: ${error.message}</div>`;
         return;
+    }
+
+    if (pending) {
+        pending.forEach(p => {
+            if (p.units && p.units.capacidad_tanque_litros > 0) {
+                p.capacidad_maxima = p.units.capacidad_tanque_litros;
+            }
+        });
     }
 
     if (!pending?.length) {
@@ -590,7 +598,8 @@ async function saveRegistroCarga(auth, litrosBomba, litrosBoson, modal) {
             porcentaje_diferencia: porcentaje,
             semaforo,
             monto_cobro:           monto,
-            status:                'completado'
+            status:                'completado',
+            capacidad_maxima:      auth.capacidad_maxima
         })
         .eq('id', auth.id);
 
