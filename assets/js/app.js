@@ -12,6 +12,7 @@ import { renderHistoryReports } from './modules/history_reports.js';
 import { renderTripLogs } from './modules/trip_logs.js';
 import { renderPayrollMap } from './modules/payroll_map.js';
 import { renderFuel } from './modules/fuel.js?v=11.1';
+import { renderSecurityVial } from './modules/security_vial.js';
 import { supabase } from './services/supabaseClient.js';
 
 // DOM Elements
@@ -67,7 +68,8 @@ try {
                 'contabilidad': 'Contabilidad',
                 'otros_usuarios': 'Usuario General',
                 'admin': 'Admin',
-                'atc': 'Atención a Clientes'
+                'atc': 'Atención a Clientes',
+                'seguridad_vial': 'Seguridad Vial'
             };
             return map[role] || role.toUpperCase();
         };
@@ -82,8 +84,8 @@ try {
 
         const allNavs = [
             'nav-assignments', 'nav-trip-logs', 'nav-expenses', 'nav-fuel', 'nav-reports',
-            'nav-client-reports', 'nav-atc-reports', 'nav-history-reports', 'nav-observations',
-            'nav-cameras', 'nav-incidents', 'nav-admin', 'nav-payroll-map'
+            'nav-client-reports', 'nav-atc-reports', 'nav-history-reports', 'nav-security-vial',
+            'nav-observations', 'nav-cameras', 'nav-incidents', 'nav-admin', 'nav-payroll-map'
         ];
 
         if (role === 'mantenimiento' || role === 'manto' || role === 'maintenance') {
@@ -158,8 +160,16 @@ try {
             document.getElementById('nav-expenses')?.classList.add('hidden-section');
             document.getElementById('nav-observations')?.classList.add('hidden-section');
             document.getElementById('nav-reports')?.classList.add('hidden-section');
+            document.getElementById('nav-security-vial')?.classList.add('hidden-section');
             // nav-payroll-map is NOT hidden for Torre de Control now
         } 
+        else if (role === 'seguridad_vial') {
+            allNavs.forEach(nav => {
+                if (nav !== 'nav-security-vial') {
+                    document.getElementById(nav)?.classList.add('hidden-section');
+                }
+            });
+        }
         else if (role === 'contabilidad') {
             allNavs.forEach(nav => {
                 if(nav !== 'nav-expenses' && nav !== 'nav-fuel' && nav !== 'nav-reports' && nav !== 'nav-payroll-map') document.getElementById(nav)?.classList.add('hidden-section');
@@ -297,6 +307,11 @@ function loadView(view) {
             setActiveNav('nav-fuel');
             renderFuel(contentArea);
             break;
+        case 'security-vial':
+            pageTitle.textContent = 'Seguridad Vial ISO 39001';
+            setActiveNav('nav-security-vial');
+            renderSecurityVial(contentArea);
+            break;
     }
 }
 
@@ -359,6 +374,7 @@ attachNav('nav-atc-reports', 'atc-reports');
 attachNav('nav-history-reports', 'history-reports');
 attachNav('nav-payroll-map', 'payroll-map');
 attachNav('nav-fuel', 'fuel');
+attachNav('nav-security-vial', 'security-vial');
 
 const logoutBtn = document.getElementById('logout-btn');
 if (logoutBtn) {
