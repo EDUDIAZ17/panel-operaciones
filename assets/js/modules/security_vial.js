@@ -1267,7 +1267,7 @@ async function loadHistoryData(pane) {
                     confirmButtonColor: '#10b981'
                 }).then(() => {
                     // Navigate to Dashboard tab
-                    document.querySelector('.vial-tab-btn[data-tab=\\'dashboard\\']').click();
+                    document.querySelector('.vial-tab-btn[data-tab="dashboard"]').click();
                 });
             };
         });
@@ -1275,7 +1275,7 @@ async function loadHistoryData(pane) {
 }
 
 // ==========================================
-// WRITE/SAVE ACTION LOGIC (SUPABASE + FIRESTORE)
+// WRITE/SAVE ACTION LOGIC (SUPABASE)
 // ==========================================
 async function saveReportToDatabases(pane) {
     // 1. Collect inputs
