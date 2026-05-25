@@ -8,11 +8,11 @@ const defaultAnswers = {
     'req1_1': 0, 'req1_2': 0, 'req1_3': 0, 'req1_4': 0,
     // 2. Operaciones (200 pts)
     'req2_1': 0, 'req2_2': 0, 'req2_3': 0, 'req2_4': 0,
-    // 3. Monitoreo (150 pts)
-    'req3_1': 0, 'req3_2': 0, 'req3_3': 0,
+    // 3. Monitoreo (160 pts)
+    'req3_1': 0, 'req3_2': 0, 'req3_3': 0, 'req3_4': 0,
     // 4. RH (150 pts)
-    'req4_1': 0, 'req4_2': 0, 'req4_3': 0,
-    // 5. Sistemas (100 pts)
+    'req4_1': 0, 'req4_2': 0, 'req4_3': 0, 'req4_4': 0, 'req4_5': 0,
+    // 5. Sistemas (90 pts)
     'req5_1': 0, 'req5_2': 0,
     // 6. Administración (100 pts)
     'req6_1': 0, 'req6_2': 0,
@@ -66,16 +66,17 @@ const areaConfig = {
     },
     monitoreo: {
         title: 'Monitoreo / Torre de Control',
-        weight: '15%',
-        maxPoints: 150,
+        weight: '16%',
+        maxPoints: 160,
         color: 'text-purple-600',
         bgColor: 'bg-purple-50',
         borderColor: 'border-purple-100',
         badgeColor: 'bg-purple-100 text-purple-800',
         criteria: [
-            { id: 'req3_1', name: 'Req 3.1', label: 'Sistema de telemetría GPS activo con alertas en tiempo real de excesos de velocidad.', max: 50 },
-            { id: 'req3_2', name: 'Req 3.2', label: 'Protocolos activos de reacción ante alertas de pánico, desvíos o paradas no autorizadas.', max: 50 },
-            { id: 'req3_3', name: 'Req 3.3', label: 'Análisis previo de rutas (clima, tráfico, alertas de delincuencia) previo al despacho.', max: 50 }
+            { id: 'req3_1', name: 'Req 3.1', label: 'Sistema de telemetría GPS activo con alertas en tiempo real de excesos de velocidad.', max: 40 },
+            { id: 'req3_2', name: 'Req 3.2', label: 'Protocolos activos de reacción ante alertas de pánico, desvíos o paradas no autorizadas.', max: 40 },
+            { id: 'req3_3', name: 'Req 3.3', label: 'Análisis previo de rutas (clima, tráfico, alertas de delincuencia) previo al despacho.', max: 40 },
+            { id: 'req3_4', name: 'Req 3.4', label: 'Inducción obligatoria a operadores sobre políticas de seguridad vial y telemetría, con cursos mensuales obligatorios de actualización de seguridad vial.', max: 40 }
         ]
     },
     rh: {
@@ -87,22 +88,24 @@ const areaConfig = {
         borderColor: 'border-emerald-100',
         badgeColor: 'bg-emerald-100 text-emerald-800',
         criteria: [
-            { id: 'req4_1', name: 'Req 4.1', label: 'Exámenes psicométricos y aptitud física/mental de conductores antes de contratación.', max: 50 },
-            { id: 'req4_2', name: 'Req 4.2', label: 'Política activa de gestión de fatiga (límites de horas de manejo continuo) y pruebas de dopaje.', max: 50 },
-            { id: 'req4_3', name: 'Req 4.3', label: 'Programa continuo de capacitación en conducción defensiva e incidentes viales.', max: 50 }
+            { id: 'req4_1', name: 'Req 4.1', label: 'Exámenes psicométricos y aptitud física/mental de conductores antes de contratación.', max: 30 },
+            { id: 'req4_2', name: 'Req 4.2', label: 'Política activa de gestión de fatiga (límites de horas de manejo continuo) y pruebas de dopaje.', max: 30 },
+            { id: 'req4_3', name: 'Req 4.3', label: 'Programa continuo de capacitación en conducción defensiva e incidentes viales.', max: 30 },
+            { id: 'req4_4', name: 'Req 4.4', label: 'Protocolo formal de contratación para operadores que exige exámenes de conocimientos teórico-prácticos, pruebas prácticas de carga/descarga y exámenes químicos de antidopaje.', max: 30 },
+            { id: 'req4_5', name: 'Req 4.5', label: 'Programa auditable de dotación de Equipo de Protección Personal (EPP) al inicio de contrato, con esquema de recambio programado cada 3 meses.', max: 30 }
         ]
     },
     sistemas: {
         title: 'Sistemas IT',
-        weight: '10%',
-        maxPoints: 100,
+        weight: '9%',
+        maxPoints: 90,
         color: 'text-indigo-600',
         bgColor: 'bg-indigo-50',
         borderColor: 'border-indigo-100',
         badgeColor: 'bg-indigo-100 text-indigo-800',
         criteria: [
-            { id: 'req5_1', name: 'Req 5.1', label: 'Redundancia y alta disponibilidad de la infraestructura y bases de datos de telemetría.', max: 50 },
-            { id: 'req5_2', name: 'Req 5.2', label: 'Bloqueo automático (MDM) de aplicaciones de mensajería en dispositivos corporativos en tránsito.', max: 50 }
+            { id: 'req5_1', name: 'Req 5.1', label: 'Redundancia y alta disponibilidad de la infraestructura y bases de datos de telemetría.', max: 45 },
+            { id: 'req5_2', name: 'Req 5.2', label: 'Bloqueo automático (MDM) de aplicaciones de mensajería en dispositivos corporativos en tránsito.', max: 45 }
         ]
     },
     direccion: {
@@ -977,12 +980,15 @@ function renderReportTab(pane) {
                     <h3 class="text-md font-extrabold text-slate-700">Guardado Oficial y Reporte</h3>
                     <p class="text-[10px] text-slate-400 font-bold uppercase mt-0.5">Almacena el reporte actual en las bases corporativas</p>
                 </div>
-                <div class="flex gap-2 w-full sm:w-auto">
+                <div class="flex flex-wrap gap-2 w-full sm:w-auto">
                     <button id="vial-save-db-btn" class="flex-1 sm:flex-none py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-xs shadow-md transition flex items-center justify-center gap-2">
                         <i class="fas fa-floppy-disk"></i> Guardar Reporte (Supabase)
                     </button>
                     <button id="vial-export-pdf-btn" class="flex-1 sm:flex-none py-2.5 px-4 bg-slate-800 hover:bg-slate-900 text-white rounded-lg font-bold text-xs shadow-md transition flex items-center justify-center gap-2">
                         <i class="fas fa-file-pdf"></i> Exportar PDF
+                    </button>
+                    <button id="vial-export-excel-btn" class="flex-1 sm:flex-none py-2.5 px-4 bg-green-700 hover:bg-green-800 text-white rounded-lg font-bold text-xs shadow-md transition flex items-center justify-center gap-2">
+                        <i class="fas fa-file-excel"></i> Exportar Excel
                     </button>
                 </div>
             </div>
@@ -1101,9 +1107,10 @@ function renderReportTab(pane) {
         </div>
     `;
 
-    // Hook events for save and pdf
+    // Hook events for save, pdf and excel
     pane.querySelector('#vial-save-db-btn').onclick = () => saveReportToDatabases(pane);
     pane.querySelector('#vial-export-pdf-btn').onclick = () => exportReportPDF(totalScore, compliancePercentage, maturity, lowestAreas, alerts);
+    pane.querySelector('#vial-export-excel-btn').onclick = () => exportReportExcel(totalScore, compliancePercentage, maturity);
 }
 
 // ==========================================
@@ -1543,6 +1550,232 @@ function exportReportPDF(totalScore, compliancePercentage, maturity, lowestAreas
             icon: 'error',
             title: 'Error al Exportar PDF',
             text: 'Hubo un error al compilar el documento PDF: ' + e.message,
+            confirmButtonText: 'Cerrar',
+            confirmButtonColor: '#ef4444'
+        });
+    }
+}
+
+// ==========================================
+// EXCEL EXPORT FUNCTION
+// ==========================================
+function exportReportExcel(totalScore, compliancePercentage, maturity) {
+    if (!window.XLSX) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Librería SheetJS no disponible',
+            text: 'No se pudo cargar la librería XLSX para exportar Excel.',
+            confirmButtonText: 'Cerrar',
+            confirmButtonColor: '#ef4444'
+        });
+        return;
+    }
+
+    try {
+        const XLSX = window.XLSX;
+        
+        // 1. Create a new Workbook
+        const wb = XLSX.utils.book_new();
+
+        // ========================================================
+        // SHEET 1: RESUMEN EJECUTIVO
+        // ========================================================
+        const summaryData = [
+            ["REPORTE EJECUTIVO DE AUDITORÍA - SEGURIDAD VIAL ISO 39001:2012"],
+            [],
+            ["METADATOS GENERALES"],
+            ["Empresa / Organización:", state.companyName || 'Alexa Transportes'],
+            ["Auditor Responsable:", state.auditorName || '---'],
+            ["Fecha de Auditoría:", state.auditDate],
+            [],
+            ["RESULTADOS DEL DIAGNÓSTICO"],
+            ["Puntaje Acumulado:", `${totalScore} / 1,000 puntos`],
+            ["Porcentaje de Cumplimiento:", `${compliancePercentage.toFixed(2)}%`],
+            ["Nivel de Madurez Vial:", maturity.name],
+            ["Descripción de Madurez:", maturity.desc],
+            [],
+            ["DESGLOSE DE CUMPLIMIENTO POR ÁREA"],
+            ["Área Corporativa", "Peso", "Puntos Obtenidos", "Puntos Máximos", "% Cumplimiento"]
+        ];
+
+        const { breakdown } = calculateISO39001(state.answers);
+        Object.keys(areaConfig).forEach(areaKey => {
+            const area = areaConfig[areaKey];
+            const score = breakdown[areaKey] || 0;
+            const pct = (score / area.maxPoints) * 100;
+            summaryData.push([
+                area.title,
+                area.weight,
+                score,
+                area.maxPoints,
+                `${pct.toFixed(1)}%`
+            ]);
+        });
+
+        // Add action plans
+        summaryData.push([], ["RECOMENDACIONES Y PLAN DE ACCIÓN PRIORITARIO"]);
+        const areaCompliance = Object.keys(areaConfig).map(areaKey => {
+            const score = breakdown[areaKey] || 0;
+            const pct = (score / areaConfig[areaKey].maxPoints) * 100;
+            return { key: areaKey, title: areaConfig[areaKey].title, pct };
+        });
+        // Sort lowest compliance first
+        areaCompliance.sort((a, b) => a.pct - b.pct);
+        const lowestThree = areaCompliance.slice(0, 3);
+        
+        lowestThree.forEach((la, idx) => {
+            let actionText = "";
+            if (la.key === 'mantenimiento') {
+                actionText = "Digitalizar el 100% de checklists pre-operativos mecánicos y programar mantenimientos preventivos sistemáticos con alertas automatizadas.";
+            } else if (la.key === 'operaciones') {
+                actionText = "Implementar auditorías rigurosas de trincado, peso de la carga y mapeo georreferenciado de rutas de alto riesgo.";
+            } else if (la.key === 'monitoreo') {
+                actionText = "Establecer protocolos inmediatos de reacción frente a excesos de velocidad y capacitar mensualmente en seguridad vial.";
+            } else if (la.key === 'rh') {
+                actionText = "Fortalecer exámenes teóricos de conocimientos, pruebas prácticas de carga/descarga y programa auditable de dotación trimestral de EPP.";
+            } else if (la.key === 'sistemas') {
+                actionText = "Activar redundancia e implementar políticas de bloqueo de pantalla y mensajería en dispositivos corporativos en tránsito.";
+            } else if (la.key === 'direccion') {
+                actionText = "Constituir el Comité de Seguridad Vial y asignar presupuesto exclusivo protegido para reparaciones urgentes.";
+            } else if (la.key === 'calidad') {
+                actionText = "Auditar formalmente el SGSV de forma semestral y registrar todo siniestro bajo el método de Análisis de Causa Raíz.";
+            } else if (la.key === 'clientes') {
+                actionText = "Habilitar canal público de quejas de conducción e integrar cláusulas de exención de demoras por motivos de seguridad.";
+            }
+            summaryData.push([`Brecha #${idx + 1} - ${la.title}:`, actionText]);
+        });
+
+        const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
+
+        // Styling widths and merges for summary sheet
+        wsSummary['!cols'] = [
+            { wch: 30 }, // A
+            { wch: 75 }, // B
+            { wch: 18 }, // C
+            { wch: 18 }, // D
+            { wch: 18 }  // E
+        ];
+
+        // Merge title
+        wsSummary['!merges'] = [
+            { s: { r: 0, c: 0 }, e: { r: 0, c: 4 } }
+        ];
+
+        XLSX.utils.book_append_sheet(wb, wsSummary, "Resumen Ejecutivo");
+
+        // ========================================================
+        // SHEET 2: CUESTIONARIO DETALLADO
+        // ========================================================
+        const questData = [
+            ["EVALUACIÓN DETALLADA DE REQUISITOS - ISO 39001"],
+            [],
+            ["ID", "Área Corporativa", "Criterio de Evaluación", "Nivel de Cumplimiento", "Puntos Obtenidos", "Puntos Máximos"]
+        ];
+
+        Object.keys(areaConfig).forEach(areaKey => {
+            const area = areaConfig[areaKey];
+            area.criteria.forEach(crit => {
+                const compliance = state.answers[crit.id] || 0;
+                const points = compliance * crit.max;
+                const complianceText = compliance === 0 ? "Nulo (0%)" :
+                                     compliance === 0.25 ? "Inicial (25%)" :
+                                     compliance === 0.50 ? "Parcial (50%)" :
+                                     compliance === 0.75 ? "Avanzado (75%)" : "Total (100%)";
+                questData.push([
+                    crit.name,
+                    area.title,
+                    crit.label,
+                    complianceText,
+                    points,
+                    crit.max
+                ]);
+            });
+        });
+
+        const wsQuest = XLSX.utils.aoa_to_sheet(questData);
+        wsQuest['!cols'] = [
+            { wch: 10 }, // A: ID
+            { wch: 25 }, // B: Area
+            { wch: 85 }, // C: Requisito
+            { wch: 22 }, // D: Cumplimiento
+            { wch: 18 }, // E: Obtenidos
+            { wch: 18 }  // F: Max
+        ];
+        wsQuest['!merges'] = [
+            { s: { r: 0, c: 0 }, e: { r: 0, c: 5 } }
+        ];
+
+        XLSX.utils.book_append_sheet(wb, wsQuest, "Cuestionario Evaluativo");
+
+        // ========================================================
+        // SHEET 3: MATRIZ DE RIESGOS
+        // ========================================================
+        const riskData = [
+            ["MATRIZ DE RIESGOS VIALES (CRITICIDAD 5x5)"],
+            [],
+            ["ID", "Área", "Descripción del Riesgo", "Consecuencia", "Probabilidad", "Severidad", "Nivel (PxS)", "Criticidad", "Medidas de Mitigación"]
+        ];
+
+        if (state.risks && state.risks.length > 0) {
+            state.risks.forEach((r, idx) => {
+                const pxs = r.probability * r.severity;
+                let classification = 'BAJO';
+                if (pxs >= 16) classification = 'CRÍTICO';
+                else if (pxs >= 10) classification = 'ALTO';
+                else if (pxs >= 5) classification = 'MEDIO';
+
+                riskData.push([
+                    `R-${idx + 1}`,
+                    areaConfig[r.area]?.title || r.area,
+                    r.description,
+                    r.consequence,
+                    r.probability,
+                    r.severity,
+                    pxs,
+                    classification,
+                    r.mitigation
+                ]);
+            });
+        } else {
+            riskData.push(["No se registraron riesgos en esta auditoría."]);
+        }
+
+        const wsRisk = XLSX.utils.aoa_to_sheet(riskData);
+        wsRisk['!cols'] = [
+            { wch: 8 },  // A: ID
+            { wch: 25 }, // B: Area
+            { wch: 45 }, // C: Descripcion
+            { wch: 35 }, // D: Consecuencia
+            { wch: 12 }, // E: Probabilidad
+            { wch: 10 }, // F: Severidad
+            { wch: 12 }, // G: PxS
+            { wch: 12 }, // H: Criticidad
+            { wch: 55 }  // I: Mitigacion
+        ];
+        wsRisk['!merges'] = [
+            { s: { r: 0, c: 0 }, e: { r: 0, c: 8 } }
+        ];
+
+        XLSX.utils.book_append_sheet(wb, wsRisk, "Matriz de Riesgos");
+
+        // 4. Trigger Download
+        const companyClean = (state.companyName || 'Alexa').replace(/[^a-zA-Z0-9]/g, '_');
+        XLSX.writeFile(wb, `Auditoria_ISO39001_${companyClean}_${state.auditDate}.xlsx`);
+
+        Swal.fire({
+            icon: 'success',
+            title: 'Excel Generado Correctamente',
+            text: 'El libro de Excel de auditoría se ha descargado en tu dispositivo.',
+            confirmButtonText: 'Excelente',
+            confirmButtonColor: '#10b981'
+        });
+
+    } catch (e) {
+        console.error("Excel generation failed:", e);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error al Exportar Excel',
+            text: 'Hubo un error al compilar el documento Excel: ' + e.message,
             confirmButtonText: 'Cerrar',
             confirmButtonColor: '#ef4444'
         });
