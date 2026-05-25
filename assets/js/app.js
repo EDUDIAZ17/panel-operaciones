@@ -79,8 +79,8 @@ try {
 
         // Role-based UI restrictions
         const role = currentUser.role ? currentUser.role.toLowerCase().trim() : '';
-        window.userRole = role; 
-        console.log("SISTEMA: Rol de usuario detectado ->", role);
+        window.userRole = (role === 'seguridad_vial') ? 'admin' : role; 
+        console.log("SISTEMA: Rol de usuario detectado ->", role, "window.userRole ->", window.userRole);
 
         const allNavs = [
             'nav-assignments', 'nav-trip-logs', 'nav-expenses', 'nav-fuel', 'nav-reports',
