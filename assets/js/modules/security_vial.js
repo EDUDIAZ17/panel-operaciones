@@ -60,7 +60,7 @@ const areaConfig = {
         criteria: [
             { id: 'req2_1', name: 'Req 2.1', label: 'Planificación y programación horaria de rutas que evite presiones de velocidad.', max: 50 },
             { id: 'req2_2', name: 'Req 2.2', label: 'Auditoría y control de peso, dimensiones y trincado de la carga.', max: 50 },
-            { id: 'req2_3', name: 'Req 2.3', label: 'Evaluación, selección y homologación de seguridad vial a transportistas tercerizados.', max: 50 },
+            { id: 'req2_3', name: 'Req 2.3', label: 'Evaluación, selección y homologación de seguridad vial a operadores.', max: 50 },
             { id: 'req2_4', name: 'Req 2.4', label: 'Definición y mapeo de rutas seguras (zonas de descanso, rampas de frenado, puntos ciegos).', max: 50 }
         ]
     },
