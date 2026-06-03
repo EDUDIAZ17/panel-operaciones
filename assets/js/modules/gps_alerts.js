@@ -1278,3 +1278,94 @@ function triggerManualArrival() {
     evaluateProximityAndRender();
     updateMapMarkers();
 }
+
+// Shared function to create or update GPS alert from assignments/trip logs
+window.syncGPSAlertForUnit = async function(unitId, unitNum, destinationName, atcComments, opPhone, m1, m2, m3, wGroup) {
+    if (!destinationName || destinationName === '---') return;
+
+    try {
+        if (typeof google === 'object' && google.maps) {
+            const geocoder = new google.maps.Geocoder();
+            geocoder.geocode({ address: destinationName + ", Mexico" }, async (results, status) => {
+                if (status === 'OK' && results[0]) {
+                    const lat = results[0].geometry.location.lat();
+                    const lng = results[0].geometry.location.lng();
+
+                    const recipients = [];
+                    if (opPhone) recipients.push({ name: 'Operador', phone: opPhone });
+                    if (m1) recipients.push({ name: 'Contacto Ruta 1', phone: m1 });
+                    if (m2) recipients.push({ name: 'Contacto Ruta 2', phone: m2 });
+                    if (m3) recipients.push({ name: 'Contacto Ruta 3', phone: m3 });
+                    if (wGroup) recipients.push({ name: 'Grupo Whatsapp', phone: wGroup, isGroup: true });
+
+                    const payload = {
+                        unit_id: unitId,
+                        destination_name: destinationName,
+                        latitude: lat,
+                        longitude: lng,
+                        radius_km: 15.0,
+                        atc_message: atcComments,
+                        quality_message: DEFAULT_QUALITY_MSG,
+                        recipients: recipients,
+                        status: 'Programada'
+                    };
+
+                    const useLocal = alertState.useLocalStorageFallback || (localStorage.getItem('db-warning-banner') !== null);
+
+                    if (useLocal) {
+                        let localAlerts = JSON.parse(localStorage.getItem('whatsapp_gps_alerts') || '[]');
+                        const existingIdx = localAlerts.findIndex(a => a.unit_id === unitId);
+                        if (existingIdx !== -1) {
+                            localAlerts[existingIdx] = { 
+                                ...localAlerts[existingIdx], 
+                                ...payload, 
+                                status: 'Programada',
+                                triggered_at: null 
+                            };
+                        } else {
+                            localAlerts.unshift({ 
+                                id: 'local_' + Math.random().toString(36).substr(2, 9), 
+                                ...payload, 
+                                created_at: new Date().toISOString() 
+                            });
+                        }
+                        localStorage.setItem('whatsapp_gps_alerts', JSON.stringify(localAlerts));
+                        console.log("GPS-MONITOR: Synced alert in localStorage.");
+                    } else {
+                        // Check in Supabase first
+                        const { data: existing, error: fetchErr } = await supabase.from('whatsapp_gps_alerts')
+                            .select('id')
+                            .eq('unit_id', unitId)
+                            .maybeSingle();
+
+                        if (!fetchErr) {
+                            if (existing) {
+                                await supabase.from('whatsapp_gps_alerts')
+                                    .update({ ...payload, status: 'Programada', triggered_at: null })
+                                    .eq('id', existing.id);
+                                console.log("GPS-MONITOR: Synced/updated alert in Supabase.");
+                            } else {
+                                await supabase.from('whatsapp_gps_alerts')
+                                    .insert([payload]);
+                                console.log("GPS-MONITOR: Synced/created new alert in Supabase.");
+                            }
+                        } else {
+                            // Fallback if table doesn't exist
+                            let localAlerts = JSON.parse(localStorage.getItem('whatsapp_gps_alerts') || '[]');
+                            const existingIdx = localAlerts.findIndex(a => a.unit_id === unitId);
+                            if (existingIdx !== -1) {
+                                localAlerts[existingIdx] = { ...localAlerts[existingIdx], ...payload, status: 'Programada', triggered_at: null };
+                            } else {
+                                localAlerts.unshift({ id: 'local_' + Math.random().toString(36).substr(2, 9), ...payload, created_at: new Date().toISOString() });
+                            }
+                            localStorage.setItem('whatsapp_gps_alerts', JSON.stringify(localAlerts));
+                            console.log("GPS-MONITOR: Fallback synced alert in localStorage.");
+                        }
+                    }
+                }
+            });
+        }
+    } catch(err) {
+        console.error("Failed to sync GPS alert:", err);
+    }
+};

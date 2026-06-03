@@ -88,7 +88,7 @@ async function loadTable() {
     const list = document.getElementById('assignments-body');
     const { data: units, error } = await supabase
         .from('units')
-        .select(`*, operators (id, name)`)
+        .select(`*, operators (id, name, phone)`)
         .order('economic_number');
     
     const { data: allOps } = await supabase.from('operators').select('*').eq('active', true).order('name');
@@ -300,8 +300,9 @@ window.openEditModal = (unitId) => {
                     <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1">Operador</label>
                     <select id="edit-op" class="w-full border-2 border-gray-200 focus:border-blue-500 outline-none p-2 rounded-lg font-medium">
                         <option value="">Sin Asignar</option>
-                        ${ops.map(op => `<option value="${op.id}" ${op.id === unit.current_operator_id ? 'selected' : ''}>${op.name}</option>`).join('')}
+                        ${ops.map(op => `<option value="${op.id}" ${op.id === unit.current_operator_id ? 'selected' : ''}>${op.name} (${op.phone || 'Sin Tel'})</option>`).join('')}
                     </select>
+                    <p id="edit-op-phone-help" class="text-[10px] text-blue-600 mt-1 italic font-medium"></p>
                 </div>
                 
                 <div class="col-span-2">
@@ -395,6 +396,39 @@ window.openEditModal = (unitId) => {
                     <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1">Observaciones</label>
                     <textarea id="edit-comments" class="w-full border-2 border-gray-200 focus:border-blue-500 outline-none p-2 rounded-lg font-medium" rows="2">${currentComments}</textarea>
                 </div>
+
+                <!-- Integración de Alerta GPS por WhatsApp (Edición) -->
+                <div class="col-span-2 bg-emerald-50 p-4 rounded-xl border border-emerald-100 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <h4 class="text-xs font-black text-emerald-800 flex items-center gap-1.5">
+                            <i class="fab fa-whatsapp text-lg"></i> Alerta GPS de WhatsApp al Arribar
+                        </h4>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="edit-wa-enable" class="sr-only peer" checked>
+                            <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
+                        </label>
+                    </div>
+                    <div id="edit-wa-fields" class="space-y-2">
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-[9px] font-bold text-emerald-700 uppercase mb-0.5">Contacto Ruta 1</label>
+                                <input type="text" id="edit-wa-m1" placeholder="Ej: 5512345678" class="w-full border border-emerald-200 focus:border-emerald-500 outline-none p-1.5 rounded text-xs font-medium" value="${localStorage.getItem('last_wa_m1') || ''}">
+                            </div>
+                            <div>
+                                <label class="block text-[9px] font-bold text-emerald-700 uppercase mb-0.5">Contacto Ruta 2</label>
+                                <input type="text" id="edit-wa-m2" placeholder="Ej: 5587654321" class="w-full border border-emerald-200 focus:border-emerald-500 outline-none p-1.5 rounded text-xs font-medium" value="${localStorage.getItem('last_wa_m2') || ''}">
+                            </div>
+                            <div>
+                                <label class="block text-[9px] font-bold text-emerald-700 uppercase mb-0.5">Contacto Ruta 3</label>
+                                <input type="text" id="edit-wa-m3" placeholder="Ej: 5599887766" class="w-full border border-emerald-200 focus:border-emerald-500 outline-none p-1.5 rounded text-xs font-medium" value="${localStorage.getItem('last_wa_m3') || ''}">
+                            </div>
+                            <div>
+                                <label class="block text-[9px] font-bold text-emerald-700 uppercase mb-0.5">Grupo Whatsapp (Opcional)</label>
+                                <input type="text" id="edit-wa-group" placeholder="Enlace de Grupo" class="w-full border border-emerald-200 focus:border-emerald-500 outline-none p-1.5 rounded text-xs font-medium" value="${localStorage.getItem('last_wa_group') || ''}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div class="mt-6 flex justify-end gap-3 pt-4 border-t">
@@ -416,9 +450,15 @@ window.openEditModal = (unitId) => {
         const destino = destinationsArray.join(' | ');
         const destinatario = document.getElementById('edit-destinatario').value;
         const route = document.getElementById('edit-route').value;
-        const comments = document.getElementById('edit-comments').value;
-        const bol = document.getElementById('edit-bol').value;
-        const viaje = document.getElementById('edit-viaje').value;
+        const comments = document.getElementById('edit-comments').value.trim();
+        const bol = document.getElementById('edit-bol').value.trim();
+        const viaje = document.getElementById('edit-viaje').value.trim();
+
+        const waEnable = document.getElementById('edit-wa-enable').checked;
+        const waM1 = document.getElementById('edit-wa-m1').value.trim();
+        const waM2 = document.getElementById('edit-wa-m2').value.trim();
+        const waM3 = document.getElementById('edit-wa-m3').value.trim();
+        const waGroup = document.getElementById('edit-wa-group').value.trim();
 
         // Auto format route if dropdowns used
         let finalRoute = route;
@@ -451,11 +491,37 @@ window.openEditModal = (unitId) => {
 
             supabase.from('assignments_history').insert([{
                 unit_id: unitId,
+                new_operator_id: newOp,
                 action_type: 'Edición Manual',
                 details: historyDetails,
                 modified_by: currentUser.name,
                 timestamp: new Date().toISOString()
             }]).then(()=>{});
+
+            // GPS Whatsapp sync
+            if (waEnable && destino) {
+                // Save contacts for next auto-fill
+                localStorage.setItem('last_wa_m1', waM1);
+                localStorage.setItem('last_wa_m2', waM2);
+                localStorage.setItem('last_wa_m3', waM3);
+                localStorage.setItem('last_wa_group', waGroup);
+
+                // Fetch Operator phone
+                const selectedOp = (window.operatorsData || []).find(o => o.id === newOp);
+                const opPhone = selectedOp ? (selectedOp.phone || '') : '';
+
+                // Combine ATC message
+                let atcText = `[ATC LOGÍSTICA] Unidad: ${unit.economic_number} | Cliente: ${cliente || 'N/A'} | Viaje: ${viaje || 'N/A'}`;
+                if (comments) atcText += ` | Observaciones: ${comments}`;
+
+                // Extract last destination city
+                const dests = destino.split(' | ').filter(v=>v);
+                const targetDestCity = dests[dests.length - 1] || '';
+
+                if (window.syncGPSAlertForUnit) {
+                    await window.syncGPSAlertForUnit(unitId, unit.economic_number, targetDestCity, atcText, opPhone, waM1, waM2, waM3, waGroup);
+                }
+            }
 
             modal.remove();
             loadTable();
@@ -467,6 +533,24 @@ window.openEditModal = (unitId) => {
     clientSelect.addEventListener('change', () => {
         window.handleDynamicSelect('edit-client', 'clients');
     });
+
+    const editOpSelect = document.getElementById('edit-op');
+    const updateEditOpPhoneHelp = () => {
+        const opId = editOpSelect.value;
+        const op = ops.find(o => o.id === opId);
+        const help = document.getElementById('edit-op-phone-help');
+        if (help) {
+            if (op) {
+                help.textContent = op.phone ? `📞 Teléfono: ${op.phone}` : '⚠️ Operador sin teléfono registrado en sistema';
+            } else {
+                help.textContent = '⚠️ Sin operador asignado';
+            }
+        }
+    };
+    if (editOpSelect) {
+        editOpSelect.addEventListener('change', updateEditOpPhoneHelp);
+        updateEditOpPhoneHelp();
+    }
 }
 
 window.addEditDestination = () => {
@@ -504,13 +588,19 @@ window.openScheduleModal = () => {
     const clients = window.clientsData || [];
     const destinations = window.destinationsData || []; // fixed reference to destinationsData
     const locationsList = window.locationsData || [];
+    const ops = window.operatorsData || [];
+
+    // Pre-fill local date/time (YYYY-MM-DDTHH:MM)
+    const now = new Date();
+    const tzoffset = now.getTimezoneOffset() * 60000;
+    const localIso = (new Date(now - tzoffset)).toISOString().slice(0, 16);
 
     const modal = document.createElement('div');
     modal.className = 'fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 fade-in';
     modal.innerHTML = `
         <div class="bg-white rounded-xl p-6 w-[32rem] shadow-2xl border border-gray-100">
             <h3 class="text-xl font-black mb-6 border-b pb-2 text-purple-700"><i class="fas fa-calendar-alt mr-2"></i> Programar Nuevo Viaje</h3>
-            <p class="text-xs text-gray-500 mb-4 bg-gray-50 p-2 rounded border border-gray-200"><i class="fas fa-info-circle text-blue-500"></i> Solo se muestran unidades sin viaje activo. Al programar, el contador de tiempo de inactividad se reiniciará a cero.</p>
+            <p class="text-xs text-gray-500 mb-4 bg-gray-50 p-2 rounded border border-gray-200"><i class="fas fa-info-circle text-blue-500"></i> Solo se muestran unidades sin viaje activo. Al programar, el contador de tiempo de inactividad se reiniciará a cero y se cargará automáticamente el operador de la unidad.</p>
             
             <div class="grid grid-cols-2 gap-4 max-h-[70vh] overflow-y-auto custom-scrollbar pr-2">
                 <div class="col-span-2">
@@ -520,9 +610,18 @@ window.openScheduleModal = () => {
                     </select>
                 </div>
 
+                <div class="col-span-2 animate-content-fade-in">
+                    <label class="block text-xs font-bold text-purple-600 uppercase tracking-wider mb-1">Operador Asignado (Auto)</label>
+                    <select id="sched-op" class="w-full border-2 border-purple-100 focus:border-purple-500 outline-none p-2 rounded-lg font-medium bg-purple-50">
+                        <option value="">Sin Asignar</option>
+                        ${ops.map(op => `<option value="${op.id}">${op.name} (${op.phone || 'Sin Teléfono'})</option>`).join('')}
+                    </select>
+                    <p id="sched-op-phone-help" class="text-[10px] text-purple-600 mt-1 italic font-medium"></p>
+                </div>
+
                 <div class="col-span-2">
                     <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1">Fecha y Hora de Salida <span class="text-red-500">*</span></label>
-                    <input type="datetime-local" id="sched-date" class="w-full border-2 border-gray-200 focus:border-purple-500 outline-none p-2 rounded-lg font-medium">
+                    <input type="datetime-local" id="sched-date" class="w-full border-2 border-gray-200 focus:border-purple-500 outline-none p-2 rounded-lg font-medium" value="${localIso}">
                 </div>
 
                 <div class="col-span-2">
@@ -555,7 +654,7 @@ window.openScheduleModal = () => {
                         <div class="flex gap-2 items-center dest-row">
                             <select class="flex-1 border-2 border-gray-200 focus:border-purple-500 outline-none p-2 rounded-lg font-medium sched-dest-item" onchange="window.handleDynamicSelect(this, 'locations')">
                                 <option value="">Seleccionar Destino...</option>
-                                ${window.locationsData.map(d => `<option value="${d.name}">${d.name}</option>`).join('')}
+                                ${locationsList.map(d => `<option value="${d.name}">${d.name}</option>`).join('')}
                                 <option value="__NEW__" class="font-bold text-green-600">+ Agregar Nuevo...</option>
                             </select>
                         </div>
@@ -575,6 +674,54 @@ window.openScheduleModal = () => {
                     <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1">Ruta Libre (Opcional)</label>
                     <input type="text" id="sched-route" class="w-full border-2 border-gray-200 focus:border-purple-500 outline-none p-2 rounded-lg font-medium" placeholder="Ej: Viaje a Monterrey directo">
                 </div>
+
+                <!-- Campos de Viaje / BOL -->
+                <div class="col-span-1" id="sched-field-viaje">
+                    <label class="block text-xs font-bold text-teal-600 uppercase tracking-wider mb-1">Número de Viaje</label>
+                    <input type="text" id="sched-viaje" class="w-full border-2 border-teal-100 focus:border-teal-500 outline-none p-2 rounded-lg font-medium bg-teal-50" placeholder="Ej: VJ-10293">
+                </div>
+                <div class="col-span-1" id="sched-field-bol">
+                    <label class="block text-xs font-bold text-blue-600 uppercase tracking-wider mb-1">BOL / Referencia</label>
+                    <input type="text" id="sched-bol" class="w-full border-2 border-blue-100 focus:border-blue-500 outline-none p-2 rounded-lg font-medium bg-blue-50" placeholder="Ej: BOL-99281">
+                </div>
+
+                <div class="col-span-2">
+                    <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1">Observaciones</label>
+                    <textarea id="sched-comments" class="w-full border-2 border-gray-200 focus:border-purple-500 outline-none p-2 rounded-lg font-medium" rows="2" placeholder="Notas o comentarios sobre la programación..."></textarea>
+                </div>
+
+                <!-- Integración de Alerta GPS por WhatsApp (Programación) -->
+                <div class="col-span-2 bg-emerald-50 p-4 rounded-xl border border-emerald-100 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <h4 class="text-xs font-black text-emerald-800 flex items-center gap-1.5">
+                            <i class="fab fa-whatsapp text-lg"></i> Alerta GPS de WhatsApp al Arribar
+                        </h4>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="sched-wa-enable" class="sr-only peer" checked>
+                            <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
+                        </label>
+                    </div>
+                    <div id="sched-wa-fields" class="space-y-2">
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-[9px] font-bold text-emerald-700 uppercase mb-0.5">Contacto Ruta 1</label>
+                                <input type="text" id="sched-wa-m1" placeholder="Ej: 5512345678" class="w-full border border-emerald-200 focus:border-emerald-500 outline-none p-1.5 rounded text-xs font-medium" value="${localStorage.getItem('last_wa_m1') || ''}">
+                            </div>
+                            <div>
+                                <label class="block text-[9px] font-bold text-emerald-700 uppercase mb-0.5">Contacto Ruta 2</label>
+                                <input type="text" id="sched-wa-m2" placeholder="Ej: 5587654321" class="w-full border border-emerald-200 focus:border-emerald-500 outline-none p-1.5 rounded text-xs font-medium" value="${localStorage.getItem('last_wa_m2') || ''}">
+                            </div>
+                            <div>
+                                <label class="block text-[9px] font-bold text-emerald-700 uppercase mb-0.5">Contacto Ruta 3</label>
+                                <input type="text" id="sched-wa-m3" placeholder="Ej: 5599887766" class="w-full border border-emerald-200 focus:border-emerald-500 outline-none p-1.5 rounded text-xs font-medium" value="${localStorage.getItem('last_wa_m3') || ''}">
+                            </div>
+                            <div>
+                                <label class="block text-[9px] font-bold text-emerald-700 uppercase mb-0.5">Grupo Whatsapp (Opcional)</label>
+                                <input type="text" id="sched-wa-group" placeholder="Enlace de Grupo" class="w-full border border-emerald-200 focus:border-emerald-500 outline-none p-1.5 rounded text-xs font-medium" value="${localStorage.getItem('last_wa_group') || ''}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div class="mt-6 flex justify-end gap-3 pt-4 border-t">
@@ -585,8 +732,42 @@ window.openScheduleModal = () => {
     `;
     document.body.appendChild(modal);
 
+    const unitSelect = document.getElementById('sched-unit');
+    const opSelect = document.getElementById('sched-op');
+
+    const updateOperatorForSelectedUnit = () => {
+        const selectedUnitId = unitSelect.value;
+        const selectedUnit = units.find(u => u.id === selectedUnitId);
+        if (selectedUnit && selectedUnit.current_operator_id) {
+            opSelect.value = selectedUnit.current_operator_id;
+        } else {
+            opSelect.value = '';
+        }
+        updateOpPhoneHelp();
+    };
+
+    const updateOpPhoneHelp = () => {
+        const opId = opSelect.value;
+        const op = ops.find(o => o.id === opId);
+        const help = document.getElementById('sched-op-phone-help');
+        if (help) {
+            if (op) {
+                help.textContent = op.phone ? `📞 Teléfono: ${op.phone}` : '⚠️ Operador sin teléfono registrado en sistema';
+            } else {
+                help.textContent = '⚠️ Sin operador asignado en sistema';
+            }
+        }
+    };
+
+    if (unitSelect && opSelect) {
+        unitSelect.addEventListener('change', updateOperatorForSelectedUnit);
+        opSelect.addEventListener('change', updateOpPhoneHelp);
+        updateOperatorForSelectedUnit(); // Ejecutar carga inicial
+    }
+
     document.getElementById('btn-save-sched').onclick = async () => {
         const unitId = document.getElementById('sched-unit').value;
+        const newOp = document.getElementById('sched-op').value || null;
         const date = document.getElementById('sched-date').value;
         const cliente = document.getElementById('sched-client').value;
         const origen = document.getElementById('sched-origin').value;
@@ -597,8 +778,17 @@ window.openScheduleModal = () => {
 
         const destinatario = document.getElementById('sched-destinatario').value;
         const route = document.getElementById('sched-route').value;
+        const comments = document.getElementById('sched-comments').value.trim();
+        const bol = document.getElementById('sched-bol').value.trim();
+        const viaje = document.getElementById('sched-viaje').value.trim();
 
-        if(!date) return alert("Selecciona fecha");
+        const waEnable = document.getElementById('sched-wa-enable').checked;
+        const waM1 = document.getElementById('sched-wa-m1').value.trim();
+        const waM2 = document.getElementById('sched-wa-m2').value.trim();
+        const waM3 = document.getElementById('sched-wa-m3').value.trim();
+        const waGroup = document.getElementById('sched-wa-group').value.trim();
+
+        if(!date) return alert("Selecciona fecha y hora de salida");
         
         let finalRoute = route;
         if(origen && destino && !route.trim()) {
@@ -607,6 +797,7 @@ window.openScheduleModal = () => {
         if(!finalRoute.trim()) return alert("Debes indicar Origen y Destino, o escribir una Ruta Libre.");
 
         const currentUser = JSON.parse(sessionStorage.getItem('currentUser'));
+        const unit = units.find(u => u.id === unitId);
         
         const newDetails = {
             scheduled_trip: date,
@@ -615,11 +806,15 @@ window.openScheduleModal = () => {
             cliente: cliente,
             destinatario: destinatario,
             origen: origen,
-            destino: destino
+            destino: destino,
+            comments: comments,
+            bol: bol,
+            viaje: viaje
         };
 
         const { error } = await supabase.from('units').update({
             status: 'Vacia', // Se pone en patio
+            current_operator_id: newOp,
             details: newDetails,
             last_status_update: new Date(date).toISOString(), // Setting timer to scheduled date for countdown
             last_modified_by: currentUser.name
@@ -629,17 +824,44 @@ window.openScheduleModal = () => {
         else {
             supabase.from('assignments_history').insert([{
                 unit_id: unitId,
+                new_operator_id: newOp,
                 action_type: 'Viaje Programado',
                 details: `Programado para ${date} | Cliente: ${cliente} | Ruta: ${finalRoute}. Se pasó a Vacia (Patio).`,
                 modified_by: currentUser.name,
                 timestamp: new Date().toISOString()
             }]).then(()=>{});
 
+            // GPS Whatsapp sync
+            if (waEnable && destino) {
+                // Save contacts for next auto-fill
+                localStorage.setItem('last_wa_m1', waM1);
+                localStorage.setItem('last_wa_m2', waM2);
+                localStorage.setItem('last_wa_m3', waM3);
+                localStorage.setItem('last_wa_group', waGroup);
+
+                // Fetch Operator phone
+                const selectedOp = (window.operatorsData || []).find(o => o.id === newOp);
+                const opPhone = selectedOp ? (selectedOp.phone || '') : '';
+
+                // Combine ATC message
+                let atcText = `[ATC LOGÍSTICA] Unidad: ${unit.economic_number} | Cliente: ${cliente || 'N/A'} | Viaje: ${viaje || 'N/A'}`;
+                if (comments) atcText += ` | Observaciones: ${comments}`;
+
+                // Extract last destination city
+                const dests = destino.split(' | ').filter(v=>v);
+                const targetDestCity = dests[dests.length - 1] || '';
+
+                if (window.syncGPSAlertForUnit) {
+                    await window.syncGPSAlertForUnit(unitId, unit.economic_number, targetDestCity, atcText, opPhone, waM1, waM2, waM3, waGroup);
+                }
+            }
+
             alert("Viaje Programado exitosamente.");
             modal.remove();
             loadTable();
         }
     };
+};
 }
 
 // 2.5 Finish Trip Modal

@@ -74,6 +74,7 @@ export async function renderAdmin(container) {
                                     <th class="px-6 py-4">Tipo</th>
                                     <th class="px-6 py-4">Placas</th>
                                     <th class="px-6 py-4 text-right">Capacidad (L)</th>
+                                    <th class="px-6 py-4">Operador Asignado</th>
                                     <th class="px-6 py-4">Estatus</th>
                                     <th class="px-6 py-4 text-right">Acciones</th>
                                 </tr>
@@ -223,11 +224,13 @@ async function loadOperators() {
 
 async function loadUnits() {
     const list = document.getElementById('admin-units-body');
-    const { data: units } = await supabase.from('units').select('*').order('economic_number');
+    const { data: units } = await supabase.from('units').select('*, operators(name)').order('economic_number');
 
     if(!units) return;
 
-    list.innerHTML = units.map(u => `
+    list.innerHTML = units.map(u => {
+        const opName = u.operators?.name || '<span class="text-gray-400 italic">Sin Operador</span>';
+        return `
         <tr class="hover:bg-gray-50 transition">
             <td class="px-6 py-4 font-bold text-gray-800">${u.economic_number}</td>
             <td class="px-6 py-4 text-sm text-gray-600">${u.type}</td>
@@ -237,6 +240,7 @@ async function loadUnits() {
                     ${u.capacidad_tanque_litros ? u.capacidad_tanque_litros.toLocaleString('es-MX') + ' L' : '—'}
                 </span>
             </td>
+            <td class="px-6 py-4 text-sm text-gray-700 font-medium">${opName}</td>
             <td class="px-6 py-4">
                 <span class="text-xs uppercase font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded border border-blue-100">${u.status}</span>
             </td>
@@ -249,7 +253,7 @@ async function loadUnits() {
                 </button>
             </td>
         </tr>
-    `).join('');
+    `}).join('');
 
     list.querySelectorAll('.edit-unit').forEach(btn => 
         btn.onclick = () => openUnitModal(units.find(u => u.id === btn.dataset.id))
@@ -333,8 +337,12 @@ function openOperatorModal(op = null) {
     };
 }
 
-function openUnitModal(unit = null) {
+async function openUnitModal(unit = null) {
     const container = document.getElementById('admin-modal-container');
+    
+    // Fetch active operators for mapping
+    const { data: ops } = await supabase.from('operators').select('id, name').eq('active', true).order('name');
+    
     const modal = document.createElement('div');
     modal.className = 'fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] fade-in';
     modal.innerHTML = `
@@ -366,6 +374,13 @@ function openUnitModal(unit = null) {
                         min="0" step="1" placeholder="900" />
                     <p class="text-[10px] text-gray-400 mt-1">Madrinas = 900 L · Pipas = 1500 L (editable por admin)</p>
                 </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1">Operador Asignado Fijo</label>
+                    <select id="modal-unit-operator" class="w-full border p-3 rounded-xl bg-gray-50 font-medium">
+                        <option value="">Sin Operador</option>
+                        ${(ops || []).map(o => `<option value="${o.id}" ${unit?.current_operator_id === o.id ? 'selected' : ''}>${o.name}</option>`).join('')}
+                    </select>
+                </div>
             </div>
             <div class="mt-8 flex justify-end gap-3">
                 <button class="px-6 py-2 text-gray-500 font-bold hover:bg-gray-100 rounded-xl" onclick="this.closest('.fixed').remove()">Cancelar</button>
@@ -380,10 +395,11 @@ function openUnitModal(unit = null) {
         const type                   = document.getElementById('modal-unit-type').value;
         const placas                 = document.getElementById('modal-unit-placas').value.trim();
         const capacidad_tanque_litros = parseFloat(document.getElementById('modal-unit-capacidad').value) || 0;
+        const current_operator_id    = document.getElementById('modal-unit-operator').value || null;
 
         if (!economic_number) return;
 
-        const payload = { economic_number, type, placas, capacidad_tanque_litros };
+        const payload = { economic_number, type, placas, capacidad_tanque_litros, current_operator_id };
 
         const { error } = unit
             ? await supabase.from('units').update(payload).eq('id', unit.id)

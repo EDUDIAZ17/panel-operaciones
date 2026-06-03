@@ -170,6 +170,52 @@ export function renderExpenses(container) {
     loadUnits();
     loadExpenseHistory();
     document.getElementById('exp-date').valueAsDate = new Date();
+
+    const expUnitSelect = document.getElementById('exp-unit');
+    if (expUnitSelect) {
+        expUnitSelect.addEventListener('change', (e) => {
+            const unitId = e.target.value;
+            const unit = (window.allUnitsForExpenses || []).find(u => u.id === unitId);
+            if (unit) {
+                // 1. Auto-select Operator
+                if (unit.current_operator_id) {
+                    const opSelect = document.getElementById('exp-operator');
+                    if (opSelect) {
+                        opSelect.value = unit.current_operator_id;
+                    }
+                } else {
+                    const opSelect = document.getElementById('exp-operator');
+                    if (opSelect) {
+                        opSelect.value = '';
+                    }
+                }
+
+                // 2. Auto-fill Route
+                let parsedDetails = unit.details;
+                if (typeof parsedDetails === 'string') {
+                    try { parsedDetails = JSON.parse(parsedDetails); } catch(err) {}
+                }
+                const routeInput = document.getElementById('exp-route');
+                if (routeInput) {
+                    if (parsedDetails && typeof parsedDetails === 'object') {
+                        routeInput.value = parsedDetails.route || (parsedDetails.origen && parsedDetails.destino ? `${parsedDetails.origen} - ${parsedDetails.destino}` : '');
+                    } else {
+                        routeInput.value = '';
+                    }
+                }
+
+                // 3. Auto-select Trayecto
+                const tripTypeSelect = document.getElementById('exp-trip-type');
+                if (tripTypeSelect) {
+                    if (unit.status === 'Cargada' || unit.status === 'Transito Carga') {
+                        tripTypeSelect.value = 'Cargada';
+                    } else if (unit.status === 'Vacia' || unit.status === 'Transito Vacio') {
+                        tripTypeSelect.value = 'Vacía';
+                    }
+                }
+            }
+        });
+    }
     
     // Listeners for calc
     const inputs = document.querySelectorAll('input[type="number"], textarea');
@@ -212,13 +258,14 @@ export function renderExpenses(container) {
 async function loadOperators() {
     const select = document.getElementById('exp-operator');
     const { data: ops } = await supabase.from('operators').select('*').order('name');
-    select.innerHTML = ops.map(op => `<option value="${op.id}" data-name="${op.name}">${op.name}</option>`).join('');
+    select.innerHTML = '<option value="">— Seleccionar operador —</option>' + ops.map(op => `<option value="${op.id}" data-name="${op.name}">${op.name}</option>`).join('');
 }
 
 async function loadUnits() {
     const select = document.getElementById('exp-unit');
     const { data: units } = await supabase.from('units').select('*').order('economic_number');
-    select.innerHTML = units.map(u => `<option value="${u.id}">${u.economic_number} (${u.type})</option>`).join('');
+    window.allUnitsForExpenses = units || [];
+    select.innerHTML = '<option value="">— Seleccionar unidad —</option>' + units.map(u => `<option value="${u.id}">${u.economic_number} (${u.type})</option>`).join('');
 }
 
 async function loadExpenseHistory() {
