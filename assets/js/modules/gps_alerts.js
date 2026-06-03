@@ -290,18 +290,64 @@ export async function renderGPSAlerts(container) {
         };
     }
 
-    // Load custom integrations config
-    const savedWebhook = localStorage.getItem('gps_alert_webhook_url') || '';
-    const savedWebhookEnabled = localStorage.getItem('gps_alert_webhook_enabled') === 'true';
-    document.getElementById('webhook-url').value = savedWebhook;
-    document.getElementById('webhook-enabled').checked = savedWebhookEnabled;
+    // Load custom integrations config (database-backed with localStorage fallback)
+    let savedWebhook = '';
+    let savedWebhookEnabled = false;
 
-    document.getElementById('webhook-url').onchange = (e) => {
-        localStorage.setItem('gps_alert_webhook_url', e.target.value.trim());
+    try {
+        const { data: dbSetting } = await supabase
+            .from('system_settings')
+            .select('setting_value')
+            .eq('setting_key', 'gps_alert_webhook')
+            .maybeSingle();
+        if (dbSetting && dbSetting.setting_value) {
+            savedWebhook = dbSetting.setting_value.url || '';
+            savedWebhookEnabled = dbSetting.setting_value.enabled === true;
+        } else {
+            savedWebhook = localStorage.getItem('gps_alert_webhook_url') || '';
+            savedWebhookEnabled = localStorage.getItem('gps_alert_webhook_enabled') === 'true';
+        }
+    } catch(err) {
+        console.warn("Failed to load settings from Supabase system_settings:", err);
+        savedWebhook = localStorage.getItem('gps_alert_webhook_url') || '';
+        savedWebhookEnabled = localStorage.getItem('gps_alert_webhook_enabled') === 'true';
+    }
+
+    const inputUrl = document.getElementById('webhook-url');
+    const inputEnabled = document.getElementById('webhook-enabled');
+    if (inputUrl) inputUrl.value = savedWebhook;
+    if (inputEnabled) inputEnabled.checked = savedWebhookEnabled;
+
+    const saveSettingsToDB = async () => {
+        const url = document.getElementById('webhook-url').value.trim();
+        const enabled = document.getElementById('webhook-enabled').checked;
+        localStorage.setItem('gps_alert_webhook_url', url);
+        localStorage.setItem('gps_alert_webhook_enabled', enabled);
+
+        try {
+            const { data: existing } = await supabase
+                .from('system_settings')
+                .select('id')
+                .eq('setting_key', 'gps_alert_webhook')
+                .maybeSingle();
+
+            if (existing) {
+                await supabase
+                    .from('system_settings')
+                    .update({ setting_value: { url, enabled }, updated_at: new Date().toISOString() })
+                    .eq('id', existing.id);
+            } else {
+                await supabase
+                    .from('system_settings')
+                    .insert([{ setting_key: 'gps_alert_webhook', setting_value: { url, enabled } }]);
+            }
+        } catch(err) {
+            console.error("Failed to save settings to Supabase system_settings:", err);
+        }
     };
-    document.getElementById('webhook-enabled').onchange = (e) => {
-        localStorage.setItem('gps_alert_webhook_enabled', e.target.checked);
-    };
+
+    if (inputUrl) inputUrl.onchange = saveSettingsToDB;
+    if (inputEnabled) inputEnabled.onchange = saveSettingsToDB;
 
     // Bind refresh buttons
     document.getElementById('btn-refresh-gps').onclick = loadGPSAlertsData;
@@ -911,11 +957,11 @@ async function fireWhatsAppDispatcherModal(alertId) {
     const qualMsg = alert.quality_message || '';
     const fullMessage = `🚨 *NOTIFICACIÓN DE ARRIBADA GPS* 🚨\n\n🚛 *Unidad:* ${unitNum}\n👤 *Operador:* ${operatorName}\n📍 *Destino:* ${alert.destination_name}\n\n====================\n💬 *INSTRUCCIONES ATC:*\n${atcMsg}\n\n====================\n⭐ *CALIDAD Y SEGURO YORO:*\n${qualMsg}`;
 
-    // Auto Webhook trigger check with DOM guards
+    // Auto Webhook trigger check with DOM guards and localStorage fallback
     const webhookEl = document.getElementById('webhook-enabled');
     const webhookUrlEl = document.getElementById('webhook-url');
-    const isWebhookActive = webhookEl ? webhookEl.checked : false;
-    const webhookUrl = webhookUrlEl ? webhookUrlEl.value.trim() : '';
+    const isWebhookActive = webhookEl ? webhookEl.checked : (localStorage.getItem('gps_alert_webhook_enabled') === 'true');
+    const webhookUrl = webhookUrlEl ? webhookUrlEl.value.trim() : (localStorage.getItem('gps_alert_webhook_url') || '');
 
     if (isWebhookActive && webhookUrl) {
         console.log("GPS-MONITOR: Webhook automation is active. Calling URL:", webhookUrl);
