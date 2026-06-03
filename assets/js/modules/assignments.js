@@ -862,7 +862,6 @@ window.openScheduleModal = () => {
         }
     };
 };
-}
 
 // 2.5 Finish Trip Modal
 window.openFinishTripModal = (unitId) => {
