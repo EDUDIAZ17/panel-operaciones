@@ -21,6 +21,18 @@ const alertState = {
 export async function renderGPSAlerts(container) {
     container.innerHTML = `
         <div id="view-gps-alerts" class="p-6 fade-in space-y-6 bg-slate-50 min-h-full">
+            <!-- Warning Banner for missing table -->
+            <div id="db-warning-banner" class="hidden bg-rose-50 border-l-4 border-rose-500 p-4 rounded-r-xl shadow-sm animate-pulse">
+                <div class="flex items-start gap-3">
+                    <div class="text-rose-600 mt-0.5"><i class="fas fa-exclamation-triangle text-lg"></i></div>
+                    <div class="flex-1">
+                        <h4 class="text-xs font-black text-rose-800 uppercase tracking-wider">Base de datos desincronizada</h4>
+                        <p class="text-[11px] text-rose-700 mt-1">La tabla <b>whatsapp_gps_alerts</b> no existe en la base de datos de Supabase. Se activó el <b>modo de demostración local (localStorage)</b>. Las alertas funcionarán temporalmente en este navegador, pero debes ejecutar el script SQL <b>v13_whatsapp_gps_alerts.sql</b> en la consola SQL de Supabase para guardarlas permanentemente.</p>
+                    </div>
+                    <button onclick="this.parentElement.parentElement.remove()" class="text-rose-400 hover:text-rose-600 text-sm"><i class="fas fa-times"></i></button>
+                </div>
+            </div>
+
             <!-- Alert Stats Grid -->
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4">
@@ -259,19 +271,22 @@ export async function renderGPSAlerts(container) {
 
     // Toggle simulation panel
     const btnSim = document.getElementById('btn-toggle-simulation');
-    btnSim.onclick = () => {
-        const panel = document.getElementById('sim-control-panel');
-        panel.classList.toggle('hidden');
-        if (!panel.classList.contains('hidden')) {
-            btnSim.classList.remove('bg-amber-500', 'hover:bg-amber-600');
-            btnSim.classList.add('bg-slate-700', 'hover:bg-slate-800');
-            btnSim.innerHTML = `<i class="fas fa-eye"></i> Ocultar Simulador`;
-        } else {
-            btnSim.classList.remove('bg-slate-700', 'hover:bg-slate-800');
-            btnSim.classList.add('bg-amber-500', 'hover:bg-amber-600');
-            btnSim.innerHTML = `<i class="fas fa-gamepad"></i> Habilitar Simulador GPS`;
-        }
-    };
+    if (btnSim) {
+        btnSim.onclick = () => {
+            const panel = document.getElementById('sim-control-panel');
+            if (!panel) return;
+            panel.classList.toggle('hidden');
+            if (!panel.classList.contains('hidden')) {
+                btnSim.classList.remove('bg-amber-500', 'hover:bg-amber-600');
+                btnSim.classList.add('bg-slate-700', 'hover:bg-slate-800');
+                btnSim.innerHTML = `<i class="fas fa-eye"></i> Ocultar Simulador`;
+            } else {
+                btnSim.classList.remove('bg-slate-700', 'hover:bg-slate-800');
+                btnSim.classList.add('bg-amber-500', 'hover:bg-amber-600');
+                btnSim.innerHTML = `<i class="fas fa-gamepad"></i> Habilitar Simulador GPS`;
+            }
+        };
+    }
 
     // Load custom integrations config
     const savedWebhook = localStorage.getItem('gps_alert_webhook_url') || '';
@@ -388,15 +403,28 @@ async function loadGPSAlertsData() {
     }
 
     // 2. Fetch Active WhatsApp Alert configs
-    const { data: alertsData, error: aErr } = await supabase
-        .from('whatsapp_gps_alerts')
-        .select('*')
-        .order('created_at', { ascending: false });
+    try {
+        const { data: alertsData, error: aErr } = await supabase
+            .from('whatsapp_gps_alerts')
+            .select('*')
+            .order('created_at', { ascending: false });
 
-    if (aErr) {
-        console.error("Error loading whatsapp GPS alerts:", aErr);
-    } else {
-        alertState.alerts = alertsData || [];
+        if (aErr) {
+            console.error("Error loading whatsapp GPS alerts:", aErr);
+            throw aErr;
+        } else {
+            alertState.alerts = alertsData || [];
+            alertState.useLocalStorageFallback = false;
+            const banner = document.getElementById('db-warning-banner');
+            if (banner) banner.classList.add('hidden');
+        }
+    } catch (err) {
+        console.log("GPS-MONITOR: Table 'whatsapp_gps_alerts' not found or inaccessible. Falling back to local storage.");
+        alertState.useLocalStorageFallback = true;
+        const localData = localStorage.getItem('whatsapp_gps_alerts');
+        alertState.alerts = localData ? JSON.parse(localData) : [];
+        const banner = document.getElementById('db-warning-banner');
+        if (banner) banner.classList.remove('hidden');
     }
 
     // 3. Fetch Samsara live locations
@@ -574,18 +602,24 @@ function evaluateProximityAndRender() {
 
         // Eval trigger condition
         if (alert.status === 'Programada' && lat !== null && lng !== null && distanceKm <= Number(alert.radius_km)) {
-            // Triggered! Update local status and push to Supabase
             alert.status = 'Disparada';
-            supabase.from('whatsapp_gps_alerts')
-                .update({ status: 'Disparada', triggered_at: new Date().toISOString() })
-                .eq('id', alert.id)
-                .then(({ error }) => {
-                    if (error) console.error("Error updating trigger state:", error);
-                    else {
-                        // Play alert sound if wanted, notify UI
-                        fireWhatsAppDispatcherModal(alert.id);
-                    }
-                });
+            alert.triggered_at = new Date().toISOString();
+            if (alertState.useLocalStorageFallback) {
+                // Save updated array to localstorage
+                localStorage.setItem('whatsapp_gps_alerts', JSON.stringify(alertState.alerts));
+                fireWhatsAppDispatcherModal(alert.id);
+            } else {
+                supabase.from('whatsapp_gps_alerts')
+                    .update({ status: 'Disparada', triggered_at: new Date().toISOString() })
+                    .eq('id', alert.id)
+                    .then(({ error }) => {
+                        if (error) console.error("Error updating trigger state:", error);
+                        else {
+                            // Play alert sound if wanted, notify UI
+                            fireWhatsAppDispatcherModal(alert.id);
+                        }
+                    });
+            }
         }
 
         // Stats classification
@@ -712,11 +746,26 @@ async function handleFormSubmit(e) {
         status: 'Programada'
     };
 
-    const { error } = await supabase.from('whatsapp_gps_alerts').insert([payload]);
-
-    if (error) {
-        Swal.fire({ icon: 'error', title: 'Error', text: error.message });
+    let success = false;
+    if (alertState.useLocalStorageFallback) {
+        const newAlert = {
+            id: 'local_' + Math.random().toString(36).substr(2, 9),
+            ...payload,
+            created_at: new Date().toISOString()
+        };
+        alertState.alerts.unshift(newAlert);
+        localStorage.setItem('whatsapp_gps_alerts', JSON.stringify(alertState.alerts));
+        success = true;
     } else {
+        const { error } = await supabase.from('whatsapp_gps_alerts').insert([payload]);
+        if (error) {
+            Swal.fire({ icon: 'error', title: 'Error', text: error.message });
+        } else {
+            success = true;
+        }
+    }
+
+    if (success) {
         Swal.fire({
             icon: 'success',
             title: 'Alerta Programada',
@@ -755,10 +804,21 @@ window.deleteGPSAlert = async function(id) {
     });
 
     if (result.isConfirmed) {
-        const { error } = await supabase.from('whatsapp_gps_alerts').delete().eq('id', id);
-        if (error) {
-            Swal.fire({ icon: 'error', title: 'Error', text: error.message });
+        let success = false;
+        if (alertState.useLocalStorageFallback) {
+            alertState.alerts = alertState.alerts.filter(a => a.id !== id);
+            localStorage.setItem('whatsapp_gps_alerts', JSON.stringify(alertState.alerts));
+            success = true;
         } else {
+            const { error } = await supabase.from('whatsapp_gps_alerts').delete().eq('id', id);
+            if (error) {
+                Swal.fire({ icon: 'error', title: 'Error', text: error.message });
+            } else {
+                success = true;
+            }
+        }
+
+        if (success) {
             Swal.fire({ icon: 'success', title: 'Eliminado', text: 'Alerta cancelada.', confirmButtonColor: '#4f46e5' });
             loadGPSAlertsData();
         }
@@ -825,9 +885,14 @@ async function fireWhatsAppDispatcherModal(alertId) {
 
             console.log("GPS-MONITOR: Webhook call response status:", response.status);
             // Automatically transition status to sent
-            await supabase.from('whatsapp_gps_alerts')
-                .update({ status: 'Enviada' })
-                .eq('id', alert.id);
+            if (alertState.useLocalStorageFallback) {
+                alertState.alerts = alertState.alerts.map(a => a.id === alert.id ? { ...a, status: 'Enviada' } : a);
+                localStorage.setItem('whatsapp_gps_alerts', JSON.stringify(alertState.alerts));
+            } else {
+                await supabase.from('whatsapp_gps_alerts')
+                    .update({ status: 'Enviada' })
+                    .eq('id', alert.id);
+            }
 
             Swal.fire({
                 icon: 'success',
@@ -940,13 +1005,23 @@ window.copyToClipboard = function(escapedStr) {
 
 // Transition alert status to Sent
 window.markAlertAsSent = async function(id) {
-    const { error } = await supabase.from('whatsapp_gps_alerts')
-        .update({ status: 'Enviada' })
-        .eq('id', id);
-
-    if (error) {
-        Swal.fire({ icon: 'error', title: 'Error', text: error.message });
+    let success = false;
+    if (alertState.useLocalStorageFallback) {
+        alertState.alerts = alertState.alerts.map(a => a.id === id ? { ...a, status: 'Enviada' } : a);
+        localStorage.setItem('whatsapp_gps_alerts', JSON.stringify(alertState.alerts));
+        success = true;
     } else {
+        const { error } = await supabase.from('whatsapp_gps_alerts')
+            .update({ status: 'Enviada' })
+            .eq('id', id);
+        if (error) {
+            Swal.fire({ icon: 'error', title: 'Error', text: error.message });
+        } else {
+            success = true;
+        }
+    }
+
+    if (success) {
         const modal = document.getElementById(`dispatcher-modal-${id}`);
         if (modal) modal.remove();
 
@@ -1135,7 +1210,7 @@ function updateCirclesOnMap() {
 // Mouse click listener to position simulated vehicle
 function handleMapClickForSimulation(event) {
     const simPanel = document.getElementById('sim-control-panel');
-    if (simPanel.classList.contains('hidden')) return; // Simulator inactive
+    if (!simPanel || simPanel.classList.contains('hidden')) return; // Simulator inactive
 
     const unitId = document.getElementById('sim-unit-select').value;
     if (!unitId) {
