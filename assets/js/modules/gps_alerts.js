@@ -197,7 +197,9 @@ export async function renderGPSAlerts(container) {
                                 </button>
                             </div>
                         </div>
-                        <div id="gps-alerts-map" class="flex-1 w-full bg-slate-100 relative">
+                        <div class="flex-1 w-full relative">
+                            <div id="gps-alerts-map" class="w-full h-full bg-slate-100"></div>
+                            
                             <!-- Overlay Simulator Menu -->
                             <div id="sim-control-panel" class="absolute top-4 left-4 bg-white/90 backdrop-blur-md p-4 rounded-xl border border-slate-100 shadow-xl max-w-xs z-10 space-y-3 hidden transition-all">
                                 <div class="flex justify-between items-center border-b pb-1">
