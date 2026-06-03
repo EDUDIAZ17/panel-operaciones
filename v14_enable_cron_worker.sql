@@ -25,5 +25,3 @@ SELECT cron.schedule(
   );
   $$
 );
-
-COMMENT ON JOB cron.jobid('evaluate-gps-alerts-worker') IS 'Autonomous 24/7 background geofencing evaluate task for WhatsApp Alerts';
