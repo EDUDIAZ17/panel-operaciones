@@ -197,7 +197,10 @@ async function loadOperators() {
     list.innerHTML = ops.map(op => `
         <tr class="hover:bg-gray-50 transition">
             <td class="px-6 py-4 text-xs font-mono text-gray-400">#${op.id.slice(0,8)}</td>
-            <td class="px-6 py-4 font-bold text-gray-700">${op.name}</td>
+            <td class="px-6 py-4">
+                <div class="font-bold text-gray-700">${op.name}</div>
+                <div class="text-[10px] text-gray-400 font-medium">${op.phone ? `📞 ${op.phone}` : 'Sin teléfono'}</div>
+            </td>
             <td class="px-6 py-4">
                 <span class="px-2 py-1 ${op.active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'} rounded-full text-[10px] font-bold">
                     ${op.active ? 'ACTIVO' : 'INACTIVO'}
@@ -307,6 +310,10 @@ function openOperatorModal(op = null) {
                     <label class="block text-xs font-bold text-gray-500 mb-1">NOMBRE COMPLETO</label>
                     <input type="text" id="modal-op-name" class="w-full border p-3 rounded-xl bg-gray-50" value="${op ? op.name : ''}" required />
                 </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 mb-1">TELÉFONO DE CONTACTO</label>
+                    <input type="text" id="modal-op-phone" class="w-full border p-3 rounded-xl bg-gray-50" placeholder="Ej: 5512345678" value="${op ? (op.phone || '') : ''}" />
+                </div>
                 <div class="flex items-center gap-2">
                     <input type="checkbox" id="modal-op-active" ${op ? (op.active ? 'checked' : '') : 'checked'} />
                     <label class="text-sm font-bold text-gray-700">Operador Activo</label>
@@ -322,12 +329,13 @@ function openOperatorModal(op = null) {
 
     document.getElementById('save-op-btn').onclick = async () => {
         const name = document.getElementById('modal-op-name').value;
+        const phone = document.getElementById('modal-op-phone').value.trim();
         const active = document.getElementById('modal-op-active').checked;
         if(!name) return;
 
         const { error } = op 
-            ? await supabase.from('operators').update({ name, active }).eq('id', op.id)
-            : await supabase.from('operators').insert({ name, active });
+            ? await supabase.from('operators').update({ name, phone, active }).eq('id', op.id)
+            : await supabase.from('operators').insert({ name, phone, active });
 
         if(error) alert(error.message);
         else {
