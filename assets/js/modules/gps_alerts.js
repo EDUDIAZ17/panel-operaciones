@@ -394,7 +394,6 @@ function initAutocomplete() {
     try {
         if (typeof google === 'object' && google.maps && google.maps.places) {
             const autocomplete = new google.maps.places.Autocomplete(input, {
-                types: ['(cities)'],
                 componentRestrictions: { country: 'MX' } // Focus on Mexico locations
             });
 

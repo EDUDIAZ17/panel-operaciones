@@ -178,16 +178,9 @@ export function renderExpenses(container) {
             const unit = (window.allUnitsForExpenses || []).find(u => u.id === unitId);
             if (unit) {
                 // 1. Auto-select Operator
-                if (unit.current_operator_id) {
-                    const opSelect = document.getElementById('exp-operator');
-                    if (opSelect) {
-                        opSelect.value = unit.current_operator_id;
-                    }
-                } else {
-                    const opSelect = document.getElementById('exp-operator');
-                    if (opSelect) {
-                        opSelect.value = '';
-                    }
+                const opSelect = document.getElementById('exp-operator');
+                if (opSelect) {
+                    opSelect.value = unit.current_operator_id || '';
                 }
 
                 // 2. Auto-fill Route
@@ -213,6 +206,61 @@ export function renderExpenses(container) {
                         tripTypeSelect.value = 'Vacía';
                     }
                 }
+            } else {
+                // Reset fields if unit selection cleared
+                const opSelect = document.getElementById('exp-operator');
+                if (opSelect) opSelect.value = '';
+                const routeInput = document.getElementById('exp-route');
+                if (routeInput) routeInput.value = '';
+                const tripTypeSelect = document.getElementById('exp-trip-type');
+                if (tripTypeSelect) tripTypeSelect.value = '';
+            }
+        });
+    }
+
+    const expOperatorSelect = document.getElementById('exp-operator');
+    if (expOperatorSelect) {
+        expOperatorSelect.addEventListener('change', (e) => {
+            const opId = e.target.value;
+            const unit = (window.allUnitsForExpenses || []).find(u => u.current_operator_id === opId);
+            if (unit) {
+                // 1. Auto-select Unit
+                const unitSelect = document.getElementById('exp-unit');
+                if (unitSelect) {
+                    unitSelect.value = unit.id;
+                }
+
+                // 2. Auto-fill Route
+                let parsedDetails = unit.details;
+                if (typeof parsedDetails === 'string') {
+                    try { parsedDetails = JSON.parse(parsedDetails); } catch(err) {}
+                }
+                const routeInput = document.getElementById('exp-route');
+                if (routeInput) {
+                    if (parsedDetails && typeof parsedDetails === 'object') {
+                        routeInput.value = parsedDetails.route || (parsedDetails.origen && parsedDetails.destino ? `${parsedDetails.origen} - ${parsedDetails.destino}` : '');
+                    } else {
+                        routeInput.value = '';
+                    }
+                }
+
+                // 3. Auto-select Trayecto
+                const tripTypeSelect = document.getElementById('exp-trip-type');
+                if (tripTypeSelect) {
+                    if (unit.status === 'Cargada' || unit.status === 'Transito Carga') {
+                        tripTypeSelect.value = 'Cargada';
+                    } else if (unit.status === 'Vacia' || unit.status === 'Transito Vacio') {
+                        tripTypeSelect.value = 'Vacía';
+                    }
+                }
+            } else {
+                // Reset fields if operator selection cleared
+                const unitSelect = document.getElementById('exp-unit');
+                if (unitSelect) unitSelect.value = '';
+                const routeInput = document.getElementById('exp-route');
+                if (routeInput) routeInput.value = '';
+                const tripTypeSelect = document.getElementById('exp-trip-type');
+                if (tripTypeSelect) tripTypeSelect.value = '';
             }
         });
     }

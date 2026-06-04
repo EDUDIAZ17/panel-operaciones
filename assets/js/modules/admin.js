@@ -509,14 +509,39 @@ async function syncOperatorsFromSamsara() {
 
         const toInsert = uniqueSamsara
             .filter(d => d.name && !existingNames.has(d.name.trim().toLowerCase()))
-            .map(d => ({ name: d.name.trim(), active: true }));
+            .map(d => ({ 
+                name: d.name.trim(), 
+                active: true,
+                phone: d.phone ? d.phone.trim() : ''
+            }));
 
         if (toInsert.length > 0) {
             const { error } = await supabase.from('operators').insert(toInsert);
             if (error) throw error;
+        }
+
+        // Update phone number of existing operators if they match by name and have a phone in Samsara
+        const { data: currentOps } = await supabase.from('operators').select('id, name, phone');
+        const opsMap = new Map(currentOps ? currentOps.map(o => [o.name.trim().toLowerCase(), o]) : []);
+
+        const toUpdate = [];
+        for (const d of uniqueSamsara) {
+            if (!d.name || !d.phone) continue;
+            const existing = opsMap.get(d.name.trim().toLowerCase());
+            if (existing && existing.phone !== d.phone.trim()) {
+                toUpdate.push({ id: existing.id, phone: d.phone.trim() });
+            }
+        }
+
+        if (toUpdate.length > 0) {
+            await Promise.all(toUpdate.map(upd => 
+                supabase.from('operators').update({ phone: upd.phone }).eq('id', upd.id)
+            ));
+            alert(`Sincronización exitosa: ${toInsert.length} nuevos operadores añadidos y ${toUpdate.length} teléfonos actualizados.`);
+        } else if (toInsert.length > 0) {
             alert(`Sincronización exitosa: ${toInsert.length} nuevos operadores añadidos.`);
         } else {
-            alert("Sincronización completa: No se encontraron nuevos operadores.");
+            alert("Sincronización completa: No se encontraron nuevos operadores ni actualizaciones de teléfono.");
         }
         loadOperators();
     } catch (error) {
