@@ -226,7 +226,7 @@ async function loadHistoryData() {
 
             tr.innerHTML = `
                 <td class="px-5 py-4 whitespace-nowrap text-gray-500 text-xs">${formatDate(row.timestamp)}</td>
-                <td class="px-5 py-4 whitespace-nowrap font-black text-gray-800 bg-white group-hover:bg-orange-50/30 sticky left-0 z-10 transition-colors shadow-sm">${row.units?.economic_number || 'N/A'}</td>
+                <td class="px-5 py-4 whitespace-nowrap font-black text-gray-800 bg-white group-hover:bg-orange-50/30 sticky left-0 z-10 transition-colors shadow-sm">${row.units?.economic_number || row.unidad_eco_txt || 'N/A'}</td>
                 <td class="px-5 py-4 whitespace-nowrap text-center">
                     <span class="px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-lg shadow-sm ${badgeClass}">${row.action_type}</span>
                 </td>
@@ -270,7 +270,7 @@ async function loadHistoryData() {
             tr.innerHTML = `
                 <td class="px-5 py-4 whitespace-nowrap text-gray-500 text-xs font-bold">${formatDate(row.timestamp)}</td>
                 <td class="px-5 py-4 whitespace-nowrap font-black text-gray-800 bg-white group-hover:bg-orange-50/30 sticky left-0 z-10">
-                    <div class="text-lg">${row.units?.economic_number || 'N/A'}</div>
+                    <div class="text-lg">${row.units?.economic_number || row.unidad_eco_txt || 'N/A'}</div>
                     <div class="text-[10px] font-mono text-gray-400">VIAJE / BOL: ${viaje}</div>
                 </td>
                 <td class="px-5 py-4 whitespace-nowrap font-bold text-blue-700">${clientTxt}</td>
@@ -383,7 +383,7 @@ function generatePDF() {
             currentData.forEach(row => {
                 const rowData = [
                     formatDate(row.timestamp),
-                    row.units?.economic_number || 'N/A',
+                    row.units?.economic_number || row.unidad_eco_txt || 'N/A',
                     row.action_type,
                     row.details || '',
                     row.modified_by || 'Sistema'
@@ -407,7 +407,7 @@ function generatePDF() {
                 
                 tableRows.push([
                     formatDate(row.timestamp),
-                    row.units?.economic_number || 'N/A',
+                    row.units?.economic_number || row.unidad_eco_txt || 'N/A',
                     parsed.viaje || parsed.bol || '---',
                     clientTxt,
                     (parsed.origen && parsed.destino) ? `${parsed.origen} a ${parsed.destino}` : '---',
@@ -501,7 +501,7 @@ window.openTripDetailsModal = (encodedRowData) => {
                         <i class="fas fa-route text-indigo-400"></i> Desglose Detallado de Viaje
                     </h3>
                     <div class="flex gap-4 mt-3">
-                        <span class="bg-slate-700/50 text-slate-200 px-3 py-1 rounded-lg text-xs font-bold font-mono">ECO: ${row.units?.economic_number || 'N/A'}</span>
+                        <span class="bg-slate-700/50 text-slate-200 px-3 py-1 rounded-lg text-xs font-bold font-mono">ECO: ${row.units?.economic_number || row.unidad_eco_txt || 'N/A'}</span>
                         <span class="bg-indigo-500/20 text-indigo-300 px-3 py-1 rounded-lg text-xs font-bold border border-indigo-500/30">BOL/VJ: ${parsed.viaje || parsed.bol || 'N/A'}</span>
                     </div>
                 </div>

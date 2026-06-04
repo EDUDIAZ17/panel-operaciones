@@ -491,6 +491,7 @@ window.openEditModal = (unitId) => {
 
             supabase.from('assignments_history').insert([{
                 unit_id: unitId,
+                unidad_eco_txt: unit?.economic_number || null,
                 new_operator_id: newOp,
                 action_type: 'Edición Manual',
                 details: historyDetails,
@@ -824,6 +825,7 @@ window.openScheduleModal = () => {
         else {
             supabase.from('assignments_history').insert([{
                 unit_id: unitId,
+                unidad_eco_txt: unit?.economic_number || null,
                 new_operator_id: newOp,
                 action_type: 'Viaje Programado',
                 details: `Programado para ${date} | Cliente: ${cliente} | Ruta: ${finalRoute}. Se pasó a Vacia (Patio).`,
@@ -960,6 +962,7 @@ window.openFinishTripModal = (unitId) => {
         // (If the table doesn't exist, this might fail, but let's assume v2 setup works)
         const { error: histErr } = await supabase.from('assignments_history').insert([{
             unit_id: unit.id,
+            unidad_eco_txt: unit.economic_number,
             action_type: 'Viaje Terminado',
             details: `Cliente: ${cliente} | Obs: ${comments} | Viaje: ${oldDetailsStr}`,
             modified_by: currentUser.name,
@@ -1022,8 +1025,12 @@ window.openStatusModal = (unitId) => {
             if (error) {
                 alert('No se pudo actualizar el estatus: ' + error.message);
             } else {
+                const unit = (window.unitsData || []).find(u => u.id === unitId);
+                const economicNumber = unit ? unit.economic_number : null;
+
                 supabase.from('assignments_history').insert([{
                     unit_id: unitId,
+                    unidad_eco_txt: economicNumber,
                     action_type: 'Cambio de Estatus',
                     details: `Se cambió estatus de ${currentStatus} a ${newStatus}`,
                     modified_by: currentUser.name,
@@ -1137,6 +1144,7 @@ window.openTimersModal = (unitId) => {
             // Log to history
             supabase.from('assignments_history').insert([{
                 unit_id: unit.id,
+                unidad_eco_txt: unit.economic_number,
                 action_type: 'Registro Logístico',
                 details: `Se actualizaron los Tiempos/Checkpoints de Viaje`,
                 modified_by: currentUser.name,

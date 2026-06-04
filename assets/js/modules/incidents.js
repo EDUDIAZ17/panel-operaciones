@@ -180,7 +180,7 @@ function renderTable(data) {
             <tr class="border-b transition hover:bg-gray-50 ${rowBg}">
                 <td class="p-4 text-sm text-gray-600 font-medium">${date}</td>
                 <td class="p-4">
-                    <div class="font-bold text-gray-800 text-blue-900">${inc.units?.economic_number || 'N/A'}</div>
+                    <div class="font-bold text-gray-800 text-blue-900">${inc.units?.economic_number || inc.unidad_eco_txt || 'N/A'}</div>
                     <div class="text-xs text-gray-500">${inc.operators?.name || 'N/A'}</div>
                 </td>
                 <td class="p-4">
@@ -395,8 +395,12 @@ function openNewIncidentModal() {
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
 
         try {
+            const unitSelect = document.getElementById('man-inc-unit');
+            const unitEco = unitSelect.options[unitSelect.selectedIndex].text;
+
             const { error } = await supabase.from('incidents').insert([{
                 unit_id: unitId,
+                unidad_eco_txt: unitEco,
                 operator_id: opId,
                 incident_type: typeMsg,
                 severity_value: sevVal || 1

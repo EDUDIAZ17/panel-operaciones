@@ -261,6 +261,7 @@ async function saveAutorizacion() {
 
     const { data, error } = await supabase.from('cargas_combustible').insert({
         unidad_id:         unidadId,
+        unidad_eco_txt:    opt.dataset.eco || null,
         operador_id:       operadorId,
         remolque:          document.getElementById('fuel-remolque')?.value?.trim() || null,
         fecha_carga:       new Date(fecha).toISOString(),
@@ -269,6 +270,7 @@ async function saveAutorizacion() {
         capacidad_maxima:  cap,
         litros_autorizar,
         ubicacion_url:     document.getElementById('fuel-ubicacion')?.value?.trim() || null,
+        notes:             document.getElementById('fuel-notas')?.value?.trim() || null, // Note: DB column is 'notas' but Deno uses it as 'notas' too. Let's make sure it is 'notas'
         notas:             document.getElementById('fuel-notas')?.value?.trim() || null,
         elaboro,
         status:            'pendiente_carga'
@@ -519,7 +521,7 @@ async function loadPendingList() {
                     <div class="border ${critico ? 'border-amber-300 bg-amber-50' : 'border-gray-200 bg-gray-50'} rounded-xl p-4 hover:shadow-md transition">
                         <div class="flex justify-between items-start mb-3">
                             <div>
-                                <div class="font-black text-gray-800 text-xl">${p.units?.economic_number || '—'}</div>
+                                <div class="font-black text-gray-800 text-xl">${p.units?.economic_number || p.unidad_eco_txt || '—'}</div>
                                 <div class="text-xs text-gray-500 uppercase font-bold tracking-wide">${p.units?.type || ''}</div>
                             </div>
                             <span class="bg-blue-100 text-blue-700 text-[10px] font-black px-2 py-1 rounded-full">PENDIENTE</span>
@@ -554,7 +556,7 @@ function openRegistrarCargaModal(auth) {
     const modal     = document.createElement('div');
     modal.className = 'fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] fade-in';
 
-    const eco      = auth.units?.economic_number || '—';
+    const eco      = auth.units?.economic_number || auth.unidad_eco_txt || '—';
     const opName   = auth.operators?.name         || '—';
     const fechaStr = new Date(auth.fecha_carga).toLocaleString('es-MX');
     const maxAllow = ((auth.litros_autorizar || 0) * 1.05);
@@ -1017,7 +1019,7 @@ function renderHistoryData(records) {
                                 <td class="px-4 py-3 text-gray-500 font-mono text-xs whitespace-nowrap">
                                     ${new Date(r.fecha_carga).toLocaleDateString('es-MX')}
                                 </td>
-                                <td class="px-4 py-3 font-bold text-gray-800">${r.units?.economic_number || '—'}</td>
+                                <td class="px-4 py-3 font-bold text-gray-800">${r.units?.economic_number || r.unidad_eco_txt || '—'}</td>
                                 <td class="px-4 py-3 text-gray-600 text-xs">${r.operators?.name || '—'}</td>
                                 <td class="px-4 py-3 text-right font-mono">${(r.litros_bomba || 0).toFixed(3)}</td>
                                 <td class="px-4 py-3 text-right font-mono">${(r.litros_boson || 0).toFixed(3)}</td>
@@ -1068,7 +1070,7 @@ function exportHistoryExcel() {
 
     const rows = records.map(r => ({
         'Fecha':                   new Date(r.fecha_carga).toLocaleString('es-MX'),
-        'Unidad':                  r.units?.economic_number || '',
+        'Unidad':                  r.units?.economic_number || r.unidad_eco_txt || '',
         'Tipo':                    r.units?.type            || '',
         'Operador':                r.operators?.name        || '',
         'Remolque':                r.remolque               || '',
@@ -1118,7 +1120,7 @@ function exportRedPDF() {
         head: [['Fecha', 'Unidad', 'Operador', 'Remolque', 'Precio/L', 'L. Bomba', 'L. BOSON', 'Diferencia', '% Dif', 'Monto Cobro']],
         body: records.map(r => [
             new Date(r.fecha_carga).toLocaleDateString('es-MX'),
-            r.units?.economic_number || '',
+            r.units?.economic_number || r.unidad_eco_txt || '',
             r.operators?.name        || '',
             r.remolque               || '—',
             `$${r.precio_litro}`,
@@ -1353,7 +1355,7 @@ async function printHistoryReport(record) {
     
     doc.text(`Folio: #${record.id.slice(0,8).toUpperCase()}`, 15, 48);
     doc.text(`Fecha: ${fechaStr}`, 15, 54);
-    doc.text(`Unidad: ${record.units?.economic_number} (${record.units?.type})`, 15, 60);
+    doc.text(`Unidad: ${record.units?.economic_number || record.unidad_eco_txt || '—'} (${record.units?.type || ''})`, 15, 60);
     doc.text(`Operador: ${record.operators?.name}`, 15, 66);
     if (record.remolque) doc.text(`Remolque: ${record.remolque}`, 15, 72);
 
@@ -1444,5 +1446,5 @@ async function printHistoryReport(record) {
         }
     }
 
-    doc.save(`Reporte_Carga_${record.units?.economic_number}_${record.id.slice(0,6)}.pdf`);
+    doc.save(`Reporte_Carga_${record.units?.economic_number || record.unidad_eco_txt || '—'}_${record.id.slice(0,6)}.pdf`);
 }

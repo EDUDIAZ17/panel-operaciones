@@ -121,7 +121,7 @@ async function loadTable() {
             <tr class="border-b transition ${rowBg}">
                 <td class="p-4 text-sm text-gray-600 font-medium">${date}</td>
                 <td class="p-4">
-                    <div class="font-bold text-gray-800">${log.units?.economic_number || 'N/A'}</div>
+                    <div class="font-bold text-gray-800">${log.units?.economic_number || log.unidad_eco_txt || 'N/A'}</div>
                     <div class="text-xs text-gray-500 truncate max-w-[150px]">${log.operators?.name || 'N/A'}</div>
                 </td>
                 <td class="p-4 text-center">${renderMov(log.is_moving)}</td>
@@ -256,8 +256,12 @@ function openNewLogModal() {
             }
 
             // 2. Insert Log
+            const unitSelect = document.getElementById('log-unit');
+            const unitEco = unitSelect.options[unitSelect.selectedIndex].text;
+
             const { data: logData, error: logError } = await supabase.from('camera_logs').insert([{
                 unit_id: unitId,
+                unidad_eco_txt: unitEco,
                 operator_id: opId,
                 is_moving: isMoving,
                 has_seatbelt: hasBelt,
@@ -288,6 +292,7 @@ function openNewLogModal() {
 
                 const { error: incError } = await supabase.from('incidents').insert([{
                     unit_id: unitId,
+                    unidad_eco_txt: unitEco,
                     operator_id: opId,
                     source_log_id: logData.id,
                     incident_type: infractions.join(' + '),

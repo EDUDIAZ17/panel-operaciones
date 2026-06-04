@@ -189,7 +189,7 @@ window.saveCheckpoint = async (unitId, key, value) => {
     const currentUser = JSON.parse(sessionStorage.getItem('currentUser'));
     
     // First, fetch the current unit details to not overwrite anything else
-    const { data: currentUnit } = await supabase.from('units').select('details').eq('id', unitId).single();
+    const { data: currentUnit } = await supabase.from('units').select('details, economic_number').eq('id', unitId).single();
     if(!currentUnit) return;
     
     let det = currentUnit.details;
@@ -223,6 +223,7 @@ window.saveCheckpoint = async (unitId, key, value) => {
         
         supabase.from('assignments_history').insert([{
             unit_id: unitId,
+            unidad_eco_txt: currentUnit.economic_number,
             action_type: 'Bitácora Logística',
             details: msg,
             modified_by: (currentUser ? currentUser.name : 'Sistema'),
