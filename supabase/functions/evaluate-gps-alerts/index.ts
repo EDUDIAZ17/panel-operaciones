@@ -222,7 +222,7 @@ serve(async (req) => {
                 
                 for (const recipient of recipientsList) {
                     const phone = recipient.phone || '';
-                    if (phone) {
+                    if (phone && !recipient.isGroup) {
                         const ok = await sendWhatsAppTemplate(
                             phone, 
                             waToken, 
