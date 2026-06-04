@@ -28,6 +28,71 @@ function formatWhatsAppPhone(phone: string) {
     return cleaned;
 }
 
+// Send WhatsApp template message using Meta's WhatsApp Business Cloud API
+async function sendWhatsAppTemplate(
+    phone: string, 
+    token: string, 
+    phoneId: string, 
+    unit: string, 
+    operator: string, 
+    destination: string, 
+    atc: string, 
+    quality: string
+) {
+    const formattedPhone = formatWhatsAppPhone(phone);
+    if (!formattedPhone) return false;
+
+    try {
+        const url = `https://graph.facebook.com/v19.0/${phoneId}/messages`;
+        console.log(`GPS-WORKER: Sending WhatsApp template 'notificacion_arribada_gps' to ${formattedPhone} via Meta API...`);
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                messaging_product: "whatsapp",
+                recipient_type: "individual",
+                to: formattedPhone,
+                type: "template",
+                template: {
+                    name: "notificacion_arribada_gps",
+                    language: {
+                        code: "es_MX"
+                    },
+                    components: [
+                        {
+                            type: "body",
+                            parameters: [
+                                { "type": "text", "text": unit },
+                                { "type": "text", "text": operator },
+                                { "type": "text", "text": destination },
+                                { "type": "text", "text": atc || "Sin indicaciones adicionales" },
+                                { "type": "text", "text": quality || "Sin indicaciones adicionales" }
+                            ]
+                        }
+                    ]
+                }
+            })
+        });
+
+        if (res.ok) {
+            console.log(`GPS-WORKER: WhatsApp template message sent to ${formattedPhone} successfully.`);
+            return true;
+        } else {
+            const errData = await res.json();
+            console.error(`GPS-WORKER: WhatsApp Template API returned error for ${formattedPhone}:`, JSON.stringify(errData));
+            return false;
+        }
+    } catch (e) {
+        console.error(`GPS-WORKER: WhatsApp Template API exception for ${formattedPhone}:`, e);
+        return false;
+    }
+}
+
+
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -144,7 +209,43 @@ serve(async (req) => {
             const qualMsg = alert.quality_message || '';
             const fullMessage = `🚨 *NOTIFICACIÓN DE ARRIBADA GPS* 🚨\n\n🚛 *Unidad:* ${unitNum}\n👤 *Operador:* ${operatorName}\n📍 *Destino:* ${alert.destination_name}\n\n====================\n💬 *INSTRUCCIONES ATC:*\n${atcMsg}\n\n====================\n⭐ *CALIDAD Y SEGURO YORO:*\n${qualMsg}`;
 
-            // Dispatch webhook if active
+            let sentSuccess = false;
+
+            // 1. Direct WhatsApp Cloud API sending if keys are configured
+            const waToken = Deno.env.get('WHATSAPP_ACCESS_TOKEN') || '';
+            const waPhoneId = Deno.env.get('WHATSAPP_PHONE_NUMBER_ID') || '';
+
+            if (waToken && waPhoneId) {
+                console.log(`GPS-WORKER: WhatsApp Cloud API keys found. Sending direct messages...`);
+                const recipientsList = Array.isArray(alert.recipients) ? alert.recipients : [];
+                let directSentCount = 0;
+                
+                for (const recipient of recipientsList) {
+                    const phone = recipient.phone || '';
+                    if (phone) {
+                        const ok = await sendWhatsAppTemplate(
+                            phone, 
+                            waToken, 
+                            waPhoneId, 
+                            unitNum, 
+                            operatorName, 
+                            alert.destination_name, 
+                            atcMsg, 
+                            qualMsg
+                        );
+                        if (ok) {
+                            directSentCount++;
+                        }
+                    }
+                }
+
+                if (directSentCount > 0) {
+                    console.log(`GPS-WORKER: Directly sent WhatsApp messages to ${directSentCount} recipient(s).`);
+                    sentSuccess = true;
+                }
+            }
+
+            // 2. Dispatch webhook if active
             if (webhookEnabled && webhookUrl) {
                 try {
                     console.log(`GPS-WORKER: Dispatching webhook for alert ${alert.id} to ${webhookUrl}`);
@@ -166,19 +267,23 @@ serve(async (req) => {
 
                     if (webRes.ok) {
                         console.log(`GPS-WORKER: Webhook successfully triggered for alert ${alert.id}.`);
-                        // Mark as Sent
-                        await supabase
-                            .from('whatsapp_gps_alerts')
-                            .update({ status: 'Enviada' })
-                            .eq('id', alert.id);
+                        sentSuccess = true;
                     } else {
                         console.error(`GPS-WORKER: Webhook returned error code ${webRes.status}`);
                     }
                 } catch (webErr) {
                     console.error(`GPS-WORKER: Failed to POST to webhook for alert ${alert.id}:`, webErr);
                 }
+            }
+
+            // If any dispatch method succeeded, mark the alert as 'Enviada'
+            if (sentSuccess) {
+                await supabase
+                    .from('whatsapp_gps_alerts')
+                    .update({ status: 'Enviada' })
+                    .eq('id', alert.id);
             } else {
-                console.warn(`GPS-WORKER: Webhook is disabled or not configured. Alert ${alert.id} left in 'Disparada' status.`);
+                console.warn(`GPS-WORKER: Neither Direct WhatsApp nor Webhook succeeded for alert ${alert.id}.`);
             }
 
             triggeredAlerts.push({
