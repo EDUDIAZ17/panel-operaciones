@@ -592,6 +592,10 @@ function getDistanceKm(lat1, lon1, lat2, lon2) {
 function formatWhatsAppPhone(phone) {
     if (!phone) return '';
     let cleaned = phone.replace(/[^0-9]/g, '');
+    // Remove the mobile prefix '1' from Mexican numbers starting with 521 (e.g. 52155...)
+    if (cleaned.length === 13 && cleaned.startsWith('521')) {
+        cleaned = '52' + cleaned.substring(3);
+    }
     if (cleaned.length === 10) {
         cleaned = '52' + cleaned;
     }
@@ -663,7 +667,7 @@ function evaluateProximityAndRender() {
                         if (error) console.error("Error updating trigger state:", error);
                         else {
                             // Play alert sound if wanted, notify UI
-                            fireWhatsAppDispatcherModal(alert.id);
+                            triggerAutomatedWhatsApp(alert.id);
                         }
                     });
             }
@@ -936,9 +940,80 @@ window.zoomAlertMap = function(lat, lng) {
     }
 };
 
+// Trigger automated WhatsApp dispatch using Edge Function
+async function triggerAutomatedWhatsApp(alertId, isManual = false) {
+    console.log(`GPS-MONITOR: Triggering automated WhatsApp for alert ${alertId} (isManual: ${isManual})...`);
+    
+    if (alertState.useLocalStorageFallback) {
+        console.log("GPS-MONITOR: Local storage fallback active. Opening manual dispatcher.");
+        fireWhatsAppDispatcherModal(alertId);
+        return;
+    }
+
+    if (isManual) {
+        Swal.fire({
+            title: 'Enviando WhatsApp...',
+            text: 'Por favor espere mientras se envía la notificación.',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+    }
+
+    try {
+        const { data, error } = await supabase.functions.invoke('evaluate-gps-alerts', {
+            body: { alert_id: alertId }
+        });
+
+        if (isManual) {
+            Swal.close();
+        }
+
+        if (error) {
+            console.error("GPS-MONITOR: Edge Function invocation error:", error);
+            // Fallback to manual dispatcher modal
+            fireWhatsAppDispatcherModal(alertId);
+        } else if (data && data.sent_success) {
+            if (isManual) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Alerta Enviada',
+                    text: 'La notificación de WhatsApp se ha enviado automáticamente a los destinatarios.',
+                    confirmButtonColor: '#10b981'
+                });
+            } else {
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'success',
+                    title: 'Alerta Enviada (Auto)',
+                    text: 'Notificación de GPS enviada automáticamente.',
+                    showConfirmButton: false,
+                    timer: 3000
+                });
+            }
+            await loadGPSAlertsData();
+        } else {
+            console.warn("GPS-MONITOR: Edge Function sent_success was false. Opening manual dispatcher.");
+            fireWhatsAppDispatcherModal(alertId);
+        }
+    } catch (err) {
+        if (isManual) {
+            Swal.close();
+        }
+        console.error("GPS-MONITOR: Exception invoking Edge Function:", err);
+        fireWhatsAppDispatcherModal(alertId);
+    }
+}
+
 // Open WhatsApp dispatcher popup manually
 window.openDispatcherModal = function(id) {
-    fireWhatsAppDispatcherModal(id);
+    if (alertState.useLocalStorageFallback) {
+        fireWhatsAppDispatcherModal(id);
+    } else {
+        triggerAutomatedWhatsApp(id, true);
+    }
 };
 
 // Real-time WhatsApp Dispatcher popup modal
@@ -1013,10 +1088,7 @@ async function fireWhatsAppDispatcherModal(alertId) {
     // Modal elements
     const recipientsHtml = alert.recipients.map((rec, i) => {
         const escapedMsg = encodeURIComponent(fullMessage);
-        let cleanedPhone = rec.phone.replace(/[^0-9]/g, '');
-        if (cleanedPhone.length === 10) {
-            cleanedPhone = '52' + cleanedPhone;
-        }
+        let cleanedPhone = formatWhatsAppPhone(rec.phone);
         let link = `https://api.whatsapp.com/send?phone=${cleanedPhone}&text=${escapedMsg}`;
         if (rec.isGroup) {
             // Group link or direct share

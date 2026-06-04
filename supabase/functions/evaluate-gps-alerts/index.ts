@@ -22,6 +22,9 @@ function getDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number) {
 function formatWhatsAppPhone(phone: string) {
     if (!phone) return '';
     let cleaned = phone.replace(/[^0-9]/g, '');
+    if (cleaned.length === 13 && cleaned.startsWith('521')) {
+        cleaned = '52' + cleaned.substring(3);
+    }
     if (cleaned.length === 10) {
         cleaned = '52' + cleaned;
     }
@@ -108,6 +111,137 @@ serve(async (req) => {
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Parse body for manual trigger
+    let alertId: string | null = null;
+    try {
+        const body = await req.json();
+        alertId = body?.alert_id || null;
+    } catch (e) {
+        // Body might be empty, ignore
+    }
+
+    if (alertId) {
+        console.log(`GPS-WORKER: Manual trigger request for alert ${alertId}`);
+        const { data: alert, error: alertErr } = await supabase
+            .from('whatsapp_gps_alerts')
+            .select(`
+                *,
+                units (
+                    id,
+                    economic_number,
+                    placas,
+                    current_operator_id
+                )
+            `)
+            .eq('id', alertId)
+            .maybeSingle();
+
+        if (alertErr) throw alertErr;
+        if (!alert) {
+            return new Response(JSON.stringify({ error: "Alert not found" }), {
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                status: 404
+            });
+        }
+
+        const { data: opsData } = await supabase.from('operators').select('id, name, phone');
+        const operatorsMap = new Map((opsData || []).map(o => [o.id, o]));
+
+        const unit = alert.units;
+        const unitNum = unit ? unit.economic_number : 'S/U';
+        const opId = unit ? unit.current_operator_id : null;
+        const operator = opId ? operatorsMap.get(opId) : null;
+        const operatorName = operator ? operator.name : 'Sin Operador';
+
+        // Mark as triggered in DB
+        await supabase
+            .from('whatsapp_gps_alerts')
+            .update({ status: 'Disparada', triggered_at: new Date().toISOString() })
+            .eq('id', alert.id);
+
+        let webhookUrl = '';
+        let webhookEnabled = false;
+        const { data: dbSetting } = await supabase
+            .from('system_settings')
+            .select('setting_value')
+            .eq('setting_key', 'gps_alert_webhook')
+            .maybeSingle();
+
+        if (dbSetting && dbSetting.setting_value) {
+            webhookUrl = dbSetting.setting_value.url || '';
+            webhookEnabled = dbSetting.setting_value.enabled === true;
+        }
+
+        const atcMsg = alert.atc_message || '';
+        const qualMsg = alert.quality_message || '';
+        const fullMessage = `🚨 *NOTIFICACIÓN DE ARRIBADA GPS* 🚨\n\n🚛 *Unidad:* ${unitNum}\n👤 *Operador:* ${operatorName}\n📍 *Destino:* ${alert.destination_name}\n\n====================\n💬 *INSTRUCCIONES ATC:*\n${atcMsg}\n\n====================\n⭐ *INSTRUCCIONES DE CALIDAD:*\n${qualMsg}\n\n--- Fin del Reporte ---`;
+
+        let sentSuccess = false;
+
+        const waToken = Deno.env.get('WHATSAPP_ACCESS_TOKEN') || '';
+        const waPhoneId = Deno.env.get('WHATSAPP_PHONE_NUMBER_ID') || '';
+
+        if (waToken && waPhoneId) {
+            const recipientsList = Array.isArray(alert.recipients) ? alert.recipients : [];
+            let directSentCount = 0;
+            for (const recipient of recipientsList) {
+                const phone = recipient.phone || '';
+                if (phone && !recipient.isGroup) {
+                    const ok = await sendWhatsAppTemplate(
+                        phone, 
+                        waToken, 
+                        waPhoneId, 
+                        unitNum, 
+                        operatorName, 
+                        alert.destination_name, 
+                        atcMsg, 
+                        qualMsg
+                    );
+                    if (ok) directSentCount++;
+                }
+            }
+            if (directSentCount > 0) sentSuccess = true;
+        }
+
+        if (webhookEnabled && webhookUrl) {
+            try {
+                const webRes = await fetch(webhookUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        event: 'gps_alert_arrival',
+                        unit: unitNum,
+                        operator: operatorName,
+                        destination: alert.destination_name,
+                        atc_message: atcMsg,
+                        quality_message: qualMsg,
+                        full_text: fullMessage,
+                        recipients: alert.recipients,
+                        timestamp: new Date().toISOString()
+                    })
+                });
+                if (webRes.ok) sentSuccess = true;
+            } catch (err) {
+                console.error("Webhook failed:", err);
+            }
+        }
+
+        if (sentSuccess) {
+            await supabase
+                .from('whatsapp_gps_alerts')
+                .update({ status: 'Enviada' })
+                .eq('id', alert.id);
+        }
+
+        return new Response(JSON.stringify({ 
+            message: "Manual trigger successful", 
+            sent_success: sentSuccess 
+        }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 200
+        });
+    }
 
     // 1. Fetch active alerts with unit details
     const { data: alerts, error: alertsErr } = await supabase
