@@ -44,7 +44,7 @@ async function sendWhatsAppTemplate(
 
     try {
         const url = `https://graph.facebook.com/v19.0/${phoneId}/messages`;
-        console.log(`GPS-WORKER: Sending WhatsApp template 'notificacion_arribada_gps' to ${formattedPhone} via Meta API...`);
+        console.log(`GPS-WORKER: Sending WhatsApp template 'notificacion_arribo_gps' to ${formattedPhone} via Meta API...`);
         const res = await fetch(url, {
             method: 'POST',
             headers: {
@@ -57,7 +57,7 @@ async function sendWhatsAppTemplate(
                 to: formattedPhone,
                 type: "template",
                 template: {
-                    name: "notificacion_arribada_gps",
+                    name: "notificacion_arribo_gps",
                     language: {
                         code: "es_MX"
                     },
