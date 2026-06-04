@@ -1096,7 +1096,7 @@ window.openTimersModal = (unitId) => {
                         <div>
                             <div class="flex justify-between mb-1 items-end">
                                 <label class="block text-xs font-bold text-gray-700 uppercase tracking-wider">${item.label}</label>
-                                <button onclick="document.getElementById('cp-${item.key}').value = (new Date(new Date() - new Date().getTimezoneOffset() * 60000)).toISOString().slice(0,16)" class="text-[10px] bg-indigo-100 text-indigo-700 hover:bg-indigo-200 px-2 py-0.5 rounded font-bold transition">
+                                <button type="button" data-now-target="${item.key}" class="btn-now text-[10px] bg-indigo-100 text-indigo-700 hover:bg-indigo-200 px-2 py-0.5 rounded font-bold transition">
                                     <i class="fas fa-clock"></i> Ahora
                                 </button>
                             </div>
@@ -1114,6 +1114,28 @@ window.openTimersModal = (unitId) => {
         </div>
     `;
     document.body.appendChild(modal);
+
+    // Attach click listeners for Milestones/Timers "Ahora" buttons
+    modal.querySelectorAll('.btn-now').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const key = btn.dataset.nowTarget;
+            const input = document.getElementById(`cp-${key}`);
+            if (input) {
+                const localISOTime = (new Date(new Date() - new Date().getTimezoneOffset() * 60000)).toISOString().slice(0,16);
+                input.value = localISOTime;
+                input.dispatchEvent(new Event('change'));
+            }
+        });
+    });
+
+    // Auto-fill Fin Ruta if Fin Descarga is updated
+    const inputUnloadEnd = document.getElementById('cp-trip_unload_end');
+    const inputRouteEnd = document.getElementById('cp-trip_route_end');
+    if (inputUnloadEnd && inputRouteEnd) {
+        inputUnloadEnd.addEventListener('change', () => {
+            inputRouteEnd.value = inputUnloadEnd.value;
+        });
+    }
 
     document.getElementById('btn-save-checkpoints').onclick = async () => {
         parsedDetails.checkpoints = {

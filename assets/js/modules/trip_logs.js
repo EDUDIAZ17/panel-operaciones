@@ -98,12 +98,12 @@ function renderTable(element, units) {
                     <th class="p-3 font-semibold text-indigo-800">Unidad</th>
                     <th class="p-3 font-semibold text-indigo-800">Viaje / Cliente</th>
                     <th class="p-3 font-semibold text-indigo-800">Origen &rarr; Destino</th>
+                    <th class="p-3 font-semibold text-gray-800 text-center border-l w-32 border-indigo-100 bg-gray-50/30">In. Ruta</th>
                     <th class="p-3 font-semibold text-indigo-800 text-center border-l w-32 border-indigo-100">LL. Carga</th>
                     <th class="p-3 font-semibold text-indigo-800 text-center w-32">Fin Carga</th>
                     <th class="p-3 font-semibold text-teal-800 text-center border-l w-32 border-indigo-100 bg-teal-50/30">LL. Descarga</th>
                     <th class="p-3 font-semibold text-teal-800 text-center w-32 bg-teal-50/30">Fin Descarga</th>
-                    <th class="p-3 font-semibold text-gray-800 text-center border-l w-32 border-indigo-100">In. Ruta</th>
-                    <th class="p-3 font-semibold text-gray-800 text-center w-32">Fin Ruta</th>
+                    <th class="p-3 font-semibold text-gray-800 text-center border-l w-32 border-indigo-100 bg-gray-50/30">Fin Ruta</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-100">
@@ -159,15 +159,16 @@ function renderTable(element, units) {
                     <div>${routeDisplay}</div>
                     ${destinatarioStr}
                 </td>
+                <!-- Ruta Start -->
+                <td class="p-2 align-top border-l border-indigo-50/50 bg-gray-50/5">${renderInput('trip_route_start')}</td>
                 <!-- Carga -->
                 <td class="p-2 align-top border-l border-indigo-50/50">${renderInput('trip_load_arrival')}</td>
                 <td class="p-2 align-top">${renderInput('trip_load_end')}</td>
                 <!-- Descarga -->
                 <td class="p-2 align-top border-l border-teal-50/50 bg-teal-50/10">${renderInput('trip_unload_arrival')}</td>
                 <td class="p-2 align-top bg-teal-50/10">${renderInput('trip_unload_end')}</td>
-                <!-- Ruta -->
-                <td class="p-2 align-top border-l border-gray-50">${renderInput('trip_route_start')}</td>
-                <td class="p-2 align-top">${renderInput('trip_route_end')}</td>
+                <!-- Ruta End -->
+                <td class="p-2 align-top border-l border-indigo-50/50 bg-gray-50/5">${renderInput('trip_route_end')}</td>
             </tr>
         `;
         activeCount++;
@@ -200,6 +201,24 @@ window.saveCheckpoint = async (unitId, key, value) => {
     // Update the specific key
     det.checkpoints[key] = value;
     
+    // Auto-fill Fin Ruta if Fin Descarga is updated
+    if (key === 'trip_unload_end') {
+        det.checkpoints['trip_route_end'] = value;
+        
+        // Instantly update the DOM input for Fin Ruta to keep the UI in sync
+        const routeEndInputs = document.querySelectorAll(`input[onchange*="${unitId}"][onchange*="trip_route_end"]`);
+        routeEndInputs.forEach(input => {
+            input.value = value;
+            if (value) {
+                input.classList.remove('bg-transparent', 'border-gray-400', 'text-gray-800');
+                input.classList.add('bg-blue-50', 'border-blue-200', 'font-bold', 'text-blue-900');
+            } else {
+                input.classList.remove('bg-blue-50', 'border-blue-200', 'font-bold', 'text-blue-900');
+                input.classList.add('bg-transparent', 'border-gray-400', 'text-gray-800');
+            }
+        });
+    }
+    
     // Save to DB
     const { error } = await supabase.from('units').update({ details: det }).eq('id', unitId);
     
@@ -219,7 +238,10 @@ window.saveCheckpoint = async (unitId, key, value) => {
             'trip_route_end': 'Fin de Ruta'
         };
         const prettyName = actionMap[key] || key;
-        const msg = value ? `Se registró [${prettyName}] a las ${value.replace('T', ' ')}` : `Se borró [${prettyName}]`;
+        let msg = value ? `Se registró [${prettyName}] a las ${value.replace('T', ' ')}` : `Se borró [${prettyName}]`;
+        if (key === 'trip_unload_end') {
+            msg += value ? ` y se auto-registró [Fin de Ruta] a las ${value.replace('T', ' ')}` : ` y se borró [Fin de Ruta]`;
+        }
         
         supabase.from('assignments_history').insert([{
             unit_id: unitId,

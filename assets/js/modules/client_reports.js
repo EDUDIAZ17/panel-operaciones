@@ -607,6 +607,15 @@ window.openClientReportEdit = (id) => {
             </div>
         </div>
     `;
+
+    // Auto-fill Fin Ruta if Fin Descarga is updated
+    const editUnloadEnd = document.getElementById('cr-edit-unload-end');
+    const editRouteEnd = document.getElementById('cr-edit-route-end');
+    if (editUnloadEnd && editRouteEnd) {
+        editUnloadEnd.addEventListener('change', () => {
+            editRouteEnd.value = editUnloadEnd.value;
+        });
+    }
 };
 
 window.saveClientReportEdit = async (id) => {
@@ -639,6 +648,11 @@ window.saveClientReportEdit = async (id) => {
         details.eta = cp.trip_unload_arrival; // Sync ETA with Llegada a Descarga
         cp.trip_unload_start = document.getElementById('cr-edit-unload-st').value;
         cp.trip_unload_end = document.getElementById('cr-edit-unload-end').value;
+        
+        // Auto-fill Fin Ruta if Fin Descarga is set
+        if (cp.trip_unload_end) {
+            cp.trip_route_end = cp.trip_unload_end;
+        }
 
         details.checkpoints = cp;
         const newStatus = document.getElementById('cr-edit-status').value;
