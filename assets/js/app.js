@@ -142,6 +142,11 @@ try {
             `;
             document.head.appendChild(style);
         } 
+        else if (role === 'meta_review') {
+            allNavs.forEach(nav => {
+                if(nav !== 'nav-gps-alerts') document.getElementById(nav)?.classList.add('hidden-section');
+            });
+        }
         else if (role === 'rh') {
             allNavs.forEach(nav => {
                 if(nav !== 'nav-observations' && nav !== 'nav-payroll-map') document.getElementById(nav)?.classList.add('hidden-section');
