@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Condiciones del Servicio - Alexa Transportes</title>
+    <link rel="icon" type="image/png" href="logo/logo_1024.png">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Outfit', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #f8fafc;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col text-slate-700">
+
+    <!-- Header / Navbar -->
+    <header class="bg-white border-b border-slate-100 sticky top-0 z-50 shadow-sm">
+        <div class="max-w-4xl mx-auto px-6 py-4 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <img src="logo/logo_1024.png" alt="Alexa Logo" class="w-10 h-10 object-contain rounded-xl shadow-sm">
+                <div>
+                    <h1 class="font-extrabold text-lg text-slate-900 leading-none">Alexa Transportes</h1>
+                    <span class="text-xs text-indigo-600 font-semibold tracking-wider uppercase">Portal Logístico</span>
+                </div>
+            </div>
+            <a href="index.html" class="text-xs font-bold text-slate-500 hover:text-indigo-600 transition flex items-center gap-1.5 bg-slate-50 px-3.5 py-2 rounded-lg border border-slate-200/60">
+                <i class="fas fa-arrow-left"></i> Volver al Panel
+            </a>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 max-w-4xl w-full mx-auto px-6 py-12">
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-8 md:p-12 space-y-8">
+            
+            <div class="border-b pb-6">
+                <h2 class="text-3xl font-black text-slate-900 tracking-tight">Condiciones del Servicio</h2>
+                <p class="text-slate-400 text-sm mt-2">Última actualización: 8 de junio de 2026</p>
+            </div>
+
+            <!-- Intro -->
+            <p class="text-slate-600 leading-relaxed">
+                Bienvenido al portal logístico de <strong>Alexa Transportes</strong> (en adelante, "el Sistema"), una herramienta tecnológica desarrollada y administrada por <strong>Nanometricasolucion</strong>. Al acceder y utilizar este Sistema, aceptas cumplir con los siguientes términos y condiciones de uso.
+            </p>
+
+            <!-- Section 1 -->
+            <section class="space-y-3">
+                <h3 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+                    <span class="flex items-center justify-center w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 text-sm"><i class="fas fa-user-check"></i></span>
+                    1. Uso Autorizado del Sistema
+                </h3>
+                <p class="text-slate-600 leading-relaxed pl-9">
+                    Este portal es una herramienta de uso **estrictamente interno, profesional y autorizado** para los colaboradores, operadores, coordinadores y personal administrativo de Alexa Transportes. Queda prohibido el acceso a personas no autorizadas o el uso del sistema para fines ajenos al monitoreo y logística del transporte de carga de la Empresa.
+                </p>
+            </section>
+
+            <!-- Section 2 -->
+            <section class="space-y-3">
+                <h3 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+                    <span class="flex items-center justify-center w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 text-sm"><i class="fas fa-map-marked-alt"></i></span>
+                    2. Monitoreo y Datos GPS
+                </h3>
+                <p class="text-slate-600 leading-relaxed pl-9">
+                    El Sistema recopila y procesa ubicaciones en tiempo real de los vehículos mediante sistemas de telemetría (Samsara). El personal que opera las unidades entiende y acepta que dicho monitoreo se realiza exclusivamente con fines de:
+                </p>
+                <ul class="list-disc pl-14 space-y-1.5 text-slate-600">
+                    <li>Seguridad vial y del conductor.</li>
+                    <li>Control de tiempos logísticos de entrega (cargas, descargas y rutas).</li>
+                    <li>Soporte ante incidencias en carretera.</li>
+                </ul>
+            </section>
+
+            <!-- Section 3 -->
+            <section class="space-y-3">
+                <h3 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+                    <span class="flex items-center justify-center w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 text-sm"><i class="fas fa-paper-plane"></i></span>
+                    3. Notificaciones automáticas de WhatsApp
+                </h3>
+                <p class="text-slate-600 leading-relaxed pl-9">
+                    El Sistema utiliza la API oficial de WhatsApp Cloud de Meta para despachar notificaciones automáticas basadas en geocercas. Los usuarios y operadores aceptan recibir estas alertas logísticas en sus dispositivos móviles registrados con el único fin de eficientar y documentar los arribos.
+                </p>
+            </section>
+
+            <!-- Section 4 -->
+            <section class="space-y-3">
+                <h3 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+                    <span class="flex items-center justify-center w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 text-sm"><i class="fas fa-user-slash"></i></span>
+                    4. Rescisión del Acceso
+                </h3>
+                <p class="text-slate-600 leading-relaxed pl-9">
+                    La Empresa y el administrador tecnológico se reservan el derecho de suspender o cancelar de forma inmediata las credenciales de acceso de cualquier usuario que haga un uso indebido, altere el código de la plataforma o viole las normas de confidencialidad de la información operativa aquí almacenada.
+                </p>
+            </section>
+
+            <!-- Section 5 -->
+            <section class="space-y-3">
+                <h3 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+                    <span class="flex items-center justify-center w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 text-sm"><i class="fas fa-exclamation-triangle"></i></span>
+                    5. Modificaciones
+                </h3>
+                <p class="text-slate-600 leading-relaxed pl-9">
+                    Nos reservamos el derecho de modificar estos Términos y Condiciones en cualquier momento para adaptarlos a nuevas regulaciones o necesidades operativas. El uso continuo del Sistema constituye la aceptación de los mismos.
+                </p>
+            </section>
+
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-slate-900 text-slate-500 py-8 border-t border-slate-800">
+        <div class="max-w-4xl mx-auto px-6 text-center text-xs space-y-2">
+            <p>&copy; 2026 Nanometricasolucion. Todos los derechos reservados.</p>
+            <p>Alexa Transportes es una marca protegida. El uso no autorizado de este portal está penalizado legalmente.</p>
+        </div>
+    </footer>
+
+</body>
+</html>
