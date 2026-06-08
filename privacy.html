@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Política de Privacidad - Alexa Transportes</title>
+    <link rel="icon" type="image/png" href="logo/logo_1024.png">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Tailwind CSS (for modern aesthetics) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Outfit', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #f8fafc;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col text-slate-700">
+
+    <!-- Header / Navbar -->
+    <header class="bg-white border-b border-slate-100 sticky top-0 z-50 shadow-sm">
+        <div class="max-w-4xl mx-auto px-6 py-4 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <img src="logo/logo_1024.png" alt="Alexa Logo" class="w-10 h-10 object-contain rounded-xl shadow-sm">
+                <div>
+                    <h1 class="font-extrabold text-lg text-slate-900 leading-none">Alexa Transportes</h1>
+                    <span class="text-xs text-indigo-600 font-semibold tracking-wider uppercase">Portal Logístico</span>
+                </div>
+            </div>
+            <a href="index.html" class="text-xs font-bold text-slate-500 hover:text-indigo-600 transition flex items-center gap-1.5 bg-slate-50 px-3.5 py-2 rounded-lg border border-slate-200/60">
+                <i class="fas fa-arrow-left"></i> Volver al Panel
+            </a>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 max-w-4xl w-full mx-auto px-6 py-12">
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-8 md:p-12 space-y-8">
+            
+            <div class="border-b pb-6">
+                <h2 class="text-3xl font-black text-slate-900 tracking-tight">Política de Privacidad</h2>
+                <p class="text-slate-400 text-sm mt-2">Última actualización: 8 de junio de 2026</p>
+            </div>
+
+            <!-- Intro -->
+            <p class="text-slate-600 leading-relaxed">
+                En <strong>Alexa Transportes</strong> (en adelante, "la Empresa"), operado bajo propiedad tecnológica de <strong>Nanometricasolucion</strong>, nos tomamos muy en serio la seguridad y privacidad de tus datos personales. Esta Política de Privacidad describe cómo recopilamos, utilizamos, almacenamos y protegemos la información a través de nuestro portal logístico y la integración con servicios de mensajería como la API de WhatsApp Cloud de Meta.
+            </p>
+
+            <!-- Section 1 -->
+            <section class="space-y-3">
+                <h3 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+                    <span class="flex items-center justify-center w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 text-sm"><i class="fas fa-database"></i></span>
+                    1. Información que Recopilamos
+                </h3>
+                <p class="text-slate-600 leading-relaxed pl-9">
+                    Nuestro sistema recopila únicamente los datos necesarios para la gestión operativa y de seguridad del transporte de carga, incluyendo:
+                </p>
+                <ul class="list-disc pl-14 space-y-1.5 text-slate-600">
+                    <li><strong>Datos de contacto de Operadores y Personal</strong>: Nombres completos y números de teléfono móvil.</li>
+                    <li><strong>Datos de Ubicación Satelital (GPS)</strong>: Datos de localización en tiempo real de las unidades de transporte (obtenidos mediante la integración autorizada con la API de Samsara).</li>
+                    <li><strong>Información del Viaje</strong>: Puntos de origen, destino, itinerario, tiempos de carga/descarga y comentarios de seguridad.</li>
+                </ul>
+            </section>
+
+            <!-- Section 2 -->
+            <section class="space-y-3">
+                <h3 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+                    <span class="flex items-center justify-center w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 text-sm"><i class="fas fa-cogs"></i></span>
+                    2. Uso de la Información
+                </h3>
+                <p class="text-slate-600 leading-relaxed pl-9">
+                    La información recopilada se utiliza exclusivamente para fines operativos y de seguridad vial:
+                </p>
+                <ul class="list-disc pl-14 space-y-1.5 text-slate-600">
+                    <li><strong>Notificaciones Automáticas</strong>: Enviar avisos de seguridad y reportes de llegada/salida a los operadores y personal logístico a través de WhatsApp.</li>
+                    <li><strong>Monitoreo de Geocercas</strong>: Evaluar distancias de aproximación para alertar al área de Torre de Control cuando una unidad ingresa al destino.</li>
+                    <li><strong>Historial Operativo</strong>: Registrar bitácoras del viaje y firmas de tiempo con fines de auditoría logística interna.</li>
+                </ul>
+            </section>
+
+            <!-- Section 3 -->
+            <section class="space-y-3">
+                <h3 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+                    <span class="flex items-center justify-center w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 text-sm"><i class="fas fa-shield-alt"></i></span>
+                    3. Almacenamiento y Protección de Datos
+                </h3>
+                <p class="text-slate-600 leading-relaxed pl-9">
+                    Todos los datos se almacenan de forma segura en bases de datos cifradas proporcionadas por <strong>Supabase</strong>. Implementamos medidas técnicas, administrativas y físicas estrictas para proteger la información contra accesos no autorizados, pérdida, alteración o divulgación. No vendemos ni compartimos datos personales con terceros para fines publicitarios.
+                </p>
+            </section>
+
+            <!-- Section 4 -->
+            <section class="space-y-3">
+                <h3 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+                    <span class="flex items-center justify-center w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 text-sm"><i class="fas fa-user-shield"></i></span>
+                    4. Derechos del Usuario (ARCO)
+                </h3>
+                <p class="text-slate-600 leading-relaxed pl-9">
+                    Como titular de tus datos personales, puedes ejercer tus derechos de Acceso, Rectificación, Cancelación y Oposición (Derechos ARCO) enviando una solicitud formal a nuestro correo electrónico de contacto.
+                </p>
+            </section>
+
+            <!-- Section 5 -->
+            <section class="space-y-3">
+                <h3 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+                    <span class="flex items-center justify-center w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 text-sm"><i class="fas fa-envelope"></i></span>
+                    5. Contacto
+                </h3>
+                <p class="text-slate-600 leading-relaxed pl-9">
+                    Para cualquier duda o aclaración sobre el tratamiento de tus datos, puedes contactarnos a través de:
+                </p>
+                <div class="bg-slate-50 p-4 rounded-xl border border-slate-100 pl-9 space-y-1.5 text-sm text-slate-600">
+                    <p><i class="fas fa-building text-slate-400 mr-2"></i> <strong>Nanometricasolucion / Alexa Transportes</strong></p>
+                    <p><i class="fas fa-envelope text-slate-400 mr-2"></i> soporte@nanometricasolucion.com</p>
+                    <p><i class="fas fa-map-marker-alt text-slate-400 mr-2"></i> México</p>
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-slate-900 text-slate-500 py-8 border-t border-slate-800">
+        <div class="max-w-4xl mx-auto px-6 text-center text-xs space-y-2">
+            <p>&copy; 2026 Nanometricasolucion. Todos los derechos reservados.</p>
+            <p>El uso del sistema y de las integraciones de mensajería API está sujeto a esta Política de Privacidad.</p>
+        </div>
+    </footer>
+
+</body>
+</html>
