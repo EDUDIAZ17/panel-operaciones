@@ -10,8 +10,28 @@ const moduleState = {
     loading: false,
     activeTab: 'samsara', // 'samsara', 'enlace', 'general', 'audits'
     charts: {
-        samsara: { safety: null, speeding: null, avgSpeed: null },
-        enlace: { safety: null, speeding: null, avgSpeed: null }
+        samsara: {
+            speeding: null,
+            avgSpeed: null,
+            harshBrake: null,
+            harshAccel: null,
+            phoneUsage: null,
+            drowsiness: null,
+            unbuckled: null,
+            collision: null,
+            passenger: null
+        },
+        enlace: {
+            speeding: null,
+            avgSpeed: null,
+            harshBrake: null,
+            harshAccel: null,
+            phoneUsage: null,
+            drowsiness: null,
+            unbuckled: null,
+            collision: null,
+            passenger: null
+        }
     }
 };
 
@@ -176,29 +196,68 @@ export async function renderTelemetry(container) {
                         </div>
                     </div>
 
-                    <!-- Charts Grid -->
-                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                        <!-- Chart 1: Safety Events by Unit -->
-                        <div class="lg:col-span-4 bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between min-h-[300px]">
-                            <h4 class="text-xs font-black text-slate-600 uppercase tracking-widest mb-4 flex items-center gap-1.5"><i class="fas fa-shield-halved text-amber-500"></i> Eventos Safety por Unidad</h4>
-                            <div class="flex-1 relative">
-                                <canvas id="chart-sam-safety"></canvas>
-                            </div>
-                        </div>
-
-                        <!-- Chart 2: Speeding Events by Unit -->
-                        <div class="lg:col-span-4 bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between min-h-[300px]">
+                    <!-- Charts: Speed and Performance -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <!-- Chart 1: Speeding Events by Unit -->
+                        <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between min-h-[260px]">
                             <h4 class="text-xs font-black text-slate-600 uppercase tracking-widest mb-4 flex items-center gap-1.5"><i class="fas fa-gauge-high text-rose-500"></i> Excesos de Velocidad por Unidad</h4>
                             <div class="flex-1 relative">
                                 <canvas id="chart-sam-speeding"></canvas>
                             </div>
                         </div>
 
-                        <!-- Chart 3: Avg Speed by Unit -->
-                        <div class="lg:col-span-4 bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between min-h-[300px]">
+                        <!-- Chart 2: Avg Speed by Unit -->
+                        <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between min-h-[260px]">
                             <h4 class="text-xs font-black text-slate-600 uppercase tracking-widest mb-4 flex items-center gap-1.5"><i class="fas fa-tachometer-alt text-emerald-500"></i> Velocidad Promedio (km/h)</h4>
                             <div class="flex-1 relative">
                                 <canvas id="chart-sam-avg-speeds"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Safety Events Section Title -->
+                    <div class="border-t border-slate-200 pt-6">
+                        <h4 class="text-xs font-black text-slate-700 uppercase tracking-widest flex items-center gap-2">
+                            <i class="fas fa-shield-halved text-amber-500"></i> Detalle de Alertas Safety por Tipo y Unidad
+                        </h4>
+                        <p class="text-[10px] text-slate-400 mt-1 font-semibold">Gráficos de barras que muestran la cantidad de alertas específicas de seguridad por cada vehículo.</p>
+                    </div>
+
+                    <!-- Safety Charts Grid (7 charts) -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                        <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col min-h-[220px]">
+                            <div class="flex-1 relative">
+                                <canvas id="chart-sam-safety-brake"></canvas>
+                            </div>
+                        </div>
+                        <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col min-h-[220px]">
+                            <div class="flex-1 relative">
+                                <canvas id="chart-sam-safety-accel"></canvas>
+                            </div>
+                        </div>
+                        <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col min-h-[220px]">
+                            <div class="flex-1 relative">
+                                <canvas id="chart-sam-safety-phone"></canvas>
+                            </div>
+                        </div>
+                        <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col min-h-[220px]">
+                            <div class="flex-1 relative">
+                                <canvas id="chart-sam-safety-drowsiness"></canvas>
+                            </div>
+                        </div>
+                        <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col min-h-[220px]">
+                            <div class="flex-1 relative">
+                                <canvas id="chart-sam-safety-unbuckled"></canvas>
+                            </div>
+                        </div>
+                        <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col min-h-[220px]">
+                            <div class="flex-1 relative">
+                                <canvas id="chart-sam-safety-collision"></canvas>
+                            </div>
+                        </div>
+                        <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col min-h-[220px] md:col-span-2 xl:col-span-1">
+                            <div class="flex-1 relative">
+                                <canvas id="chart-sam-safety-passenger"></canvas>
                             </div>
                         </div>
                     </div>
@@ -296,29 +355,68 @@ export async function renderTelemetry(container) {
                         </div>
                     </div>
 
-                    <!-- Charts Grid -->
-                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                        <!-- Chart 1: Safety Events by Unit -->
-                        <div class="lg:col-span-4 bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between min-h-[300px]">
-                            <h4 class="text-xs font-black text-slate-600 uppercase tracking-widest mb-4 flex items-center gap-1.5"><i class="fas fa-shield-halved text-amber-500"></i> Eventos Safety por Unidad</h4>
-                            <div class="flex-1 relative">
-                                <canvas id="chart-enl-safety"></canvas>
-                            </div>
-                        </div>
-
-                        <!-- Chart 2: Speeding Events by Unit -->
-                        <div class="lg:col-span-4 bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between min-h-[300px]">
+                    <!-- Charts: Speed and Performance -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <!-- Chart 1: Speeding Events by Unit -->
+                        <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between min-h-[260px]">
                             <h4 class="text-xs font-black text-slate-600 uppercase tracking-widest mb-4 flex items-center gap-1.5"><i class="fas fa-gauge-high text-rose-500"></i> Excesos de Velocidad por Unidad</h4>
                             <div class="flex-1 relative">
                                 <canvas id="chart-enl-speeding"></canvas>
                             </div>
                         </div>
 
-                        <!-- Chart 3: Avg Speed by Unit -->
-                        <div class="lg:col-span-4 bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between min-h-[300px]">
+                        <!-- Chart 2: Avg Speed by Unit -->
+                        <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between min-h-[260px]">
                             <h4 class="text-xs font-black text-slate-600 uppercase tracking-widest mb-4 flex items-center gap-1.5"><i class="fas fa-tachometer-alt text-emerald-500"></i> Velocidad Promedio (km/h)</h4>
                             <div class="flex-1 relative">
                                 <canvas id="chart-enl-avg-speeds"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Safety Events Section Title -->
+                    <div class="border-t border-slate-200 pt-6">
+                        <h4 class="text-xs font-black text-slate-700 uppercase tracking-widest flex items-center gap-2">
+                            <i class="fas fa-shield-halved text-amber-500"></i> Detalle de Alertas Safety por Tipo y Unidad
+                        </h4>
+                        <p class="text-[10px] text-slate-400 mt-1 font-semibold">Gráficos de barras que muestran la cantidad de alertas específicas de seguridad por cada vehículo.</p>
+                    </div>
+
+                    <!-- Safety Charts Grid (7 charts) -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                        <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col min-h-[220px]">
+                            <div class="flex-1 relative">
+                                <canvas id="chart-enl-safety-brake"></canvas>
+                            </div>
+                        </div>
+                        <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col min-h-[220px]">
+                            <div class="flex-1 relative">
+                                <canvas id="chart-enl-safety-accel"></canvas>
+                            </div>
+                        </div>
+                        <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col min-h-[220px]">
+                            <div class="flex-1 relative">
+                                <canvas id="chart-enl-safety-phone"></canvas>
+                            </div>
+                        </div>
+                        <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col min-h-[220px]">
+                            <div class="flex-1 relative">
+                                <canvas id="chart-enl-safety-drowsiness"></canvas>
+                            </div>
+                        </div>
+                        <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col min-h-[220px]">
+                            <div class="flex-1 relative">
+                                <canvas id="chart-enl-safety-unbuckled"></canvas>
+                            </div>
+                        </div>
+                        <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col min-h-[220px]">
+                            <div class="flex-1 relative">
+                                <canvas id="chart-enl-safety-collision"></canvas>
+                            </div>
+                        </div>
+                        <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col min-h-[220px] md:col-span-2 xl:col-span-1">
+                            <div class="flex-1 relative">
+                                <canvas id="chart-enl-safety-passenger"></canvas>
                             </div>
                         </div>
                     </div>
@@ -709,7 +807,6 @@ function applyFilters() {
             speedingEvents: moduleState.reportData.samsara.speedingEvents.filter(filterFn),
             safetyEvents: moduleState.reportData.samsara.safetyEvents.filter(filterFn),
             averageSpeeds: moduleState.reportData.samsara.averageSpeeds.filter(item => {
-                // Average speeds don't have driver, filter by unit only
                 return (unitFilter === 'all' || item.vehicle === unitFilter);
             })
         },
@@ -717,7 +814,6 @@ function applyFilters() {
             speedingEvents: moduleState.reportData.enlace.speedingEvents.filter(filterFn),
             safetyEvents: moduleState.reportData.enlace.safetyEvents.filter(filterFn),
             averageSpeeds: moduleState.reportData.enlace.averageSpeeds.filter(item => {
-                // Average speeds don't have driver, filter by unit only
                 return (unitFilter === 'all' || item.vehicle === unitFilter);
             })
         }
@@ -779,163 +875,164 @@ function renderStats(summary) {
 }
 
 /**
+ * Helper to render individual safety event bar charts by unit
+ */
+function renderSafetyBarChart(ctxId, events, eventTypeKey, label, color, systemKey) {
+    // Filter events matching the translated Spanish label
+    const filteredEvents = events.filter(e => formatEventLabel(e.type) === label);
+
+    // Count by unit
+    const counts = {};
+    filteredEvents.forEach(e => {
+        counts[e.vehicle] = (counts[e.vehicle] || 0) + 1;
+    });
+
+    const labels = Object.keys(counts);
+    const values = Object.values(counts);
+    const totalEvents = values.reduce((sum, val) => sum + val, 0);
+
+    const canvas = document.getElementById(ctxId);
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    
+    if (moduleState.charts[systemKey][eventTypeKey]) {
+        moduleState.charts[systemKey][eventTypeKey].destroy();
+    }
+
+    moduleState.charts[systemKey][eventTypeKey] = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Cantidad',
+                data: values,
+                backgroundColor: color,
+                borderRadius: 5
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                title: {
+                    display: true,
+                    text: `${label} (${totalEvents} total)`,
+                    font: { size: 11, weight: 'bold' },
+                    color: '#475569'
+                }
+            },
+            scales: {
+                y: { beginAtZero: true, ticks: { precision: 0 } },
+                x: { ticks: { font: { size: 9 } } }
+            }
+        }
+    });
+}
+
+function renderSpeedingChart(canvasId, events, systemKey) {
+    const counts = {};
+    events.forEach(e => { counts[e.vehicle] = (counts[e.vehicle] || 0) + 1; });
+    const labels = Object.keys(counts);
+    const values = Object.values(counts);
+
+    const ctx = document.getElementById(canvasId).getContext('2d');
+    moduleState.charts[systemKey].speeding = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Excesos',
+                data: values,
+                backgroundColor: '#ef4444',
+                borderRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { beginAtZero: true, ticks: { precision: 0 } },
+                x: { ticks: { font: { size: 9 } } }
+            }
+        }
+    });
+}
+
+function renderAvgSpeedChart(canvasId, averageSpeeds, systemKey) {
+    const ctx = document.getElementById(canvasId).getContext('2d');
+    moduleState.charts[systemKey].avgSpeed = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: averageSpeeds.map(v => v.vehicle),
+            datasets: [{
+                label: 'Velocidad Promedio (km/h)',
+                data: averageSpeeds.map(v => v.avgSpeed),
+                backgroundColor: '#10b981',
+                borderRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { beginAtZero: true },
+                x: { ticks: { font: { size: 9 } } }
+            }
+        }
+    });
+}
+
+/**
  * Render Charts via Chart.js
  */
 function renderCharts(data) {
     // Destroy existing chart instances to prevent canvas ghosting
-    if (moduleState.charts.samsara.safety) moduleState.charts.samsara.safety.destroy();
-    if (moduleState.charts.samsara.speeding) moduleState.charts.samsara.speeding.destroy();
-    if (moduleState.charts.samsara.avgSpeed) moduleState.charts.samsara.avgSpeed.destroy();
-    
-    if (moduleState.charts.enlace.safety) moduleState.charts.enlace.safety.destroy();
-    if (moduleState.charts.enlace.speeding) moduleState.charts.enlace.speeding.destroy();
-    if (moduleState.charts.enlace.avgSpeed) moduleState.charts.enlace.avgSpeed.destroy();
-
-    // Helper to extract bar chart data by unit
-    const getUnitCountData = (events) => {
-        const counts = {};
-        events.forEach(e => { counts[e.vehicle] = (counts[e.vehicle] || 0) + 1; });
-        return {
-            labels: Object.keys(counts),
-            values: Object.values(counts)
-        };
+    const destroyCharts = (sys) => {
+        if (moduleState.charts[sys].speeding) moduleState.charts[sys].speeding.destroy();
+        if (moduleState.charts[sys].avgSpeed) moduleState.charts[sys].avgSpeed.destroy();
+        if (moduleState.charts[sys].harshBrake) moduleState.charts[sys].harshBrake.destroy();
+        if (moduleState.charts[sys].harshAccel) moduleState.charts[sys].harshAccel.destroy();
+        if (moduleState.charts[sys].phoneUsage) moduleState.charts[sys].phoneUsage.destroy();
+        if (moduleState.charts[sys].drowsiness) moduleState.charts[sys].drowsiness.destroy();
+        if (moduleState.charts[sys].unbuckled) moduleState.charts[sys].unbuckled.destroy();
+        if (moduleState.charts[sys].collision) moduleState.charts[sys].collision.destroy();
+        if (moduleState.charts[sys].passenger) moduleState.charts[sys].passenger.destroy();
     };
+    destroyCharts('samsara');
+    destroyCharts('enlace');
 
     // -------------------------------------------------------------
     // SAMSARA CHARTS
     // -------------------------------------------------------------
-    // 1. Samsara Safety by Unit (Bar)
-    const samSafetyData = getUnitCountData(data.samsara.safetyEvents);
-    const samSafetyCtx = document.getElementById('chart-sam-safety').getContext('2d');
-    moduleState.charts.samsara.safety = new Chart(samSafetyCtx, {
-        type: 'bar',
-        data: {
-            labels: samSafetyData.labels,
-            datasets: [{
-                label: 'Eventos Safety',
-                data: samSafetyData.values,
-                backgroundColor: '#f59e0b',
-                borderRadius: 6
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
-        }
-    });
+    renderSpeedingChart('chart-sam-speeding', data.samsara.speedingEvents, 'samsara');
+    renderAvgSpeedChart('chart-sam-avg-speeds', data.samsara.averageSpeeds, 'samsara');
 
-    // 2. Samsara Speeding by Unit (Bar)
-    const samSpeedingData = getUnitCountData(data.samsara.speedingEvents);
-    const samSpeedingCtx = document.getElementById('chart-sam-speeding').getContext('2d');
-    moduleState.charts.samsara.speeding = new Chart(samSpeedingCtx, {
-        type: 'bar',
-        data: {
-            labels: samSpeedingData.labels,
-            datasets: [{
-                label: 'Excesos Velocidad',
-                data: samSpeedingData.values,
-                backgroundColor: '#ef4444',
-                borderRadius: 6
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
-        }
-    });
-
-    // 3. Samsara Avg Speed (Bar)
-    const samAvgSpeedCtx = document.getElementById('chart-sam-avg-speeds').getContext('2d');
-    moduleState.charts.samsara.avgSpeed = new Chart(samAvgSpeedCtx, {
-        type: 'bar',
-        data: {
-            labels: data.samsara.averageSpeeds.map(v => v.vehicle),
-            datasets: [{
-                label: 'Velocidad Promedio (km/h)',
-                data: data.samsara.averageSpeeds.map(v => v.avgSpeed),
-                backgroundColor: '#10b981',
-                borderRadius: 6
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: { y: { beginAtZero: true } }
-        }
-    });
+    // 7 Safety charts breakdown for Samsara
+    renderSafetyBarChart('chart-sam-safety-brake', data.samsara.safetyEvents, 'harshBrake', 'Frenado Brusco', '#f59e0b', 'samsara');
+    renderSafetyBarChart('chart-sam-safety-accel', data.samsara.safetyEvents, 'harshAccel', 'Aceleración Brusca', '#eab308', 'samsara');
+    renderSafetyBarChart('chart-sam-safety-phone', data.samsara.safetyEvents, 'phoneUsage', 'Uso de Celular', '#ef4444', 'samsara');
+    renderSafetyBarChart('chart-sam-safety-drowsiness', data.samsara.safetyEvents, 'drowsiness', 'Somnolencia / Fatiga', '#8b5cf6', 'samsara');
+    renderSafetyBarChart('chart-sam-safety-unbuckled', data.samsara.safetyEvents, 'unbuckled', 'Sin Cinturón de Seguridad', '#3b82f6', 'samsara');
+    renderSafetyBarChart('chart-sam-safety-collision', data.samsara.safetyEvents, 'collision', 'Alerta de Colisión / Choque', '#dc2626', 'samsara');
+    renderSafetyBarChart('chart-sam-safety-passenger', data.samsara.safetyEvents, 'passenger', 'Pasajero No Autorizado', '#6b7280', 'samsara');
 
     // -------------------------------------------------------------
     // ENLACE CHARTS
     // -------------------------------------------------------------
-    // 1. Enlace Safety by Unit (Bar)
-    const enlSafetyData = getUnitCountData(data.enlace.safetyEvents);
-    const enlSafetyCtx = document.getElementById('chart-enl-safety').getContext('2d');
-    moduleState.charts.enlace.safety = new Chart(enlSafetyCtx, {
-        type: 'bar',
-        data: {
-            labels: enlSafetyData.labels,
-            datasets: [{
-                label: 'Eventos Safety',
-                data: enlSafetyData.values,
-                backgroundColor: '#f59e0b',
-                borderRadius: 6
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
-        }
-    });
+    renderSpeedingChart('chart-enl-speeding', data.enlace.speedingEvents, 'enlace');
+    renderAvgSpeedChart('chart-enl-avg-speeds', data.enlace.averageSpeeds, 'enlace');
 
-    // 2. Enlace Speeding by Unit (Bar)
-    const enlSpeedingData = getUnitCountData(data.enlace.speedingEvents);
-    const enlSpeedingCtx = document.getElementById('chart-enl-speeding').getContext('2d');
-    moduleState.charts.enlace.speeding = new Chart(enlSpeedingCtx, {
-        type: 'bar',
-        data: {
-            labels: enlSpeedingData.labels,
-            datasets: [{
-                label: 'Excesos Velocidad',
-                data: enlSpeedingData.values,
-                backgroundColor: '#ef4444',
-                borderRadius: 6
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
-        }
-    });
-
-    // 3. Enlace Avg Speed (Bar)
-    const enlAvgSpeedCtx = document.getElementById('chart-enl-avg-speeds').getContext('2d');
-    moduleState.charts.enlace.avgSpeed = new Chart(enlAvgSpeedCtx, {
-        type: 'bar',
-        data: {
-            labels: data.enlace.averageSpeeds.map(v => v.vehicle),
-            datasets: [{
-                label: 'Velocidad Promedio (km/h)',
-                data: data.enlace.averageSpeeds.map(v => v.avgSpeed),
-                backgroundColor: '#10b981',
-                borderRadius: 6
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: { y: { beginAtZero: true } }
-        }
-    });
+    // 7 Safety charts breakdown for Enlace
+    renderSafetyBarChart('chart-enl-safety-brake', data.enlace.safetyEvents, 'harshBrake', 'Frenado Brusco', '#f59e0b', 'enlace');
+    renderSafetyBarChart('chart-enl-safety-accel', data.enlace.safetyEvents, 'harshAccel', 'Aceleración Brusca', '#eab308', 'enlace');
+    renderSafetyBarChart('chart-enl-safety-phone', data.enlace.safetyEvents, 'phoneUsage', 'Uso de Celular', '#ef4444', 'enlace');
+    renderSafetyBarChart('chart-enl-safety-drowsiness', data.enlace.safetyEvents, 'drowsiness', 'Somnolencia / Fatiga', '#8b5cf6', 'enlace');
+    renderSafetyBarChart('chart-enl-safety-unbuckled', data.enlace.safetyEvents, 'unbuckled', 'Sin Cinturón de Seguridad', '#3b82f6', 'enlace');
+    renderSafetyBarChart('chart-enl-safety-collision', data.enlace.safetyEvents, 'collision', 'Alerta de Colisión / Choque', '#dc2626', 'enlace');
+    renderSafetyBarChart('chart-enl-safety-passenger', data.enlace.safetyEvents, 'passenger', 'Pasajero No Autorizado', '#6b7280', 'enlace');
 }
 
 /**
@@ -969,7 +1066,7 @@ function renderTables(data) {
                 <tr class="hover:bg-slate-50 transition-colors">
                     <td class="p-3 font-mono text-slate-500">${new Date(e.time).toLocaleString()}</td>
                     <td class="p-3">
-                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-50 text-amber-600 border border-amber-200/50">
+                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-50 text-amber-600 border border-amber-200/50 text-center">
                             ${formatEventLabel(e.type)}
                         </span>
                     </td>
@@ -1037,12 +1134,12 @@ function renderGeneralTable(filteredData) {
     filteredData.samsara.safetyEvents.forEach(e => {
         const g = getGroup(e.vehicle, e.driver, 'Samsara');
         const type = e.type.toLowerCase();
-        if (type.includes('brake') || type.includes('frenado')) g.safety.harshBrake++;
-        else if (type.includes('accel') || type.includes('aceleracion')) g.safety.harshAcceleration++;
-        else if (type.includes('phone') || type.includes('celular') || type.includes('distract') || type.includes('camera')) g.safety.phoneUsage++;
-        else if (type.includes('drowsy') || type.includes('somnolencia') || type.includes('fatiga')) g.safety.drowsiness++;
-        else if (type.includes('seatbelt') || type.includes('cinturon') || type.includes('unbuckled')) g.safety.unbuckled++;
-        else if (type.includes('crash') || type.includes('collision') || type.includes('colision') || type.includes('choque')) g.safety.crash++;
+        if (type.includes('brake') || type.includes('frenado') || type.includes('frenada')) g.safety.harshBrake++;
+        else if (type.includes('accel') || type.includes('aceleracion') || type.includes('aceleración')) g.safety.harshAcceleration++;
+        else if (type.includes('phone') || type.includes('celular') || type.includes('distract') || type.includes('camera') || type.includes('mobile') || type.includes('movil') || type.includes('móvil')) g.safety.phoneUsage++;
+        else if (type.includes('drowsy') || type.includes('somnolencia') || type.includes('fatiga') || type.includes('sleep') || type.includes('bostezo')) g.safety.drowsiness++;
+        else if (type.includes('seatbelt') || type.includes('cinturon') || type.includes('cinturón') || type.includes('unbuckled') || type.includes('belt')) g.safety.unbuckled++;
+        else if (type.includes('crash') || type.includes('collision') || type.includes('colision') || type.includes('colisión') || type.includes('choque')) g.safety.crash++;
         else g.safety.other++;
     });
 
@@ -1057,12 +1154,12 @@ function renderGeneralTable(filteredData) {
     filteredData.enlace.safetyEvents.forEach(e => {
         const g = getGroup(e.vehicle, e.driver, 'Enlace');
         const type = e.type.toLowerCase();
-        if (type.includes('brake') || type.includes('frenado')) g.safety.harshBrake++;
-        else if (type.includes('accel') || type.includes('aceleracion')) g.safety.harshAcceleration++;
-        else if (type.includes('phone') || type.includes('celular') || type.includes('distract')) g.safety.phoneUsage++;
-        else if (type.includes('drowsy') || type.includes('somnolencia') || type.includes('fatiga')) g.safety.drowsiness++;
-        else if (type.includes('seatbelt') || type.includes('cinturon') || type.includes('unbuckled')) g.safety.unbuckled++;
-        else if (type.includes('crash') || type.includes('collision') || type.includes('colision') || type.includes('choque')) g.safety.crash++;
+        if (type.includes('brake') || type.includes('frenado') || type.includes('frenada')) g.safety.harshBrake++;
+        else if (type.includes('accel') || type.includes('aceleracion') || type.includes('aceleración')) g.safety.harshAcceleration++;
+        else if (type.includes('phone') || type.includes('celular') || type.includes('distract') || type.includes('mobile') || type.includes('movil') || type.includes('móvil')) g.safety.phoneUsage++;
+        else if (type.includes('drowsy') || type.includes('somnolencia') || type.includes('fatiga') || type.includes('sleep') || type.includes('bostezo')) g.safety.drowsiness++;
+        else if (type.includes('seatbelt') || type.includes('cinturon') || type.includes('cinturón') || type.includes('unbuckled') || type.includes('belt')) g.safety.unbuckled++;
+        else if (type.includes('crash') || type.includes('collision') || type.includes('colision') || type.includes('colisión') || type.includes('choque')) g.safety.crash++;
         else g.safety.other++;
     });
 
@@ -1345,23 +1442,34 @@ function formatDuration(sec) {
 }
 
 /**
- * Format helper for event labels
+ * Format helper for event labels to ensure complete Spanish translations
  */
 function formatEventLabel(type) {
+    if (!type) return 'Desconocido';
+    const lower = type.toLowerCase();
+    
+    // Check for substrings first (extremely robust)
+    if (lower.includes('brake') || lower.includes('frenado') || lower.includes('frenada')) return 'Frenado Brusco';
+    if (lower.includes('accel') || lower.includes('aceleracion') || lower.includes('aceleración')) return 'Aceleración Brusca';
+    if (lower.includes('phone') || lower.includes('celular') || lower.includes('mobile') || lower.includes('movil') || lower.includes('móvil')) return 'Uso de Celular';
+    if (lower.includes('distract') || lower.includes('distracc')) return 'Conducción Distraída';
+    if (lower.includes('drowsy') || lower.includes('fatiga') || lower.includes('somnolencia') || lower.includes('sleep') || lower.includes('bostezo') || lower.includes('yawn')) return 'Somnolencia / Fatiga';
+    if (lower.includes('seatbelt') || lower.includes('cinturon') || lower.includes('cinturón') || lower.includes('unbuckled') || lower.includes('belt')) return 'Sin Cinturón de Seguridad';
+    if (lower.includes('passenger') || lower.includes('pasajero') || lower.includes('unauthorized')) return 'Pasajero No Autorizado';
+    if (lower.includes('collision') || lower.includes('colision') || lower.includes('colisión') || lower.includes('crash') || lower.includes('choque')) return 'Alerta de Colisión / Choque';
+    if (lower.includes('lane') || lower.includes('carril')) return 'Salida de Carril';
+    if (lower.includes('speed') || lower.includes('velocidad')) return 'Exceso de Velocidad';
+    
     const map = {
-        'speeding': 'Exceso de Velocidad',
-        'harshBrake': 'Frenado Brusco',
-        'harshAcceleration': 'Aceleración Brusca',
+        'harshbrake': 'Frenado Brusco',
+        'harshacceleration': 'Aceleración Brusca',
         'distraction': 'Conducción Distraída',
-        'distractedDriving': 'Conducción Distraída',
-        'phoneUsage': 'Uso de Celular',
-        'mobileUsage': 'Uso de Celular',
+        'phoneusage': 'Uso de Celular',
         'drowsiness': 'Somnolencia / Fatiga',
         'unbuckled': 'Sin Cinturón',
-        'noSeatbelt': 'Sin Cinturón',
-        'forwardCollision': 'Alerta Colisión Frontal',
-        'laneDeparture': 'Salida de Carril',
+        'forwardcollision': 'Alerta Colisión Frontal',
+        'lanedeparture': 'Salida de Carril',
         'crash': 'Colisión / Choque'
     };
-    return map[type] || type;
+    return map[lower] || type;
 }
