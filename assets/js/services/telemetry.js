@@ -20,7 +20,7 @@ async function invokeProxy(functionName, body) {
 }
 
 /**
- * Fetch Samsara vehicles and drivers
+ * Fetch Samsara vehicles
  */
 export async function getSamsaraVehicles() {
     const data = await invokeProxy('samsara-proxy', { endpoint: '/fleet/vehicles' });
@@ -28,7 +28,15 @@ export async function getSamsaraVehicles() {
 }
 
 /**
- * Fetch Enlace vehicles and drivers
+ * Fetch Samsara drivers
+ */
+export async function getSamsaraDrivers() {
+    const data = await invokeProxy('samsara-proxy', { endpoint: '/fleet/drivers' });
+    return data?.data || [];
+}
+
+/**
+ * Fetch Enlace vehicles
  */
 export async function getEnlaceVehicles() {
     const data = await invokeProxy('enlace-proxy', { endpoint: '/assets/current-position' });
@@ -47,22 +55,44 @@ async function getSamsaraSafetyEvents(startIso, endIso) {
 }
 
 /**
+ * Fetch Samsara speeding intervals
+ */
+async function getSamsaraSpeedingIntervals(startIso, endIso, vehicleIds = []) {
+    let targetIds = vehicleIds;
+    if (!targetIds || targetIds.length === 0) {
+        const vehicles = await getSamsaraVehicles();
+        targetIds = vehicles.map(v => v.id);
+    }
+    
+    if (targetIds.length === 0) return [];
+
+    const allIntervals = [];
+    const BATCH_SIZE = 40; // Max 50 per request
+    for (let i = 0; i < targetIds.length; i += BATCH_SIZE) {
+        const batch = targetIds.slice(i, i + BATCH_SIZE);
+        const assetIds = batch.join(',');
+        const endpoint = `/fleet/vehicles/driver_speeding_intervals?startTime=${startIso}&endTime=${endIso}&assetIds=${assetIds}&queryBy=tripStartTime`;
+        const res = await invokeProxy('samsara-proxy', { endpoint });
+        const intervals = res?.data || [];
+        allIntervals.push(...intervals);
+    }
+    return allIntervals;
+}
+
+/**
  * Fetch Samsara trips
  */
 async function getSamsaraTrips(startIso, endIso, vehicleIds = []) {
     const startMs = new Date(startIso).getTime();
     const endMs = new Date(endIso).getTime();
     
-    // We need to fetch trips for active vehicles.
-    // If no vehicleIds provided, we fetch vehicles first.
     let targetIds = vehicleIds;
     if (!targetIds || targetIds.length === 0) {
         const vehicles = await getSamsaraVehicles();
-        targetIds = vehicles.slice(0, 15).map(v => v.id); // Limit to 15 vehicles to prevent rate limits
+        targetIds = vehicles.slice(0, 20).map(v => v.id); // Limit to 20 vehicles to prevent rate limits
     }
 
     const allTrips = [];
-    // Fetch trips in parallel batches of 5
     const BATCH_SIZE = 5;
     for (let i = 0; i < targetIds.length; i += BATCH_SIZE) {
         const batch = targetIds.slice(i, i + BATCH_SIZE);
@@ -90,6 +120,47 @@ async function getEnlacePositionHistory(startIso, endIso) {
 }
 
 /**
+ * Haversine formula to calculate distance in km between two coordinates
+ */
+function haversineDistance(lat1, lon1, lat2, lon2) {
+    if (!lat1 || !lon1 || !lat2 || !lon2) return 0;
+    const R = 6371; // Earth radius in km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = 
+        Math.sin(dLat/2) * Math.sin(dLat/2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+        Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c; // in km
+}
+
+/**
+ * Calculate total path distance using coordinate history
+ */
+function calculatePathDistance(points) {
+    let totalDist = 0;
+    for (let i = 1; i < points.length; i++) {
+        const p1 = points[i - 1];
+        const p2 = points[i];
+        if (p1.latitude && p1.longitude && p2.latitude && p2.longitude) {
+            totalDist += haversineDistance(p1.latitude, p1.longitude, p2.latitude, p2.longitude);
+        }
+    }
+    return parseFloat(totalDist.toFixed(1));
+}
+
+/**
+ * Speeding Severity Classifier
+ */
+function classifySpeeding(speed) {
+    if (speed <= 105) return 'leve';
+    if (speed <= 110) return 'moderado';
+    if (speed <= 120) return 'grave';
+    return 'muy_grave';
+}
+
+/**
  * Main function to fetch telemetry from BOTH systems, process calculations on the fly, and return a clean report
  */
 export async function getTelemetryReport(startDate, endDate) {
@@ -99,92 +170,126 @@ export async function getTelemetryReport(startDate, endDate) {
     console.log(`📡 [Telemetry Service] Fetching reports from ${startIso} to ${endIso}`);
 
     // Call APIs in parallel
-    const [samsaraEvents, samsaraTrips, enlaceHistory] = await Promise.all([
+    const [samsaraEvents, samsaraIntervals, samsaraTrips, enlaceHistory, samsaraVehicles, samsaraDrivers] = await Promise.all([
         getSamsaraSafetyEvents(startIso, endIso).catch(() => []),
+        getSamsaraSpeedingIntervals(startIso, endIso).catch(() => []),
         getSamsaraTrips(startIso, endIso).catch(() => []),
-        getEnlacePositionHistory(startIso, endIso).catch(() => [])
+        getEnlacePositionHistory(startIso, endIso).catch(() => []),
+        getSamsaraVehicles().catch(() => []),
+        getSamsaraDrivers().catch(() => [])
     ]);
 
     const report = {
         summary: {
-            totalSafetyEvents: 0,
-            totalSpeedingEvents: 0,
-            averageFleetSpeed: 0,
-            monitoredVehicles: 0
+            samsara: {
+                totalSafetyEvents: 0,
+                totalSpeedingEvents: 0,
+                averageFleetSpeed: 0,
+                monitoredVehicles: 0
+            },
+            enlace: {
+                totalSafetyEvents: 0,
+                totalSpeedingEvents: 0,
+                averageFleetSpeed: 0,
+                monitoredVehicles: 0
+            }
         },
-        speedingEvents: [], // { vehicle, driver, start, end, duration, maxSpeed, lat, lng, address, source }
-        safetyEvents: [],    // { time, type, vehicle, driver, lat, lng, source }
-        averageSpeeds: []   // { vehicle, avgSpeed, distanceKm, hours, source }
+        samsara: {
+            speedingEvents: [], // { vehicle, driver, time, duration, maxSpeed, severity, lat, lng, address }
+            safetyEvents: [],    // { time, type, vehicle, driver, lat, lng }
+            averageSpeeds: []   // { vehicle, avgSpeed, distanceKm, hours }
+        },
+        enlace: {
+            speedingEvents: [], // { vehicle, driver, time, duration, maxSpeed, severity, lat, lng, address }
+            safetyEvents: [],    // { time, type, vehicle, driver, lat, lng }
+            averageSpeeds: []   // { vehicle, avgSpeed, distanceKm, hours }
+        }
     };
 
-    const monitoredVehicleSet = new Set();
+    // Helper maps to resolve Samsara IDs
+    const samVehicleMap = {};
+    samsaraVehicles.forEach(v => { samVehicleMap[v.id] = v.name; });
+    const samDriverMap = {};
+    samsaraDrivers.forEach(d => { samDriverMap[d.id] = d.name; });
+
+    const samsaraMonitoredSet = new Set();
+    const enlaceMonitoredSet = new Set();
 
     // -------------------------------------------------------------
-    // 1. PROCESS SAMSARA SAFETY & SPEEDING EVENTS
+    // 1. PROCESS SAMSARA SAFETY EVENTS
     // -------------------------------------------------------------
     samsaraEvents.forEach(e => {
         const labels = e.behaviorLabels || [];
         let eventType = labels.length > 0 ? (labels[0].label || labels[0].name) : (e.eventType || e.type || 'unknown');
         
-        const vehicleName = e.vehicle?.name || 'Samsara Veh';
-        const driverName = e.driver?.name || 'No Identificado';
-        monitoredVehicleSet.add(vehicleName);
+        const vehicleName = e.vehicle?.name || samVehicleMap[e.vehicle?.id] || 'Samsara Veh';
+        const driverName = e.driver?.name || samDriverMap[e.driver?.id] || 'No Identificado';
+        samsaraMonitoredSet.add(vehicleName);
 
         // Standardize speeding type
         if (eventType.toLowerCase().includes('speed')) {
-            eventType = 'speeding';
+            return; // Ignore speeding from safety events since we pull it accurately via driver_speeding_intervals
         }
 
-        // Location
         const lat = e.location?.latitude || e.location?.lat || null;
         const lng = e.location?.longitude || e.location?.lon || null;
         const address = e.location?.reverseGeo?.formattedLocation || e.location?.address || 'Ubicación Desconocida';
 
-        if (eventType === 'speeding') {
-            let speedKmH = 0;
-            if (e.maxSpeedMetersPerSecond) speedKmH = Math.round(e.maxSpeedMetersPerSecond * 3.6);
-            else if (e.speedMilesPerHour) speedKmH = Math.round(e.speedMilesPerHour * 1.60934);
-            else if (e.speed) speedKmH = Math.round(e.speed);
+        report.samsara.safetyEvents.push({
+            time: e.time,
+            type: eventType,
+            vehicle: vehicleName,
+            driver: driverName,
+            lat,
+            lng,
+            address
+        });
+        report.summary.samsara.totalSafetyEvents++;
+    });
 
-            report.speedingEvents.push({
+    // -------------------------------------------------------------
+    // 2. PROCESS SAMSARA SPEEDING INTERVALS
+    // -------------------------------------------------------------
+    samsaraIntervals.forEach(interval => {
+        const vehicleName = interval.vehicle?.name || samVehicleMap[interval.vehicle?.id] || `Veh ${interval.vehicle?.id || ''}`;
+        const driverName = interval.driver?.name || samDriverMap[interval.driver?.id] || 'No Identificado';
+        samsaraMonitoredSet.add(vehicleName);
+
+        const speedKmH = Math.round(interval.averageSpeedMph * 1.60934);
+        const durationSec = interval.durationSeconds || 0;
+
+        // Apply filters: >100 km/h and duration > 60 seconds
+        if (speedKmH > 100 && durationSec > 60) {
+            const lat = interval.startLocation?.latitude || null;
+            const lng = interval.startLocation?.longitude || null;
+            const address = interval.startLocation?.formattedAddress || 'Ubicación Desconocida';
+            
+            report.samsara.speedingEvents.push({
                 vehicle: vehicleName,
                 driver: driverName,
-                time: e.time,
-                duration: 60, // Default duration if not provided
-                maxSpeed: speedKmH || 100,
+                time: interval.startTime,
+                duration: durationSec,
+                maxSpeed: speedKmH, // Use speed from the interval
+                severity: classifySpeeding(speedKmH),
                 lat,
                 lng,
-                address,
-                source: 'Samsara'
+                address
             });
-            report.summary.totalSpeedingEvents++;
-        } else {
-            report.safetyEvents.push({
-                time: e.time,
-                type: eventType,
-                vehicle: vehicleName,
-                driver: driverName,
-                lat,
-                lng,
-                source: 'Samsara'
-            });
-            report.summary.totalSafetyEvents++;
+            report.summary.samsara.totalSpeedingEvents++;
         }
     });
 
     // -------------------------------------------------------------
-    // 2. PROCESS SAMSARA AVERAGE SPEEDS
+    // 3. PROCESS SAMSARA AVERAGE SPEEDS
     // -------------------------------------------------------------
     const samsaraVehicleStats = {};
     samsaraTrips.forEach(trip => {
         const vId = trip.vehicleId;
         if (!samsaraVehicleStats[vId]) {
-            samsaraVehicleStats[vId] = { name: `Veh ${vId}`, distanceMeters: 0, durationMs: 0 };
+            samsaraVehicleStats[vId] = { name: samVehicleMap[vId] || `Veh ${vId}`, distanceMeters: 0, durationMs: 0 };
         }
         
-        // Find vehicle name if possible from e.vehicle or fetch
         if (trip.vehicleName) samsaraVehicleStats[vId].name = trip.vehicleName;
-        
         samsaraVehicleStats[vId].distanceMeters += (trip.distanceMeters || 0);
         const dur = (trip.endMs && trip.startMs) ? (trip.endMs - trip.startMs) : 0;
         samsaraVehicleStats[vId].durationMs += dur;
@@ -195,29 +300,30 @@ export async function getTelemetryReport(startDate, endDate) {
         const hours = parseFloat((stats.durationMs / (1000 * 60 * 60)).toFixed(2));
         const avgSpeed = hours > 0 ? Math.round(distanceKm / hours) : 0;
         
-        report.averageSpeeds.push({
-            vehicle: stats.name,
-            avgSpeed,
-            distanceKm,
-            hours,
-            source: 'Samsara'
-        });
+        if (distanceKm > 0) {
+            report.samsara.averageSpeeds.push({
+                vehicle: stats.name,
+                avgSpeed,
+                distanceKm,
+                hours
+            });
+        }
     });
 
     // -------------------------------------------------------------
-    // 3. PROCESS ENLACE DATA (SPEEDING, SAFETY & AVG SPEEDS)
+    // 4. PROCESS ENLACE DATA (SPEEDING, SAFETY & AVG SPEEDS)
     // -------------------------------------------------------------
     enlaceHistory.forEach(v => {
         const vehicleName = v.vehicleNumber || `Enlace ${v.assetId}`;
         const historyPoints = v.history || [];
         if (historyPoints.length === 0) return;
         
-        monitoredVehicleSet.add(vehicleName);
+        enlaceMonitoredSet.add(vehicleName);
 
-        // Sort points ascending
+        // Sort points ascending by date
         historyPoints.sort((a, b) => new Date(a.date) - new Date(b.date));
 
-        // 3a. Calculate Speeding Events (>100 km/h for >60s)
+        // 4a. Calculate Speeding Events (>100 km/h for >60s)
         let inSpeeding = false;
         let eventStartPoint = null;
         let maxSpeed = 0;
@@ -238,23 +344,21 @@ export async function getTelemetryReport(startDate, endDate) {
                     // Check for large gaps > 5 mins
                     const prevTime = new Date(historyPoints[i-1].date);
                     if (pTime - prevTime > 5 * 60 * 1000) {
-                        // Split event
                         const durationSec = (prevTime - new Date(eventStartPoint.date)) / 1000;
                         if (durationSec > 60) {
-                            report.speedingEvents.push({
+                            report.enlace.speedingEvents.push({
                                 vehicle: vehicleName,
                                 driver: eventStartPoint.position?.driver?.driverName || eventStartPoint.driver?.driverName || 'No Identificado',
                                 time: eventStartPoint.date,
                                 duration: durationSec,
                                 maxSpeed: Math.round(maxSpeed),
+                                severity: classifySpeeding(Math.round(maxSpeed)),
                                 lat: eventStartPoint.latitude,
                                 lng: eventStartPoint.longitude,
-                                address: eventStartPoint.streetReference || eventStartPoint.nearestCityReference || 'Ubicación Desconocida',
-                                source: 'Enlace'
+                                address: eventStartPoint.streetReference || eventStartPoint.nearestCityReference || 'Ubicación Desconocida'
                             });
-                            report.summary.totalSpeedingEvents++;
+                            report.summary.enlace.totalSpeedingEvents++;
                         }
-                        // Reset to current point
                         eventStartPoint = p;
                         maxSpeed = speed;
                     }
@@ -264,18 +368,18 @@ export async function getTelemetryReport(startDate, endDate) {
                     const prevPoint = historyPoints[i-1];
                     const durationSec = (new Date(prevPoint.date) - new Date(eventStartPoint.date)) / 1000;
                     if (durationSec > 60) {
-                        report.speedingEvents.push({
+                        report.enlace.speedingEvents.push({
                             vehicle: vehicleName,
                             driver: eventStartPoint.position?.driver?.driverName || eventStartPoint.driver?.driverName || 'No Identificado',
                             time: eventStartPoint.date,
                             duration: durationSec,
                             maxSpeed: Math.round(maxSpeed),
+                            severity: classifySpeeding(Math.round(maxSpeed)),
                             lat: eventStartPoint.latitude,
                             lng: eventStartPoint.longitude,
-                            address: eventStartPoint.streetReference || eventStartPoint.nearestCityReference || 'Ubicación Desconocida',
-                            source: 'Enlace'
+                            address: eventStartPoint.streetReference || eventStartPoint.nearestCityReference || 'Ubicación Desconocida'
                         });
-                        report.summary.totalSpeedingEvents++;
+                        report.summary.enlace.totalSpeedingEvents++;
                     }
                     inSpeeding = false;
                     eventStartPoint = null;
@@ -284,89 +388,95 @@ export async function getTelemetryReport(startDate, endDate) {
             }
         }
 
-        // Catch active speeding at the end
         if (inSpeeding && eventStartPoint) {
             const lastPoint = historyPoints[historyPoints.length - 1];
             const durationSec = (new Date(lastPoint.date) - new Date(eventStartPoint.date)) / 1000;
             if (durationSec > 60) {
-                report.speedingEvents.push({
+                report.enlace.speedingEvents.push({
                     vehicle: vehicleName,
                     driver: eventStartPoint.position?.driver?.driverName || eventStartPoint.driver?.driverName || 'No Identificado',
                     time: eventStartPoint.date,
                     duration: durationSec,
                     maxSpeed: Math.round(maxSpeed),
+                    severity: classifySpeeding(Math.round(maxSpeed)),
                     lat: eventStartPoint.latitude,
                     lng: eventStartPoint.longitude,
-                    address: eventStartPoint.streetReference || eventStartPoint.nearestCityReference || 'Ubicación Desconocida',
-                    source: 'Enlace'
+                    address: eventStartPoint.streetReference || eventStartPoint.nearestCityReference || 'Ubicación Desconocida'
                 });
-                report.summary.totalSpeedingEvents++;
+                report.summary.enlace.totalSpeedingEvents++;
             }
         }
 
-        // 3b. Extract safety events from the points
+        // 4b. Extract safety events from the points
         historyPoints.forEach(p => {
             const evList = p.events || [];
             evList.forEach(e => {
                 const driverName = p.position?.driver?.driverName || p.driver?.driverName || 'No Identificado';
                 const eventTypeName = e.eventTypeName || e.event || 'Alerta Enlace';
                 
-                // Avoid duplicating speeding events since we calculate them precisely
                 if (eventTypeName.toLowerCase().includes('velocidad') || eventTypeName.toLowerCase().includes('speed')) {
-                    return;
+                    return; // Avoid duplicating speeding
                 }
 
-                report.safetyEvents.push({
+                report.enlace.safetyEvents.push({
                     time: p.date,
                     type: eventTypeName,
                     vehicle: vehicleName,
                     driver: driverName,
                     lat: p.latitude,
                     lng: p.longitude,
-                    source: 'Enlace'
+                    address: p.streetReference || p.nearestCityReference || 'Ubicación Desconocida'
                 });
-                report.summary.totalSafetyEvents++;
+                report.summary.enlace.totalSafetyEvents++;
             });
         });
 
-        // 3c. Calculate Enlace average speed
+        // 4c. Calculate Enlace average speed using Haversine route calculation
+        const distanceKm = calculatePathDistance(historyPoints);
         const firstPoint = historyPoints[0];
         const lastPoint = historyPoints[historyPoints.length - 1];
         
-        const fDistance = firstPoint.gpsDistance || 0;
-        const lDistance = lastPoint.gpsDistance || 0;
-        const distanceKm = parseFloat(Math.max(0, lDistance - fDistance).toFixed(1));
-        
         const durationHours = (new Date(lastPoint.date) - new Date(firstPoint.date)) / (1000 * 60 * 60);
         const hours = parseFloat(Math.max(0, durationHours).toFixed(2));
-        
         const avgSpeed = (hours > 0 && distanceKm > 0) ? Math.round(distanceKm / hours) : 0;
 
-        if (distanceKm > 0) {
-            report.averageSpeeds.push({
+        if (distanceKm > 0.5) { // Only count if moved more than 500 meters
+            report.enlace.averageSpeeds.push({
                 vehicle: vehicleName,
                 avgSpeed,
                 distanceKm,
-                hours,
-                source: 'Enlace'
+                hours
             });
         }
     });
 
     // -------------------------------------------------------------
-    // 4. CALCULATE OVERALL SUMMARY METRICS
+    // 5. CALCULATE OVERALL SUMMARY METRICS
     // -------------------------------------------------------------
-    report.summary.monitoredVehicles = monitoredVehicleSet.size;
+    report.summary.samsara.monitoredVehicles = samsaraMonitoredSet.size;
+    report.summary.enlace.monitoredVehicles = enlaceMonitoredSet.size;
 
-    let sumSpeed = 0;
-    let countSpeed = 0;
-    report.averageSpeeds.forEach(v => {
+    // Samsara Average Fleet Speed
+    let samSum = 0;
+    let samCount = 0;
+    report.samsara.averageSpeeds.forEach(v => {
         if (v.avgSpeed > 0) {
-            sumSpeed += v.avgSpeed;
-            countSpeed++;
+            samSum += v.avgSpeed;
+            samCount++;
         }
     });
-    report.summary.averageFleetSpeed = countSpeed > 0 ? Math.round(sumSpeed / countSpeed) : 0;
+    report.summary.samsara.averageFleetSpeed = samCount > 0 ? Math.round(samSum / samCount) : 0;
+
+    // Enlace Average Fleet Speed
+    let enlSum = 0;
+    let enlCount = 0;
+    report.enlace.averageSpeeds.forEach(v => {
+        if (v.avgSpeed > 0) {
+            enlSum += v.avgSpeed;
+            enlCount++;
+        }
+    });
+    report.summary.enlace.averageFleetSpeed = enlCount > 0 ? Math.round(enlSum / enlCount) : 0;
 
     return report;
 }
