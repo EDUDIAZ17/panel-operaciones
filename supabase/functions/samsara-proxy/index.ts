@@ -14,7 +14,15 @@ serve(async (req) => {
     const { endpoint } = await req.json()
     
     // Validate endpoint
-    const allowedEndpoints = ['/fleet/vehicles/locations', '/fleet/vehicles', '/fleet/drivers', '/fleet/vehicles/stats'];
+    const allowedEndpoints = [
+      '/fleet/vehicles/locations',
+      '/fleet/vehicles',
+      '/fleet/drivers',
+      '/fleet/vehicles/stats',
+      '/fleet/safety-events',
+      '/v1/fleet/trips',
+      '/fleet/reports/vehicles/fuel-energy'
+    ];
     const isAllowed = allowedEndpoints.some(e => endpoint.startsWith(e));
     
     if (!isAllowed) {

@@ -14,6 +14,7 @@ import { renderPayrollMap } from './modules/payroll_map.js';
 import { renderFuel } from './modules/fuel.js?v=11.1';
 import { renderSecurityVial } from './modules/security_vial.js';
 import { renderGPSAlerts } from './modules/gps_alerts.js';
+import { renderTelemetry } from './modules/telemetry.js';
 import { supabase } from './services/supabaseClient.js';
 
 // DOM Elements
@@ -87,7 +88,7 @@ try {
             'nav-assignments', 'nav-trip-logs', 'nav-expenses', 'nav-fuel', 'nav-reports',
             'nav-client-reports', 'nav-atc-reports', 'nav-history-reports', 'nav-security-vial',
             'nav-observations', 'nav-cameras', 'nav-incidents', 'nav-admin', 'nav-payroll-map',
-            'nav-gps-alerts'
+            'nav-gps-alerts', 'nav-telemetry'
         ];
 
         if (role === 'mantenimiento' || role === 'manto' || role === 'maintenance') {
@@ -154,7 +155,7 @@ try {
         } 
         else if (role === 'operaciones') {
             allNavs.forEach(nav => {
-                if(nav !== 'nav-assignments' && nav !== 'nav-expenses' && nav !== 'nav-fuel' && nav !== 'nav-payroll-map' && nav !== 'nav-admin' && nav !== 'nav-gps-alerts') document.getElementById(nav)?.classList.add('hidden-section');
+                if(nav !== 'nav-assignments' && nav !== 'nav-expenses' && nav !== 'nav-fuel' && nav !== 'nav-payroll-map' && nav !== 'nav-admin' && nav !== 'nav-gps-alerts' && nav !== 'nav-telemetry') document.getElementById(nav)?.classList.add('hidden-section');
             });
         } 
         else if (role === 'otros_usuarios') {
@@ -324,6 +325,11 @@ function loadView(view) {
             setActiveNav('nav-gps-alerts');
             renderGPSAlerts(contentArea);
             break;
+        case 'telemetry':
+            pageTitle.textContent = 'Módulo de Telemetría (Samsara + Enlace)';
+            setActiveNav('nav-telemetry');
+            renderTelemetry(contentArea);
+            break;
     }
 }
 
@@ -388,6 +394,7 @@ attachNav('nav-payroll-map', 'payroll-map');
 attachNav('nav-fuel', 'fuel');
 attachNav('nav-security-vial', 'security-vial');
 attachNav('nav-gps-alerts', 'gps-alerts');
+attachNav('nav-telemetry', 'telemetry');
 
 const logoutBtn = document.getElementById('logout-btn');
 if (logoutBtn) {
