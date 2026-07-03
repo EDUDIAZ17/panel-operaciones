@@ -121,6 +121,7 @@ export async function registerUser(userData) {
         .insert({
             email: normalizedEmail,
             name: userData.name,
+            password: 'obsolete_use_hash', // Safe fallback for legacy DB NOT NULL constraint
             password_hash: passwordHash,
             role: userData.role
         });
