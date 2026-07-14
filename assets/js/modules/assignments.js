@@ -4,21 +4,123 @@ import { fetchSamsaraLocations } from '../services/samsara.js';
 
 window.openHistoryModal = openHistoryModal;
 
+const geoCache = new Map();
+
+// Database fallback helpers to ensure seamless operation
+async function fetchTableDataFallback(tableName) {
+    try {
+        const { data, error } = await supabase.from(tableName).select('*');
+        if (error) {
+            if (error.code === '42P01' || error.message.includes('relation') || error.message.includes('does not exist')) {
+                console.warn(`[Fallback] La tabla ${tableName} no existe en Supabase. Usando localStorage.`);
+                return JSON.parse(localStorage.getItem(tableName) || '[]');
+            }
+            throw error;
+        }
+        return data || [];
+    } catch (e) {
+        console.warn(`[Fallback] Error al conectar a la tabla ${tableName}:`, e);
+        return JSON.parse(localStorage.getItem(tableName) || '[]');
+    }
+}
+
+async function insertTableDataFallback(tableName, row) {
+    try {
+        const rowWithId = { id: crypto.randomUUID(), created_at: new Date().toISOString(), ...row };
+        const { data, error } = await supabase.from(tableName).insert([rowWithId]).select();
+        if (error) {
+            if (error.code === '42P01' || error.message.includes('relation') || error.message.includes('does not exist')) {
+                console.warn(`[Fallback] Insertando en localStorage para ${tableName}`);
+                const local = JSON.parse(localStorage.getItem(tableName) || '[]');
+                local.push(rowWithId);
+                localStorage.setItem(tableName, JSON.stringify(local));
+                return rowWithId;
+            }
+            throw error;
+        }
+        return data?.[0] || rowWithId;
+    } catch (e) {
+        console.warn(`[Fallback] Error insertando en tabla ${tableName}:`, e);
+        const rowWithId = { id: crypto.randomUUID(), created_at: new Date().toISOString(), ...row };
+        const local = JSON.parse(localStorage.getItem(tableName) || '[]');
+        local.push(rowWithId);
+        localStorage.setItem(tableName, JSON.stringify(local));
+        return rowWithId;
+    }
+}
+
+async function deleteTableDataFallback(tableName, id) {
+    try {
+        const { error } = await supabase.from(tableName).delete().eq('id', id);
+        if (error) {
+            if (error.code === '42P01' || error.message.includes('relation') || error.message.includes('does not exist')) {
+                console.warn(`[Fallback] Eliminando de localStorage para ${tableName}`);
+                let local = JSON.parse(localStorage.getItem(tableName) || '[]');
+                local = local.filter(item => item.id !== id);
+                localStorage.setItem(tableName, JSON.stringify(local));
+                return;
+            }
+            throw error;
+        }
+    } catch (e) {
+        console.warn(`[Fallback] Error eliminando en tabla ${tableName}:`, e);
+        let local = JSON.parse(localStorage.getItem(tableName) || '[]');
+        local = local.filter(item => item.id !== id);
+        localStorage.setItem(tableName, JSON.stringify(local));
+    }
+}
+
+// Google Maps Reverse Geocoder helper
+async function reverseGeocode(lat, lng, elementId) {
+    const key = `${lat.toFixed(3)},${lng.toFixed(3)}`;
+    if (geoCache.has(key)) {
+        const el = document.getElementById(elementId);
+        if (el) el.innerText = geoCache.get(key);
+        return;
+    }
+
+    if (!window.google || !window.google.maps || !window.google.maps.Geocoder) return;
+
+    const geocoder = new window.google.maps.Geocoder();
+    try {
+        geocoder.geocode({ location: { lat, lng } }, (results, status) => {
+            if (status === "OK" && results[0]) {
+                let preciseAddress = results[0].formatted_address.split(',').slice(0, 3).join(', ');
+                geoCache.set(key, preciseAddress);
+                const el = document.getElementById(elementId);
+                if (el) {
+                    el.innerText = preciseAddress;
+                    el.title = results[0].formatted_address;
+                }
+            } else {
+                geoCache.set(key, 'GPS Activo');
+                const el = document.getElementById(elementId);
+                if (el) el.innerText = 'GPS Activo';
+            }
+        });
+    } catch(e) {
+        console.error("Geocoding Error", e);
+    }
+}
+
 export async function renderAssignments(container) {
     const canEdit = ['admin', 'torre_control', 'operaciones'].includes(window.userRole);
 
     container.innerHTML = `
         <div id="view-assignments" class="p-6 fade-in">
-            <div class="bg-white rounded-lg shadow p-6">
+            <div class="bg-white rounded-lg shadow p-6 mb-6">
                 <!-- Header -->
                 <div class="flex flex-col md:flex-row justify-between mb-6 items-center gap-4">
-                    <h3 class="text-xl font-bold text-gray-800">Control de Asignaciones y Programación</h3>
+                    <div>
+                        <h3 class="text-xl font-bold text-gray-800"><i class="fas fa-tasks text-purple-600 mr-2"></i>Control de Asignaciones y Programación</h3>
+                        <p class="text-xs text-gray-500 mt-1">Gestión de viajes activos, telemetría satelital, regresos y estatus preventivo ERP.</p>
+                    </div>
                     <div class="flex gap-2 flex-wrap">
                         ${canEdit ? `
                         <button id="btn-schedule" class="bg-purple-600 text-white px-4 py-2 rounded shadow hover:bg-purple-700 transition">
                             <i class="fas fa-calendar-plus mr-2"></i> Programar Viaje
                         </button>
-                        <button id="btn-observations" class="bg-yellow-500 text-white px-4 py-2 rounded shadow hover:bg-yellow-600 transition">
+                        <button id="btn-observations-direct" class="bg-amber-500 text-white px-4 py-2 rounded shadow hover:bg-amber-600 transition">
                             <i class="fas fa-exclamation-triangle mr-2"></i> Observaciones RH
                         </button>
                         ` : ''}
@@ -30,27 +132,83 @@ export async function renderAssignments(container) {
                 <div class="overflow-x-auto custom-scrollbar w-full pb-4">
                     <table class="w-full text-left border-collapse min-w-max">
                         <thead>
-                            <tr class="bg-gray-100 border-b">
-                                <th class="p-4 font-semibold text-gray-600 rounded-tl-lg">Unidad</th>
-                                <th class="p-4 font-semibold text-gray-600">Operador Actual</th>
-                                <th class="p-4 font-semibold text-gray-600 w-32">Estado</th>
-                                <th class="p-4 font-semibold text-gray-600">Ruta / Ubicación</th>
-                                <th class="p-4 font-semibold text-gray-600">Fecha Asignación</th>
-                                <th class="p-4 font-semibold text-gray-600 rounded-tr-lg">Acciones</th>
+                            <tr class="bg-gray-100 border-b text-xs uppercase tracking-wider text-gray-500">
+                                <th class="p-4 font-bold rounded-tl-lg">Económico</th>
+                                <th class="p-4 font-bold">Operador Actual</th>
+                                <th class="p-4 font-bold w-32">Estado</th>
+                                <th class="p-4 font-bold w-48">Origen Actual (GPS)</th>
+                                <th class="p-4 font-bold w-48">Destino Actual</th>
+                                <th class="p-4 font-bold w-32">Regreso</th>
+                                <th class="p-4 font-bold w-40">Duración y Semáforo</th>
+                                <th class="p-4 font-bold w-40">Fecha Asignación</th>
+                                <th class="p-4 font-bold rounded-tr-lg">Acciones</th>
                             </tr>
                         </thead>
-                        <tbody id="assignments-body">
-                             <tr><td colspan="6" class="p-8 text-center"><div class="spinner"></div> Cargando flota...</td></tr>
+                        <tbody id="assignments-body" class="text-sm">
+                             <tr><td colspan="9" class="p-8 text-center"><div class="spinner"></div> Cargando flota...</td></tr>
                         </tbody>
                     </table>
                 </div>
             </div>
+
+            <!-- AI Suggestions & Pending Trips Layout -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+                <!-- AI recommendations panel -->
+                <div class="bg-indigo-50/50 rounded-xl border border-indigo-100 p-6 flex flex-col shadow-sm">
+                    <div class="flex justify-between items-center mb-4">
+                        <h4 class="font-black text-slate-800 flex items-center gap-2">
+                            <i class="fas fa-robot text-indigo-600 text-xl animate-bounce"></i>
+                            Sugerencias Logísticas de IA (Gemini)
+                        </h4>
+                        <button id="btn-refresh-ai-suggestions" class="bg-indigo-600 text-white hover:bg-indigo-700 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 shadow-sm">
+                            <i class="fas fa-sync-alt"></i> Recargar
+                        </button>
+                    </div>
+                    <div id="ai-suggestions-content" class="flex-1 overflow-y-auto max-h-[350px] min-h-[150px] custom-scrollbar bg-white rounded-lg p-4 border border-indigo-50 shadow-inner">
+                        <div class="text-center py-8 text-slate-400 font-medium">
+                            <div class="spinner border-t-indigo-500 mb-2"></div>
+                            Generando sugerencias logísticas...
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pending Trips panel -->
+                <div class="bg-white rounded-xl border border-slate-200 p-6 flex flex-col shadow-sm">
+                    <div class="flex justify-between items-center mb-4">
+                        <h4 class="font-bold text-slate-800 flex items-center gap-2">
+                            <i class="fas fa-clock text-orange-500 text-lg"></i>
+                            Viajes Pendientes por Asignar
+                        </h4>
+                        ${canEdit ? `
+                        <button id="btn-add-pending-trip" class="bg-emerald-600 text-white hover:bg-emerald-700 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 shadow-sm">
+                            <i class="fas fa-plus"></i> Registrar Viaje
+                        </button>
+                        ` : ''}
+                    </div>
+                    <div class="flex-1 overflow-y-auto max-h-[350px] custom-scrollbar border border-slate-100 rounded-lg">
+                        <table class="w-full text-left border-collapse text-xs">
+                            <thead>
+                                <tr class="bg-slate-50 border-b border-slate-100 text-slate-500 font-bold uppercase">
+                                    <th class="p-3">Cliente</th>
+                                    <th class="p-3">Origen Carga</th>
+                                    <th class="p-3">Destino Entrega</th>
+                                    <th class="p-3 text-center">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="pending-trips-body">
+                                <tr><td colspan="4" class="p-6 text-center text-gray-400 italic">Cargando viajes pendientes...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
             <!-- Modals Container -->
             <div id="modal-container"></div>
         </div>
     `;
 
-    const btnObs = document.getElementById('btn-observations');
+    const btnObs = document.getElementById('btn-observations-direct');
     if (btnObs) {
         btnObs.onclick = () => {
             const navBtn = document.getElementById('nav-observations');
@@ -62,10 +220,16 @@ export async function renderAssignments(container) {
     const btnSchedule = document.getElementById('btn-schedule');
     if (btnSchedule) btnSchedule.onclick = () => openScheduleModal();
 
+    const btnAddPending = document.getElementById('btn-add-pending-trip');
+    if (btnAddPending) btnAddPending.onclick = () => window.openAddPendingTripModal();
+
+    const btnRefreshAI = document.getElementById('btn-refresh-ai-suggestions');
+    if (btnRefreshAI) btnRefreshAI.onclick = () => window.refreshAISuggestions();
+
     window.addSchedDestination = () => {
         const container = document.getElementById('sched-destinations-list');
         const div = document.createElement('div');
-        div.className = 'flex gap-2 items-center dest-row animate-content-fade-in';
+        div.className = 'flex gap-2 items-center dest-row animate-content-fade-in mt-2';
         div.innerHTML = `
             <select class="flex-1 border-2 border-gray-200 focus:border-purple-500 outline-none p-2 rounded-lg font-medium sched-dest-item" onchange="window.handleDynamicSelect(this, 'locations')">
                 <option value="">Seleccionar Destino...</option>
@@ -103,10 +267,11 @@ async function loadTable() {
     window.samsaraData = samsaraData;
 
     if (error) {
-        list.innerHTML = `<tr><td colspan="5" class="text-red-500 p-4 text-center">Error: ${error.message}</td></tr>`;
+        list.innerHTML = `<tr><td colspan="9" class="text-red-500 p-4 text-center">Error: ${error.message}</td></tr>`;
         return;
     }
 
+    // Sort units naturally (ATM01, ATM02, ATM10...)
     window.unitsData = units.sort((a,b) => a.economic_number.localeCompare(b.economic_number, undefined, {numeric: true})); 
     window.operatorsData = allOps;
     window.clientsData = clients || [];
@@ -114,8 +279,166 @@ async function loadTable() {
     window.destinationsData = destinations || [];
     window.statusesData = unitStatuses || [];
 
-    renderRows(units, allOps, samsaraData);
+    // Fetch Pending Trips and Maintenance Logs (with fallback)
+    window.pendingTripsData = await fetchTableDataFallback('pending_trips');
+    window.maintLogsData = await fetchTableDataFallback('maintenance_logs');
+
+    // Render assignments table
+    renderRows(window.unitsData, allOps, samsaraData);
+
+    // Render pending trips table
+    renderPendingTripsList();
+
+    // Trigger AI recommendations in the background
+    window.refreshAISuggestions();
 }
+
+function renderPendingTripsList() {
+    const tbody = document.getElementById('pending-trips-body');
+    if (!tbody) return;
+    
+    const trips = window.pendingTripsData || [];
+    if (trips.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" class="p-6 text-center text-gray-400 italic">No hay viajes pendientes registrados.</td></tr>`;
+        return;
+    }
+
+    let html = '';
+    const canEdit = ['admin', 'torre_control', 'operaciones'].includes(window.userRole);
+
+    trips.forEach(trip => {
+        html += `
+            <tr class="border-b hover:bg-slate-50">
+                <td class="p-3 font-semibold text-slate-800">${trip.client}</td>
+                <td class="p-3 text-slate-600">${trip.origin}</td>
+                <td class="p-3 text-slate-600">${trip.destination}</td>
+                <td class="p-3 text-center">
+                    ${canEdit ? `
+                    <button class="text-red-500 hover:text-red-700 p-1.5 transition" onclick="window.deletePendingTripDirect('${trip.id}')" title="Eliminar Viaje Pendiente">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                    ` : '---'}
+                </td>
+            </tr>
+        `;
+    });
+    tbody.innerHTML = html;
+}
+
+window.deletePendingTripDirect = async (id) => {
+    if (!confirm('¿Estás seguro de eliminar este viaje pendiente?')) return;
+    await deleteTableDataFallback('pending_trips', id);
+    loadTable();
+};
+
+window.openAddPendingTripModal = () => {
+    const clients = window.clientsData || [];
+    const locations = window.locationsData || [];
+    
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 fade-in';
+    modal.innerHTML = `
+        <div class="bg-white rounded-xl p-6 w-[28rem] shadow-2xl border border-gray-100">
+            <h3 class="text-lg font-black mb-4 border-b pb-2 text-indigo-700">
+                <i class="fas fa-plus mr-2"></i> Registrar Viaje Pendiente
+            </h3>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1">Cliente</label>
+                    <select id="pending-client" class="w-full border-2 border-gray-200 focus:border-indigo-500 outline-none p-2 rounded-lg font-medium" onchange="window.handleDynamicSelect('pending-client', 'clients')">
+                        <option value="">Seleccionar Cliente...</option>
+                        ${clients.map(c => `<option value="${c.name}">${c.name}</option>`).join('')}
+                        <option value="__NEW__" class="font-bold text-green-600">+ Agregar Nuevo Cliente...</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1">Origen de Carga</label>
+                    <select id="pending-origin" class="w-full border-2 border-gray-200 focus:border-indigo-500 outline-none p-2 rounded-lg font-medium" onchange="window.handleDynamicSelect('pending-origin', 'locations')">
+                        <option value="">Seleccionar Origen...</option>
+                        ${locations.map(d => `<option value="${d.name}">${d.name}</option>`).join('')}
+                        <option value="__NEW__" class="font-bold text-green-600">+ Agregar Nuevo Origen...</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1">Destino de Entrega (Descarga)</label>
+                    <select id="pending-destination" class="w-full border-2 border-gray-200 focus:border-indigo-500 outline-none p-2 rounded-lg font-medium" onchange="window.handleDynamicSelect('pending-destination', 'locations')">
+                        <option value="">Seleccionar Destino...</option>
+                        ${locations.map(d => `<option value="${d.name}">${d.name}</option>`).join('')}
+                        <option value="__NEW__" class="font-bold text-green-600">+ Agregar Nuevo...</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="mt-6 flex justify-end gap-3 pt-4 border-t">
+                <button class="px-4 py-2 font-bold text-gray-500 hover:bg-gray-100 rounded-lg transition" onclick="this.closest('.fixed').remove()">Cancelar</button>
+                <button class="px-4 py-2 font-bold bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition" id="btn-save-pending">Registrar Viaje</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+
+    document.getElementById('btn-save-pending').onclick = async () => {
+        const client = document.getElementById('pending-client').value;
+        const origin = document.getElementById('pending-origin').value;
+        const destination = document.getElementById('pending-destination').value;
+        
+        if (!client || !origin || !destination) {
+            alert('Todos los campos son obligatorios.');
+            return;
+        }
+        
+        await insertTableDataFallback('pending_trips', {
+            client,
+            origin,
+            destination,
+            status: 'Pendiente'
+        });
+        
+        modal.remove();
+        loadTable();
+    };
+};
+
+window.refreshAISuggestions = async () => {
+    const container = document.getElementById('ai-suggestions-content');
+    if (!container) return;
+    
+    container.innerHTML = `
+        <div class="text-center py-12 text-slate-400 font-medium">
+            <div class="spinner border-t-indigo-500 mb-2"></div>
+            Analizando flota y ubicaciones para sugerir asignaciones...
+        </div>
+    `;
+    
+    try {
+        const availableUnits = [];
+        for (const unit of window.unitsData || []) {
+            const samsaraVeh = (window.samsaraData || []).find(v => v.name.includes(unit.economic_number) || (unit.placas && v.name.includes(unit.placas)));
+            let gpsLocStr = 'No disponible';
+            if (samsaraVeh) {
+                const key = `${samsaraVeh.location.latitude.toFixed(3)},${samsaraVeh.location.longitude.toFixed(3)}`;
+                gpsLocStr = geoCache.get(key) || `Coordenadas: ${samsaraVeh.location.latitude}, ${samsaraVeh.location.longitude}`;
+            }
+            availableUnits.push({
+                ...unit,
+                gpsLocation: gpsLocStr
+            });
+        }
+        
+        const pendingTrips = window.pendingTripsData || [];
+        const suggestionsHtml = await window.getAssignmentSuggestionsAI(availableUnits, pendingTrips);
+        container.innerHTML = suggestionsHtml;
+    } catch (e) {
+        console.error("AI Suggestions Error:", e);
+        container.innerHTML = `
+            <div class="p-6 bg-red-50 border border-red-200 rounded-xl text-center text-red-600 font-medium">
+                <i class="fas fa-exclamation-triangle mr-2 text-red-500 text-lg animate-pulse"></i>
+                Error al generar las sugerencias con Gemini: ${e.message || e}
+            </div>
+        `;
+    }
+};
 
 window.handleDynamicSelect = async (selectOrId, tableName) => {
     const select = (typeof selectOrId === 'string') ? document.getElementById(selectOrId) : selectOrId;
@@ -153,11 +476,13 @@ function renderRows(units, allOps) {
     if (!list) return;
 
     if (units.length === 0) {
-        list.innerHTML = '<tr><td colspan="5" class="p-6 text-center text-gray-500">No se encontraron unidades.</td></tr>';
+        list.innerHTML = '<tr><td colspan="9" class="p-6 text-center text-gray-500">No se encontraron unidades.</td></tr>';
         return;
     }
 
     let html = '';
+    const canEdit = ['admin', 'torre_control', 'operaciones'].includes(window.userRole);
+
     units.forEach(unit => {
         const opName = unit.operators?.name || 'Sin Asignar';
         
@@ -178,66 +503,169 @@ function renderRows(units, allOps) {
         // Match with Samsara
         const samsaraData = window.samsaraData || [];
         const samsaraVeh = samsaraData.find(v => v.name.includes(unit.economic_number) || (unit.placas && v.name.includes(unit.placas)));
-        let locationStr = samsaraVeh ? `<div class="text-[10px] text-blue-600 font-bold"><i class="fas fa-map-marker-alt"></i> GPS: ${samsaraVeh.location.speed} km/h</div>` : '<div class="text-[10px] text-gray-400">Sin GPS</div>';
         
-        const origenStr = typeof unit.details === 'object' ? (unit.details?.origen || '') : '';
-        const destinoStr = typeof unit.details === 'object' ? (unit.details?.destino || '') : '';
-        if (origenStr && destinoStr && origenStr !== '---' && destinoStr !== '---' && !samsaraVeh) {
-             locationStr += `<button onclick="window.openAIRoute('${origenStr}', '${destinoStr}')" class="text-purple-600 hover:text-purple-800 text-[10px] font-bold mt-1 transition flex items-center gap-1 w-max"><i class="fas fa-robot"></i> Ruta IA</button>`;
+        let telemetryOriginHtml = '';
+        if (samsaraVeh) {
+            const lat = samsaraVeh.location.latitude;
+            const lng = samsaraVeh.location.longitude;
+            const speed = samsaraVeh.location.speed || 0;
+            const geoId = `geo-loc-${unit.id}`;
+            
+            telemetryOriginHtml = `
+                <div id="${geoId}" class="font-bold text-gray-800 text-xs truncate max-w-[150px]">Geocodificando...</div>
+                <div class="text-[9px] text-blue-600 font-black mt-0.5"><i class="fas fa-gauge"></i> ${speed.toFixed(0)} km/h</div>
+            `;
+            setTimeout(() => reverseGeocode(lat, lng, geoId), 100);
+        } else {
+            telemetryOriginHtml = `<span class="text-xs text-gray-400 font-medium">Sin GPS (Desconectado)</span>`;
         }
         
         let parsedDetails = unit.details;
         if (typeof parsedDetails === 'string') {
             try { parsedDetails = JSON.parse(parsedDetails); } catch(e) {}
         }
+        parsedDetails = parsedDetails || {};
 
-        let routeStr = 'Pendiente';
         let hasTrip = false;
-        if (typeof parsedDetails === 'object' && parsedDetails !== null) {
-            if (parsedDetails.cliente) hasTrip = true;
-            if (parsedDetails.origen && parsedDetails.destino) routeStr = `${parsedDetails.origen} - ${parsedDetails.destino}`;
-            else if (parsedDetails.route) routeStr = parsedDetails.route;
-        } else if (typeof unit.details === 'string') {
-            routeStr = unit.details;
+        if (parsedDetails.cliente) hasTrip = true;
+
+        let originStr = parsedDetails.origen || '---';
+        let destinoStr = parsedDetails.destino || '---';
+        
+        if (originStr && destinoStr && originStr !== '---' && destinoStr !== '---' && !samsaraVeh) {
+             // AI Route recommendation option if GPS unavailable
+             telemetryOriginHtml += `<button onclick="window.openAIRoute('${originStr}', '${destinoStr}')" class="text-purple-600 hover:text-purple-800 text-[10px] font-bold mt-1 transition flex items-center gap-1 w-max"><i class="fas fa-robot"></i> Ruta IA</button>`;
+        }
+
+        // 1. Duración y Semáforo Logic
+        let durationHtml = '<span class="text-xs text-gray-400 font-medium">---</span>';
+        if (hasTrip) {
+            const assignDate = parsedDetails.assignment_date ? new Date(parsedDetails.assignment_date) : new Date(unit.last_status_update);
+            const elapsedMs = Date.now() - assignDate.getTime();
+            const elapsedDays = elapsedMs / (1000 * 60 * 60 * 24);
+            const estDays = parseFloat(parsedDetails.duracion_estimada_dias) || 0;
+            
+            if (estDays > 0) {
+                const remainingDays = estDays - elapsedDays;
+                let dotColor = 'dot-green';
+                let textClass = 'text-emerald-600';
+                let textLabel = '';
+                
+                if (remainingDays < 0) {
+                    dotColor = 'dot-red';
+                    textClass = 'text-red-600 animate-pulse';
+                    textLabel = `${Math.abs(remainingDays).toFixed(1)} días de retraso`;
+                } else if (remainingDays <= 1) {
+                    dotColor = 'dot-yellow';
+                    textClass = 'text-amber-600';
+                    textLabel = `${remainingDays.toFixed(1)} días restantes`;
+                } else {
+                    dotColor = 'dot-green';
+                    textClass = 'text-emerald-600';
+                    textLabel = `${remainingDays.toFixed(1)} días restantes`;
+                }
+                
+                durationHtml = `
+                    <div class="flex items-center gap-1.5 font-bold ${textClass}">
+                        <span class="status-dot ${dotColor} scale-90"></span>
+                        <span>${textLabel}</span>
+                    </div>
+                    <div class="text-[10px] text-gray-500 font-medium mt-0.5">Pactado: ${estDays} días</div>
+                `;
+            } else {
+                durationHtml = `<span class="text-xs text-gray-400 font-medium">Sin duración pactada</span>`;
+            }
+        }
+
+        // 2. Mantenimiento ERP Alerts & Badges
+        let maintenanceAlertHtml = '';
+        const logs = window.maintLogsData || [];
+        const activeLogs = logs.filter(l => l.unit_id === unit.id && l.status !== 'Resuelto' && l.status !== 'Terminado');
+        
+        activeLogs.forEach(log => {
+            if (log.type === 'Preventivo' && log.status === 'Programado') {
+                maintenanceAlertHtml += `
+                    <div class="mt-1 text-[9px] bg-yellow-100 text-yellow-800 border border-yellow-200 px-1.5 py-0.5 rounded font-black w-max flex items-center gap-1 animate-pulse shadow-sm" title="Se requiere bajar a patio para servicio preventivo">
+                        <i class="fas fa-wrench"></i> Bajar a Patio: Preventivo (${new Date(log.scheduled_date).toLocaleDateString()})
+                    </div>
+                `;
+            } else if (log.type === 'Rescate Carretero') {
+                maintenanceAlertHtml += `
+                    <div class="mt-1 text-[9px] bg-red-600 text-white border border-red-700 px-1.5 py-0.5 rounded font-black w-max flex items-center gap-1 animate-bounce shadow-md">
+                        <i class="fas fa-truck-medical"></i> Rescate Activo: ${log.description || 'Falla mecánica'}
+                    </div>
+                `;
+            } else if (log.status === 'En Taller') {
+                maintenanceAlertHtml += `
+                    <div class="mt-1 text-[9px] bg-red-100 text-red-800 border border-red-200 px-1.5 py-0.5 rounded font-black w-max flex items-center gap-1 shadow-sm">
+                        <i class="fas fa-tools"></i> En taller: ${log.description || 'Servicio'}
+                    </div>
+                `;
+            }
+        });
+
+        // Forced color for "En Taller" unit status
+        if (unit.status === 'En Taller' && !maintenanceAlertHtml) {
+            maintenanceAlertHtml += `
+                <div class="mt-1 text-[9px] bg-red-100 text-red-800 border border-red-200 px-1.5 py-0.5 rounded font-black w-max flex items-center gap-1">
+                    <i class="fas fa-tools"></i> En taller (Servicio)
+                </div>
+            `;
         }
 
         let terminarViajeBtn = hasTrip ? `<button class="bg-green-50 text-green-600 hover:bg-green-100 px-3 py-2 rounded transition" onclick="openFinishTripModal('${unit.id}')" title="Terminar Viaje"><i class="fas fa-flag-checkered"></i></button>` : '';
 
-        const canEdit = ['admin', 'torre_control', 'operaciones'].includes(window.userRole);
-
         let rowClasses = 'border-b transition items-center';
         if (hasTrip) {
-            rowClasses += ' bg-yellow-50 hover:bg-yellow-100 border-l-4 border-l-yellow-400';
+            rowClasses += ' bg-yellow-50/50 hover:bg-yellow-100/50 border-l-4 border-l-yellow-400';
         } else {
             rowClasses += ' hover:bg-gray-50';
         }
 
         html += `
             <tr class="${rowClasses}">
+                <!-- Unidad -->
                 <td class="p-4">
                     <div class="font-bold text-gray-800 text-lg">${unit.economic_number}</div>
                     <div class="text-xs text-gray-500">${unit.type} • ${unit.placas || 'S/P'}</div>
+                    ${maintenanceAlertHtml}
                 </td>
+                <!-- Operador -->
                 <td class="p-4">
                     <div class="font-medium text-gray-700">${opName}</div>
                 </td>
+                <!-- Estado -->
                 <td class="p-4">
                     <span class="px-3 py-1 rounded-full text-xs font-bold ${statusColor} text-center block w-max shadow-sm ${canEdit ? 'cursor-pointer hover:opacity-80' : ''} transition" ${canEdit ? `onclick="openStatusModal('${unit.id}')"` : ''}>
                         ${unit.status}
                     </span>
                     ${scheduleBadge}
                 </td>
-                <td class="p-4 text-sm w-48 max-w-[200px]">
-                    <div class="font-bold text-orange-600 uppercase truncate" title="${routeStr}">${routeStr}</div>
-                    <div class="text-[10px] text-indigo-600 font-bold mt-0.5">VIAJE/BOL: ${parsedDetails?.viaje || parsedDetails?.bol || '---'}</div>
-                    ${locationStr}
+                <!-- Origen Actual GPS -->
+                <td class="p-4">
+                    ${telemetryOriginHtml}
                 </td>
+                <!-- Destino Actual -->
+                <td class="p-4">
+                    <div class="font-bold text-orange-600 uppercase truncate max-w-[150px]" title="${destinoStr}">${destinoStr}</div>
+                    <div class="text-[10px] text-indigo-600 font-bold mt-0.5">VIAJE/BOL: ${parsedDetails?.viaje || parsedDetails?.bol || '---'}</div>
+                </td>
+                <!-- Regreso -->
+                <td class="p-4 text-xs font-bold text-blue-700 uppercase">
+                    ${parsedDetails?.regreso || '---'}
+                </td>
+                <!-- Duración y Semáforo -->
+                <td class="p-4">
+                    ${durationHtml}
+                </td>
+                <!-- Fecha Asignación -->
                 <td class="p-4 text-sm text-gray-600 w-40">
                     <div><i class="far fa-clock"></i> ${dateDisplay}</div>
                     <div class="text-[10px] font-bold mt-1 ${unit.last_modified_by ? 'text-indigo-600 bg-indigo-50 inline-block px-1 rounded truncate max-w-full' : 'text-gray-400'}" title="${unit.last_modified_by || 'Sistema'}">
                         <i class="fas fa-user-edit"></i> ${unit.last_modified_by || 'Sistema'}
                     </div>
                 </td>
+                <!-- Acciones -->
                 <td class="p-4 flex gap-2 w-max">
                     <button class="bg-indigo-50 text-indigo-600 hover:bg-indigo-100 px-3 py-2 rounded transition" onclick="openTimersModal('${unit.id}')" title="Tiempos Logísticos">
                         <i class="fas fa-map-marker-alt"></i>
@@ -260,12 +688,10 @@ function renderRows(units, allOps) {
 
 // --- MODALS ---
 
-// 1. Edit Modal (Full Control)
+// 1. Edit Modal
 window.openEditModal = (unitId) => {
     const unit = window.unitsData.find(u => u.id === unitId);
     const ops = window.operatorsData;
-    
-    // Dynamically loaded generic catalogs
     const clients = window.clientsData || [];
     const locations = window.locationsData || [];
     const destinations = window.destinationsData || [];
@@ -279,6 +705,8 @@ window.openEditModal = (unitId) => {
     const currentClient = parsedDetails.cliente || '';
     const currentOrigin = parsedDetails.origen || '';
     const currentDest = parsedDetails.destino || '';
+    const currentRegreso = parsedDetails.regreso || '';
+    const currentDuration = parsedDetails.duracion_estimada_dias || '';
     const currentDestinatario = parsedDetails.destinatario || '';
     const currentAssignDate = parsedDetails.assignment_date || '';
     const currentRoute = parsedDetails.route || '';
@@ -286,7 +714,6 @@ window.openEditModal = (unitId) => {
     const currentBol = parsedDetails.bol || '';
     const currentComments = parsedDetails.comments || '';
 
-    // ISO string for datetime-local input (YYYY-MM-DDTHH:MM)
     const currentIso = currentAssignDate ? new Date(currentAssignDate).toISOString().slice(0, 16) : new Date(unit.last_status_update).toISOString().slice(0, 16);
 
     const modal = document.createElement('div');
@@ -368,6 +795,21 @@ window.openEditModal = (unitId) => {
                     </div>
                 </div>
 
+                <!-- NEW FIELDS: REGRESO Y DURACION ESTIMADA -->
+                <div>
+                    <label class="block text-xs font-bold text-blue-600 uppercase tracking-wider mb-1">Destino de Regreso</label>
+                    <select id="edit-regreso" class="w-full border-2 border-blue-200 focus:border-blue-500 outline-none p-2 rounded-lg font-medium bg-blue-50/20" onchange="window.handleDynamicSelect('edit-regreso', 'locations')">
+                        <option value="">Seleccionar Regreso...</option>
+                        ${locations.map(d => `<option value="${d.name}" ${currentRegreso === d.name ? 'selected' : ''}>${d.name}</option>`).join('')}
+                        <option value="__NEW__" class="font-bold text-green-600">+ Agregar Nuevo...</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-indigo-600 uppercase tracking-wider mb-1">Duración (Días)</label>
+                    <input type="number" id="edit-duration-days" class="w-full border-2 border-indigo-200 focus:border-indigo-500 outline-none p-2 rounded-lg font-medium bg-indigo-50/20" value="${currentDuration}" placeholder="Ej: 3" min="0.5" step="0.5">
+                </div>
+
                 <div class="col-span-2">
                     <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1">Destinatario (Empresa/Receptor)</label>
                     <select id="edit-destinatario" class="w-full border-2 border-gray-200 focus:border-blue-500 outline-none p-2 rounded-lg font-medium text-indigo-700" onchange="window.handleDynamicSelect('edit-destinatario', 'destinations')">
@@ -382,7 +824,6 @@ window.openEditModal = (unitId) => {
                     <input type="text" id="edit-route" class="w-full border-2 border-gray-200 focus:border-blue-500 outline-none p-2 rounded-lg font-medium" value="${currentRoute}" placeholder="Ej: Autopista 57">
                 </div>
 
-                <!-- Campos de Viaje / BOL (Siempre Visibles para integración total) -->
                 <div class="col-span-1" id="field-viaje">
                     <label class="block text-xs font-bold text-teal-600 uppercase tracking-wider mb-1">Número de Viaje</label>
                     <input type="text" id="edit-viaje" class="w-full border-2 border-teal-100 focus:border-teal-500 outline-none p-2 rounded-lg font-medium bg-teal-50" value="${currentViaje}" placeholder="Ej: VJ-10293">
@@ -397,7 +838,6 @@ window.openEditModal = (unitId) => {
                     <textarea id="edit-comments" class="w-full border-2 border-gray-200 focus:border-blue-500 outline-none p-2 rounded-lg font-medium" rows="2">${currentComments}</textarea>
                 </div>
 
-                <!-- Integración de Alerta GPS por WhatsApp (Edición) -->
                 <div class="col-span-2 bg-emerald-50 p-4 rounded-xl border border-emerald-100 space-y-3">
                     <div class="flex items-center justify-between">
                         <h4 class="text-xs font-black text-emerald-800 flex items-center gap-1.5">
@@ -448,6 +888,8 @@ window.openEditModal = (unitId) => {
         const destElements = document.querySelectorAll('.edit-dest-item');
         const destinationsArray = Array.from(destElements).map(el => el.value).filter(v => v);
         const destino = destinationsArray.join(' | ');
+        const regreso = document.getElementById('edit-regreso').value;
+        const duracion = document.getElementById('edit-duration-days').value;
         const destinatario = document.getElementById('edit-destinatario').value;
         const route = document.getElementById('edit-route').value;
         const comments = document.getElementById('edit-comments').value.trim();
@@ -460,33 +902,31 @@ window.openEditModal = (unitId) => {
         const waM3 = document.getElementById('edit-wa-m3').value.trim();
         const waGroup = document.getElementById('edit-wa-group').value.trim();
 
-        // Auto format route if dropdowns used
         let finalRoute = route;
         if(origen && destino && !route.trim()) {
             finalRoute = `${origen} - ${destino}`;
         }
         
         const currentUser = JSON.parse(sessionStorage.getItem('currentUser'));
-
         let currentParsed = typeof unit.details === 'string' ? { raw: unit.details } : (unit.details || {});
         let oldDetailsStr = JSON.stringify(currentParsed);
 
         let clientChangedReason = '';
         if (currentParsed.cliente && cliente && currentParsed.cliente !== cliente) {
             clientChangedReason = prompt(`Estás cambiando el cliente de ${currentParsed.cliente} a ${cliente}. Por favor, ingresa el motivo del cambio:`);
-            if (clientChangedReason === null) return; // Cancelled
+            if (clientChangedReason === null) return;
         }
 
         const { error } = await supabase.from('units').update({
             current_operator_id: newOp,
-            last_status_update: new Date().toISOString(), // Reset timer immediately
+            last_status_update: new Date().toISOString(),
             last_modified_by: currentUser.name,
-            details: { ...currentParsed, assignment_date: newDate, route: finalRoute, cliente, destinatario, origen, destino, comments, bol, viaje } 
+            details: { ...currentParsed, assignment_date: newDate, route: finalRoute, cliente, destinatario, origen, destino, regreso, duracion_estimada_dias: duracion, comments, bol, viaje } 
         }).eq('id', unitId);
 
         if(error) alert(error.message);
         else {
-            let historyDetails = `Cambio de detalles. Antes: ${oldDetailsStr} | Ahora: Cliente=${cliente}, Destino=${finalRoute}`;
+            let historyDetails = `Cambio de detalles. Antes: ${oldDetailsStr} | Ahora: Cliente=${cliente}, Destino=${finalRoute}, Regreso=${regreso}`;
             if (clientChangedReason) historyDetails += ` | Motivo cambio cliente: ${clientChangedReason}`;
 
             supabase.from('assignments_history').insert([{
@@ -501,21 +941,16 @@ window.openEditModal = (unitId) => {
 
             // GPS Whatsapp sync
             if (waEnable && destino) {
-                // Save contacts for next auto-fill
                 localStorage.setItem('last_wa_m1', waM1);
                 localStorage.setItem('last_wa_m2', waM2);
                 localStorage.setItem('last_wa_m3', waM3);
                 localStorage.setItem('last_wa_group', waGroup);
 
-                // Fetch Operator phone
                 const selectedOp = (window.operatorsData || []).find(o => o.id === newOp);
                 const opPhone = selectedOp ? (selectedOp.phone || '') : '';
-
-                // Combine ATC message
                 let atcText = `[ATC LOGÍSTICA] Unidad: ${unit.economic_number} | Cliente: ${cliente || 'N/A'} | Viaje: ${viaje || 'N/A'}`;
                 if (comments) atcText += ` | Observaciones: ${comments}`;
 
-                // Extract last destination city
                 const dests = destino.split(' | ').filter(v=>v);
                 const targetDestCity = dests[dests.length - 1] || '';
 
@@ -529,11 +964,22 @@ window.openEditModal = (unitId) => {
         }
     };
 
-    // Client select event for dynamic fields
-    const clientSelect = document.getElementById('edit-client');
-    clientSelect.addEventListener('change', () => {
-        window.handleDynamicSelect('edit-client', 'clients');
-    });
+    window.addEditDestination = () => {
+        const container = document.getElementById('edit-destinations-list');
+        const div = document.createElement('div');
+        div.className = 'flex gap-2 items-center dest-row animate-content-fade-in mt-2';
+        div.innerHTML = `
+            <select class="flex-1 border-2 border-gray-200 focus:border-blue-500 outline-none p-2 rounded-lg font-medium edit-dest-item" onchange="window.handleDynamicSelect(this, 'locations')">
+                <option value="">Seleccionar Destino...</option>
+                ${locations.map(d => `<option value="${d.name}">${d.name}</option>`).join('')}
+                <option value="__NEW__" class="font-bold text-green-600">+ Agregar Nuevo...</option>
+            </select>
+            <button type="button" class="text-red-500 hover:text-red-700 p-2" onclick="this.parentElement.remove()">
+                <i class="fas fa-trash-alt"></i>
+            </button>
+        `;
+        container.appendChild(div);
+    };
 
     const editOpSelect = document.getElementById('edit-op');
     const updateEditOpPhoneHelp = () => {
@@ -554,27 +1000,9 @@ window.openEditModal = (unitId) => {
     }
 }
 
-window.addEditDestination = () => {
-    const container = document.getElementById('edit-destinations-list');
-    const div = document.createElement('div');
-    div.className = 'flex gap-2 items-center dest-row animate-content-fade-in';
-    div.innerHTML = `
-        <select class="flex-1 border-2 border-gray-200 focus:border-blue-500 outline-none p-2 rounded-lg font-medium edit-dest-item" onchange="window.handleDynamicSelect(this, 'locations')">
-            <option value="">Seleccionar Destino...</option>
-            ${(window.locationsData || []).map(d => `<option value="${d.name}">${d.name}</option>`).join('')}
-            <option value="__NEW__" class="font-bold text-green-600">+ Agregar Nuevo...</option>
-        </select>
-        <button type="button" class="text-red-500 hover:text-red-700 p-2" onclick="this.parentElement.remove()">
-            <i class="fas fa-trash-alt"></i>
-        </button>
-    `;
-    container.appendChild(div);
-};
-
+// 2. Schedule Modal
 window.openScheduleModal = () => {
     const units = window.unitsData;
-    
-    // Sólo mostrar unidades que no tengan viaje activo
     const availableUnits = units.filter(u => {
         let d = u.details;
         if(typeof d === 'string') { try{d=JSON.parse(d)}catch(e){} }
@@ -585,13 +1013,11 @@ window.openScheduleModal = () => {
         return alert("Todas las unidades tienen un viaje activo. Para programar, primero debes 'Terminar Viaje' de alguna en la tabla.");
     }
     
-    // Dynamically loaded generic catalogs
     const clients = window.clientsData || [];
-    const destinations = window.destinationsData || []; // fixed reference to destinationsData
+    const destinations = window.destinationsData || [];
     const locationsList = window.locationsData || [];
     const ops = window.operatorsData || [];
 
-    // Pre-fill local date/time (YYYY-MM-DDTHH:MM)
     const now = new Date();
     const tzoffset = now.getTimezoneOffset() * 60000;
     const localIso = (new Date(now - tzoffset)).toISOString().slice(0, 16);
@@ -662,6 +1088,21 @@ window.openScheduleModal = () => {
                     </div>
                 </div>
 
+                <!-- NEW FIELDS: REGRESO Y DURACION ESTIMADA -->
+                <div>
+                    <label class="block text-xs font-bold text-blue-600 uppercase tracking-wider mb-1">Destino de Regreso</label>
+                    <select id="sched-regreso" class="w-full border-2 border-blue-200 focus:border-blue-500 outline-none p-2 rounded-lg font-medium bg-blue-50/20" onchange="window.handleDynamicSelect('sched-regreso', 'locations')">
+                        <option value="">Seleccionar Regreso...</option>
+                        ${locationsList.map(d => `<option value="${d.name}">${d.name}</option>`).join('')}
+                        <option value="__NEW__" class="font-bold text-green-600">+ Agregar Nuevo...</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-indigo-600 uppercase tracking-wider mb-1">Duración (Días)</label>
+                    <input type="number" id="sched-duration-days" class="w-full border-2 border-indigo-200 focus:border-indigo-500 outline-none p-2 rounded-lg font-medium bg-indigo-50/20" placeholder="Ej: 3" min="0.5" step="0.5">
+                </div>
+
                 <div class="col-span-2">
                     <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1">Destinatario (Empresa/Receptor)</label>
                     <select id="sched-destinatario" class="w-full border-2 border-gray-200 focus:border-purple-500 outline-none p-2 rounded-lg font-medium text-indigo-700" onchange="window.handleDynamicSelect('sched-destinatario', 'destinations')">
@@ -676,7 +1117,6 @@ window.openScheduleModal = () => {
                     <input type="text" id="sched-route" class="w-full border-2 border-gray-200 focus:border-purple-500 outline-none p-2 rounded-lg font-medium" placeholder="Ej: Viaje a Monterrey directo">
                 </div>
 
-                <!-- Campos de Viaje / BOL -->
                 <div class="col-span-1" id="sched-field-viaje">
                     <label class="block text-xs font-bold text-teal-600 uppercase tracking-wider mb-1">Número de Viaje</label>
                     <input type="text" id="sched-viaje" class="w-full border-2 border-teal-100 focus:border-teal-500 outline-none p-2 rounded-lg font-medium bg-teal-50" placeholder="Ej: VJ-10293">
@@ -691,7 +1131,6 @@ window.openScheduleModal = () => {
                     <textarea id="sched-comments" class="w-full border-2 border-gray-200 focus:border-purple-500 outline-none p-2 rounded-lg font-medium" rows="2" placeholder="Notas o comentarios sobre la programación..."></textarea>
                 </div>
 
-                <!-- Integración de Alerta GPS por WhatsApp (Programación) -->
                 <div class="col-span-2 bg-emerald-50 p-4 rounded-xl border border-emerald-100 space-y-3">
                     <div class="flex items-center justify-between">
                         <h4 class="text-xs font-black text-emerald-800 flex items-center gap-1.5">
@@ -727,27 +1166,26 @@ window.openScheduleModal = () => {
 
             <div class="mt-6 flex justify-end gap-3 pt-4 border-t">
                 <button class="px-5 py-2 font-bold text-gray-500 hover:bg-gray-100 rounded-lg transition" onclick="this.closest('.fixed').remove()">Cancelar</button>
-                <button class="px-5 py-2 font-bold bg-purple-600 text-white rounded-lg hover:bg-purple-700 shadow-lg shadow-purple-500/30 transition" id="btn-save-sched">Crear Programación</button>
+                <button class="px-5 py-2 font-bold bg-purple-600 text-white rounded-lg hover:bg-purple-700 shadow-lg shadow-purple-500/30 transition" id="btn-save-sched">Programar Viaje</button>
             </div>
         </div>
     `;
     document.body.appendChild(modal);
 
+    // Sync unit operator details on select change
     const unitSelect = document.getElementById('sched-unit');
     const opSelect = document.getElementById('sched-op');
-
-    const updateOperatorForSelectedUnit = () => {
-        const selectedUnitId = unitSelect.value;
-        const selectedUnit = units.find(u => u.id === selectedUnitId);
-        if (selectedUnit && selectedUnit.current_operator_id) {
-            opSelect.value = selectedUnit.current_operator_id;
+    const updateOperatorPreselect = () => {
+        const uId = unitSelect.value;
+        const unit = units.find(u => u.id === uId);
+        if (unit && unit.current_operator_id) {
+            opSelect.value = unit.current_operator_id;
         } else {
-            opSelect.value = '';
+            opSelect.value = "";
         }
-        updateOpPhoneHelp();
+        updateSchedOpPhoneHelp();
     };
-
-    const updateOpPhoneHelp = () => {
+    const updateSchedOpPhoneHelp = () => {
         const opId = opSelect.value;
         const op = ops.find(o => o.id === opId);
         const help = document.getElementById('sched-op-phone-help');
@@ -755,28 +1193,26 @@ window.openScheduleModal = () => {
             if (op) {
                 help.textContent = op.phone ? `📞 Teléfono: ${op.phone}` : '⚠️ Operador sin teléfono registrado en sistema';
             } else {
-                help.textContent = '⚠️ Sin operador asignado en sistema';
+                help.textContent = '⚠️ Sin operador asignado';
             }
         }
     };
-
-    if (unitSelect && opSelect) {
-        unitSelect.addEventListener('change', updateOperatorForSelectedUnit);
-        opSelect.addEventListener('change', updateOpPhoneHelp);
-        updateOperatorForSelectedUnit(); // Ejecutar carga inicial
-    }
+    unitSelect.addEventListener('change', updateOperatorPreselect);
+    opSelect.addEventListener('change', updateSchedOpPhoneHelp);
+    updateOperatorPreselect();
 
     document.getElementById('btn-save-sched').onclick = async () => {
-        const unitId = document.getElementById('sched-unit').value;
-        const newOp = document.getElementById('sched-op').value || null;
+        const unitId = unitSelect.value;
+        const newOp = opSelect.value || null;
         const date = document.getElementById('sched-date').value;
         const cliente = document.getElementById('sched-client').value;
         const origen = document.getElementById('sched-origin').value;
-        
+
         const destElements = document.querySelectorAll('.sched-dest-item');
         const destinationsArray = Array.from(destElements).map(el => el.value).filter(v => v);
         const destino = destinationsArray.join(' | ');
-
+        const regreso = document.getElementById('sched-regreso').value;
+        const duracion = document.getElementById('sched-duration-days').value;
         const destinatario = document.getElementById('sched-destinatario').value;
         const route = document.getElementById('sched-route').value;
         const comments = document.getElementById('sched-comments').value.trim();
@@ -789,13 +1225,14 @@ window.openScheduleModal = () => {
         const waM3 = document.getElementById('sched-wa-m3').value.trim();
         const waGroup = document.getElementById('sched-wa-group').value.trim();
 
-        if(!date) return alert("Selecciona fecha y hora de salida");
-        
+        if (!date) {
+            return alert("La fecha de salida es obligatoria.");
+        }
+
         let finalRoute = route;
         if(origen && destino && !route.trim()) {
             finalRoute = `${origen} - ${destino}`;
         }
-        if(!finalRoute.trim()) return alert("Debes indicar Origen y Destino, o escribir una Ruta Libre.");
 
         const currentUser = JSON.parse(sessionStorage.getItem('currentUser'));
         const unit = units.find(u => u.id === unitId);
@@ -808,6 +1245,8 @@ window.openScheduleModal = () => {
             destinatario: destinatario,
             origen: origen,
             destino: destino,
+            regreso: regreso,
+            duracion_estimada_dias: duracion,
             comments: comments,
             bol: bol,
             viaje: viaje
@@ -817,7 +1256,7 @@ window.openScheduleModal = () => {
             status: 'Vacia', // Se pone en patio
             current_operator_id: newOp,
             details: newDetails,
-            last_status_update: new Date(date).toISOString(), // Setting timer to scheduled date for countdown
+            last_status_update: new Date(date).toISOString(),
             last_modified_by: currentUser.name
         }).eq('id', unitId);
 
@@ -828,28 +1267,23 @@ window.openScheduleModal = () => {
                 unidad_eco_txt: unit?.economic_number || null,
                 new_operator_id: newOp,
                 action_type: 'Viaje Programado',
-                details: `Programado para ${date} | Cliente: ${cliente} | Ruta: ${finalRoute}. Se pasó a Vacia (Patio).`,
+                details: `Programado para ${date} | Cliente: ${cliente} | Ruta: ${finalRoute} | Regreso: ${regreso}`,
                 modified_by: currentUser.name,
                 timestamp: new Date().toISOString()
             }]).then(()=>{});
 
             // GPS Whatsapp sync
             if (waEnable && destino) {
-                // Save contacts for next auto-fill
                 localStorage.setItem('last_wa_m1', waM1);
                 localStorage.setItem('last_wa_m2', waM2);
                 localStorage.setItem('last_wa_m3', waM3);
                 localStorage.setItem('last_wa_group', waGroup);
 
-                // Fetch Operator phone
                 const selectedOp = (window.operatorsData || []).find(o => o.id === newOp);
                 const opPhone = selectedOp ? (selectedOp.phone || '') : '';
-
-                // Combine ATC message
                 let atcText = `[ATC LOGÍSTICA] Unidad: ${unit.economic_number} | Cliente: ${cliente || 'N/A'} | Viaje: ${viaje || 'N/A'}`;
                 if (comments) atcText += ` | Observaciones: ${comments}`;
 
-                // Extract last destination city
                 const dests = destino.split(' | ').filter(v=>v);
                 const targetDestCity = dests[dests.length - 1] || '';
 
@@ -865,14 +1299,15 @@ window.openScheduleModal = () => {
     };
 };
 
-// 2.5 Finish Trip Modal
+// 3. Finish Trip Modal
 window.openFinishTripModal = (unitId) => {
     const unit = window.unitsData.find(u => u.id === unitId);
     let parsedDetails = unit.details;
     if (typeof parsedDetails === 'string') {
         try { parsedDetails = JSON.parse(parsedDetails); } catch(e) {}
     }
-    const cliente = parsedDetails?.cliente || 'Desconocido';
+    parsedDetails = parsedDetails || {};
+    const cliente = parsedDetails.cliente || 'Desconocido';
 
     const modal = document.createElement('div');
     modal.className = 'fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 fade-in';
@@ -904,7 +1339,6 @@ window.openFinishTripModal = (unitId) => {
     document.body.appendChild(modal);
 
     const now = new Date();
-    // Offset for local timezone issues with toISOString manually setting local
     const tzoffset = now.getTimezoneOffset() * 60000;
     const localISOTime = (new Date(now - tzoffset)).toISOString().slice(0, 16);
     document.getElementById('finish-date').value = localISOTime;
@@ -935,7 +1369,6 @@ window.openFinishTripModal = (unitId) => {
             }
         }
 
-        // Permiso especial: Si el estatus es VACIA o contiene VACIO, permitimos terminar sin todos los tiempos
         const isVacio = unit.status === 'Vacia' || unit.status.toUpperCase().includes('VACIO');
 
         if (missingFields.length > 0 && !isVacio) {
@@ -954,12 +1387,10 @@ window.openFinishTripModal = (unitId) => {
                 confirmButtonColor: '#4f46e5'
             });
             return;
-        };
+        }
 
         const oldDetailsStr = JSON.stringify(parsedDetails);
 
-        // 1. Insert into history table if it exists
-        // (If the table doesn't exist, this might fail, but let's assume v2 setup works)
         const { error: histErr } = await supabase.from('assignments_history').insert([{
             unit_id: unit.id,
             unidad_eco_txt: unit.economic_number,
@@ -971,14 +1402,12 @@ window.openFinishTripModal = (unitId) => {
 
         if (histErr) {
             console.error("No se pudo guardar en historial", histErr);
-            // Ignorar para que no bloquee la operacion principal si la tabla no está creada aún en db
         }
 
-        // 2. Clear unit data and reset time
         const { error } = await supabase.from('units').update({
             status: 'Vacia',
             details: null,
-            last_status_update: new Date().toISOString(), // Reset timer to NOW
+            last_status_update: new Date().toISOString(),
             last_modified_by: currentUser.name
         }).eq('id', unit.id);
 
@@ -988,9 +1417,9 @@ window.openFinishTripModal = (unitId) => {
             loadTable();
         }
     };
-}
+};
 
-// 3. Status Modal (Quick Change)
+// 4. Status Modal
 window.openStatusModal = (unitId) => {
     const currentStatus = window.unitsData.find(u => u.id === unitId).status;
     const valid = window.statusesData || [];
@@ -1017,10 +1446,11 @@ window.openStatusModal = (unitId) => {
     document.getElementById('btn-save-status').onclick = () => {
         const newStatus = document.getElementById('status-select').value;
         const currentUser = JSON.parse(sessionStorage.getItem('currentUser'));
-         supabase.from('units').update({
+        
+        supabase.from('units').update({
             status: newStatus,
             last_modified_by: currentUser.name,
-            last_status_update: new Date().toISOString() // Resets timer
+            last_status_update: new Date().toISOString()
         }).eq('id', unitId).then(({ error }) => {
             if (error) {
                 alert('No se pudo actualizar el estatus: ' + error.message);
@@ -1041,22 +1471,17 @@ window.openStatusModal = (unitId) => {
                 loadTable();
             }
         });
-    }
-}
+    };
+};
 
-// 4. Timers / Checkpoints Modal
+// 5. Timers Modal
 window.openTimersModal = (unitId) => {
     const unit = window.unitsData.find(u => u.id === unitId);
     let parsedDetails = unit.details;
     if (typeof parsedDetails === 'string') {
         try { parsedDetails = JSON.parse(parsedDetails); } catch(e) {}
     }
-    
-    // Fallback if not an object
-    if (!parsedDetails || typeof parsedDetails !== 'object') {
-        parsedDetails = {};
-    }
-
+    parsedDetails = parsedDetails || {};
     const checkpoints = parsedDetails.checkpoints || {};
 
     const modal = document.createElement('div');
@@ -1068,7 +1493,6 @@ window.openTimersModal = (unitId) => {
             </h3>
             
             <div class="space-y-4 max-h-[60vh] overflow-y-auto custom-scrollbar pr-2 mb-6">
-                
                 <!-- Odometer -->
                 <div class="grid grid-cols-2 gap-3 mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
                     <div>
@@ -1104,7 +1528,6 @@ window.openTimersModal = (unitId) => {
                         </div>
                     `;
                 }).join('')}
-                
             </div>
             
             <div class="flex justify-end gap-3 pt-4 border-t">
@@ -1115,7 +1538,6 @@ window.openTimersModal = (unitId) => {
     `;
     document.body.appendChild(modal);
 
-    // Attach click listeners for Milestones/Timers "Ahora" buttons
     modal.querySelectorAll('.btn-now').forEach(btn => {
         btn.addEventListener('click', () => {
             const key = btn.dataset.nowTarget;
@@ -1128,7 +1550,6 @@ window.openTimersModal = (unitId) => {
         });
     });
 
-    // Auto-fill Fin Ruta if Fin Descarga is updated
     const inputUnloadEnd = document.getElementById('cp-trip_unload_end');
     const inputRouteEnd = document.getElementById('cp-trip_route_end');
     if (inputUnloadEnd && inputRouteEnd) {
@@ -1153,17 +1574,14 @@ window.openTimersModal = (unitId) => {
 
         const currentUser = JSON.parse(sessionStorage.getItem('currentUser'));
 
-        const payload = {
+        const { error } = await supabase.from('units').update({
             details: parsedDetails,
             last_modified_by: currentUser.name
-        };
-
-        const { error } = await supabase.from('units').update(payload).eq('id', unit.id);
+        }).eq('id', unit.id);
         
         if (error) {
             alert('Error al guardar tiempos: ' + error.message);
         } else {
-            // Log to history
             supabase.from('assignments_history').insert([{
                 unit_id: unit.id,
                 unidad_eco_txt: unit.economic_number,
@@ -1177,7 +1595,7 @@ window.openTimersModal = (unitId) => {
             loadTable();
         }
     };
-}
+};
 
 function filterAssignments(text) {
     text = text.toLowerCase();

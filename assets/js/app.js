@@ -15,6 +15,7 @@ import { renderFuel } from './modules/fuel.js?v=11.1';
 import { renderSecurityVial } from './modules/security_vial.js';
 import { renderGPSAlerts } from './modules/gps_alerts.js';
 import { renderTelemetry } from './modules/telemetry.js';
+import { renderMaintenance } from './modules/maintenance.js';
 import { supabase } from './services/supabaseClient.js';
 
 // DOM Elements
@@ -88,13 +89,13 @@ try {
             'nav-assignments', 'nav-trip-logs', 'nav-expenses', 'nav-fuel', 'nav-reports',
             'nav-client-reports', 'nav-atc-reports', 'nav-history-reports', 'nav-security-vial',
             'nav-observations', 'nav-cameras', 'nav-incidents', 'nav-admin', 'nav-payroll-map',
-            'nav-gps-alerts', 'nav-telemetry'
+            'nav-gps-alerts', 'nav-telemetry', 'nav-maintenance'
         ];
 
         if (role === 'mantenimiento' || role === 'manto' || role === 'maintenance') {
             console.log("SISTEMA: Aplicando configuración para Mantenimiento");
             allNavs.forEach(nav => {
-                if(nav !== 'nav-expenses' && nav !== 'nav-reports' && nav !== 'nav-payroll-map') {
+                if(nav !== 'nav-expenses' && nav !== 'nav-reports' && nav !== 'nav-payroll-map' && nav !== 'nav-maintenance') {
                     document.getElementById(nav)?.classList.add('hidden-section');
                 }
             });
@@ -155,7 +156,7 @@ try {
         } 
         else if (role === 'operaciones') {
             allNavs.forEach(nav => {
-                if(nav !== 'nav-assignments' && nav !== 'nav-expenses' && nav !== 'nav-fuel' && nav !== 'nav-payroll-map' && nav !== 'nav-admin' && nav !== 'nav-gps-alerts' && nav !== 'nav-telemetry') document.getElementById(nav)?.classList.add('hidden-section');
+                if(nav !== 'nav-assignments' && nav !== 'nav-expenses' && nav !== 'nav-fuel' && nav !== 'nav-payroll-map' && nav !== 'nav-admin' && nav !== 'nav-gps-alerts' && nav !== 'nav-telemetry' && nav !== 'nav-maintenance') document.getElementById(nav)?.classList.add('hidden-section');
             });
         } 
         else if (role === 'otros_usuarios') {
@@ -330,6 +331,11 @@ function loadView(view) {
             setActiveNav('nav-telemetry');
             renderTelemetry(contentArea);
             break;
+        case 'maintenance':
+            pageTitle.textContent = 'Gestión de Mantenimiento y Servicios';
+            setActiveNav('nav-maintenance');
+            renderMaintenance(contentArea);
+            break;
     }
 }
 
@@ -395,6 +401,7 @@ attachNav('nav-fuel', 'fuel');
 attachNav('nav-security-vial', 'security-vial');
 attachNav('nav-gps-alerts', 'gps-alerts');
 attachNav('nav-telemetry', 'telemetry');
+attachNav('nav-maintenance', 'maintenance');
 
 const logoutBtn = document.getElementById('logout-btn');
 if (logoutBtn) {
@@ -469,7 +476,13 @@ navButtons.forEach(btn => {
 
 // Init
 const init = () => {
-    loadView('dashboard');
+    const currentUser = JSON.parse(sessionStorage.getItem('currentUser'));
+    const role = currentUser?.role ? currentUser.role.toLowerCase().trim() : '';
+    if (role === 'mantenimiento' || role === 'manto' || role === 'maintenance') {
+        loadView('maintenance');
+    } else {
+        loadView('dashboard');
+    }
 };
 
 if (document.readyState === 'loading') {

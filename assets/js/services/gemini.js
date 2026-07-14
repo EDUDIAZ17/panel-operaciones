@@ -342,3 +342,90 @@ export async function generateLogisticsReportAI(origen, destino, paradas = [], u
 }
 
 window.generateLogisticsReportAI = generateLogisticsReportAI;
+
+export async function getAssignmentSuggestionsAI(availableUnits, pendingTrips) {
+    if (!pendingTrips || pendingTrips.length === 0) {
+        return `<div class="p-6 bg-slate-50 border border-slate-200 rounded-xl text-center text-slate-500 font-medium">
+            <i class="fas fa-info-circle mr-2 text-indigo-500 text-lg"></i>
+            No hay viajes pendientes registrados en este momento para analizar. Registra viajes abajo para recibir recomendaciones.
+        </div>`;
+    }
+
+    const unitsInfo = availableUnits.map(u => {
+        let gpsInfo = u.gpsLocation || 'No disponible';
+        let status = u.status;
+        let activeTrip = u.details?.cliente ? `Cliente: ${u.details.cliente}, Origen: ${u.details.origen}, Destino: ${u.details.destino}` : 'Sin viaje activo';
+        let returnDest = u.details?.regreso || 'No asignado';
+        
+        return {
+            economico: u.economic_number,
+            tipo: u.type,
+            estatus: status,
+            ubicacion_actual_gps: gpsInfo,
+            viaje_activo: activeTrip,
+            destino_regreso_asignado: returnDest
+        };
+    });
+
+    const pendingInfo = pendingTrips.map(p => ({
+        cliente: p.client,
+        origen_carga: p.origin,
+        destino_entrega: p.destination,
+        estatus: p.status
+    }));
+
+    const prompt = `
+        Actúa como un Despachador Logístico Inteligente y Optimizador de Rutas para la empresa "Alexa Transportes" en México.
+        Tu objetivo es maximizar la eficiencia y reducir el costo de "kilómetros vacíos" (deadhead / empty miles) sugiriendo qué unidades asignar a los viajes pendientes.
+
+        Aquí está el listado de las unidades de nuestra flota (incluyendo su estatus y ubicación GPS actual):
+        ${JSON.stringify(unitsInfo)}
+
+        Aquí está el listado de viajes pendientes registrados por los clientes (carga y descarga):
+        ${JSON.stringify(pendingInfo)}
+
+        Instrucciones de análisis:
+        1. Compara la ubicación actual por GPS de las unidades libres (Vacia / Sin Operador) con el origen de carga de los viajes pendientes. Sugiere la unidad más cercana geográficamente para reducir kilómetros vacíos.
+        2. Analiza las unidades en tránsito (Cargada / Transito) que terminarán su viaje pronto. Si su destino final está cerca del origen de un viaje pendiente, sugiérela para "pre-asignación" una vez que quede libre.
+        3. Excluye o advierte claramente sobre unidades en taller ("En Taller") indicando que no pueden ser asignadas por mantenimiento.
+        4. Haz recomendaciones específicas, directas y claras.
+        
+        Devuelve el resultado formateado ÚNICAMENTE en HTML limpio y moderno (sin bloques de código markdown \`\`\`html o similares). Usa clases de Tailwind CSS básicas para estilo y diseño premium (por ejemplo, divs contenedores con bg-indigo-50/50, bordes finos, iconos de font-awesome como <i class="fas fa-robot text-indigo-600"></i>, y badges coloridos). Mantén las sugerencias concisas y estructuradas en una lista vertical interactiva.
+    `;
+
+    const modelsToTry = [
+        'gemini-2.5-flash',
+        'gemini-2.5-pro'
+    ];
+    let lastError = null;
+
+    for (const model of modelsToTry) {
+        try {
+            const { data, error } = await supabase.functions.invoke('gemini-proxy', {
+                body: { model, prompt }
+            });
+            
+            if (error) {
+                console.warn(`Model ${model} failed via proxy for suggestions:`, error);
+                lastError = error;
+                continue;
+            }
+
+            const textOption = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (textOption) {
+                return textOption.replace(/\`\`\`html/gi, '').replace(/\`\`\`/g, '').trim();
+            }
+        } catch (error) {
+            console.warn(`Fetch error for model ${model} for suggestions:`, error);
+            lastError = error;
+        }
+    }
+    
+    console.error("All Gemini models failed for suggestions. Last error:", lastError);
+    return `<div class="p-4 bg-red-50 border border-red-200 rounded-lg text-center text-red-600 font-medium">
+        <i class="fas fa-exclamation-triangle mr-2 text-red-500"></i>
+        No se pudieron obtener sugerencias de la IA en este momento. Por favor intente más tarde.
+    </div>`;
+}
+
+window.getAssignmentSuggestionsAI = getAssignmentSuggestionsAI;
