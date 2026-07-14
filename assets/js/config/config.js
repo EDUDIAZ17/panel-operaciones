@@ -30,5 +30,6 @@ export const GOOGLE_MAPS_API_KEY = 'AIzaSyBiaioYABgNrwIm-j_H1VuPk2SN7CsbbFY';
 // The key is stored as a secret in Supabase, NOT in client code.
 export const GOOGLE_API_KEY = '';
 
-// Foursquare API Key for precise places search fallback
-export const FOURSQUARE_API_KEY = 'KCXLQJUSWFTSGMY4XEPIIWXFBX0PY4W2SPXE12501QWS204U';
+// Foursquare Legacy v2 credentials for precise places search fallback
+export const FOURSQUARE_CLIENT_ID = '2KBXFY1YCOJSGI1FZ540W0SK20GHNRATNQZJGTDEFVTIFSED';
+export const FOURSQUARE_CLIENT_SECRET = 'HYWTTH2S1EK4JVU5Q1T1DNYOUNVRHKXRDRXYFZN2X2EMAYTW';

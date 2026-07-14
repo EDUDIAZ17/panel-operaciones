@@ -535,26 +535,23 @@
               // 1. Try Foursquare Places Search first (precise, matches businesses and specific places)
               try {
                 const config = await import('./assets/js/config/config.js');
-                const fsqKey = config.FOURSQUARE_API_KEY || 'KCXLQJUSWFTSGMY4XEPIIWXFBX0PY4W2SPXE12501QWS204U';
+                const clientId = config.FOURSQUARE_CLIENT_ID || '2KBXFY1YCOJSGI1FZ540W0SK20GHNRATNQZJGTDEFVTIFSED';
+                const clientSecret = config.FOURSQUARE_CLIENT_SECRET || 'HYWTTH2S1EK4JVU5Q1T1DNYOUNVRHKXRDRXYFZN2X2EMAYTW';
 
-                const fsqUrl = `https://api.foursquare.com/v3/places/search?query=${encodeURIComponent(query)}&limit=5`;
-                const response = await fetch(fsqUrl, {
-                  headers: {
-                    'Authorization': fsqKey,
-                    'Accept': 'application/json'
-                  }
-                });
+                const fsqUrl = `https://api.foursquare.com/v2/venues/search?client_id=${clientId}&client_secret=${clientSecret}&v=20210831&near=Mexico&query=${encodeURIComponent(query)}&limit=5`;
+                const response = await fetch(fsqUrl);
 
                 if (response.ok) {
-                  const data = await response.json();
-                  if (data.results && data.results.length > 0) {
+                  const resData = await response.json();
+                  const venues = resData.response && resData.response.venues ? resData.response.venues : [];
+                  if (venues.length > 0) {
                     container.innerHTML = '';
-                    data.results.forEach(item => {
+                    venues.forEach(item => {
                       const name = item.name;
-                      const addr = item.location && item.location.formatted_address ? item.location.formatted_address : '';
+                      const addr = item.location && item.location.formattedAddress ? item.location.formattedAddress.join(', ') : '';
                       const display = addr ? `${name} (${addr})` : name;
-                      const lat = item.geocodes && item.geocodes.main ? item.geocodes.main.latitude : null;
-                      const lng = item.geocodes && item.geocodes.main ? item.geocodes.main.longitude : null;
+                      const lat = item.location && item.location.lat ? item.location.lat : null;
+                      const lng = item.location && item.location.lng ? item.location.lng : null;
 
                       if (lat !== null && lng !== null) {
                         const option = document.createElement('div');
