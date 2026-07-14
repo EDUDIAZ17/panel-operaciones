@@ -11,6 +11,7 @@ let currentPage = 0;
 const ITEMS_PER_PAGE = 8;
 let samsaraData = [];
 
+// Free Reverse Geocoder helper using Nominatim queue
 async function reverseGeocode(lat, lng, elementId) {
     const key = `${lat.toFixed(3)},${lng.toFixed(3)}`;
     if (geoCache.has(key)) {
@@ -19,29 +20,18 @@ async function reverseGeocode(lat, lng, elementId) {
         return;
     }
 
-    if (!window.google || !window.google.maps || !window.google.maps.Geocoder) return;
-
-    const geocoder = new window.google.maps.Geocoder();
-    try {
-        geocoder.geocode({ location: { lat, lng } }, (results, status) => {
-            if (status === "OK" && results[0]) {
-                // Use a precise address format (Street, City, State)
-                let preciseAddress = results[0].formatted_address.split(',').slice(0, 3).join(', ');
-
-                geoCache.set(key, preciseAddress);
-                const el = document.getElementById(elementId);
-                if (el) {
-                    el.innerText = preciseAddress;
-                    el.title = results[0].formatted_address; // Full address on hover
-                }
-            } else {
-                geoCache.set(key, 'GPS Activo');
-                const el = document.getElementById(elementId);
-                if (el) el.innerText = 'GPS Activo';
+    if (window.freeReverseGeocodeQueue) {
+        window.freeReverseGeocodeQueue(lat, lng, (preciseAddress, fullAddress) => {
+            geoCache.set(key, preciseAddress);
+            const el = document.getElementById(elementId);
+            if (el) {
+                el.innerText = preciseAddress;
+                el.title = fullAddress;
             }
         });
-    } catch(e) {
-        console.error("Geocoding Error", e);
+    } else {
+        const el = document.getElementById(elementId);
+        if (el) el.innerText = 'GPS Activo';
     }
 }
 

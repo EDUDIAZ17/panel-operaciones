@@ -3,10 +3,9 @@ import { GOOGLE_MAPS_API_KEY } from '../config/config.js';
 import { getHeavyVehicleRouteWithAI, estimateTollsWithAI } from '../services/gemini.js';
 
 let map = null;
-let directionsService = null;
-let directionsRenderer = null;
-let geocoder = null;
-let infoWindow = null;
+let routePolyline = null;
+let waypointMarkers = [];
+let tollMarkers = [];
 let waypointCount = 0;
 
 export function renderPayrollMap(container) {
@@ -502,11 +501,21 @@ function clearMapRoute() {
     document.getElementById('map-origen').value = '';
     document.getElementById('map-destino').value = '';
     document.getElementById('waypoints-container').innerHTML = '';
-    if (directionsRenderer) directionsRenderer.setDirections({routes: []});
-    if (window.tollMarkers) {
-        window.tollMarkers.forEach(m => m.setMap(null));
+    
+    if (routePolyline) {
+        map.removeLayer(routePolyline);
+        routePolyline = null;
     }
-    window.tollMarkers = [];
+    
+    if (waypointMarkers) {
+        waypointMarkers.forEach(m => map.removeLayer(m));
+        waypointMarkers = [];
+    }
+    
+    if (window.tollMarkers) {
+        window.tollMarkers.forEach(m => map.removeLayer(m));
+        window.tollMarkers = [];
+    }
 }
 
 window.removeWaypoint = (btn) => {
@@ -531,64 +540,35 @@ function bindWaypointLogic() {
         `;
         container.appendChild(div);
         
-        if (window.google && window.google.maps && window.google.maps.places) {
-            new google.maps.places.Autocomplete(document.getElementById(id), { componentRestrictions: { country: 'mx' }});
+        if (window.setupFreeAutocomplete) {
+            window.setupFreeAutocomplete(document.getElementById(id));
         }
     });
 }
 
 function initMap() {
-    if (typeof google === 'undefined') {
-        Swal.fire('Error', 'Google Maps API no pudo cargar. Verifique su conexión y API Key.', 'error');
-        return;
-    }
+    const mexicoCenter = [23.6345, -102.5528];
+    
+    // Initialize Leaflet Map
+    map = L.map('map-canvas').setView(mexicoCenter, 5);
 
-    const mexicoCenter = { lat: 23.6345, lng: -102.5528 };
-    map = new google.maps.Map(document.getElementById('map-canvas'), {
-        zoom: 5,
-        center: mexicoCenter,
-        mapId: '62e666a4666cf647', // ID for advanced markers
-        mapTypeId: 'hybrid',
-        mapTypeControl: true,
-        streetViewControl: false,
-        fullscreenControl: false
+    // Free OpenStreetMap Tile Layer
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+
+    // Map click event
+    map.on('click', (e) => {
+        geocodeLatLng(e.latlng);
     });
 
-    const trafficLayer = new google.maps.TrafficLayer();
-    trafficLayer.setMap(map);
-
-    directionsService = new google.maps.DirectionsService();
-    directionsRenderer = new google.maps.DirectionsRenderer({
-        map: map,
-        draggable: true, // Habilitar arrastre de ruta
-        polylineOptions: {
-            strokeColor: '#4f46e5',
-            strokeOpacity: 0.8,
-            strokeWeight: 6
-        }
-    });
-
-    geocoder = new google.maps.Geocoder();
-    infoWindow = new google.maps.InfoWindow();
-
-    // Map click event to see what's there
-    map.addListener('click', (e) => {
-        geocodeLatLng(e.latLng);
-    });
-
-    // Escuchar cuando el usuario arrastre y modifique la ruta
-    directionsRenderer.addListener('directions_changed', () => {
-        const result = directionsRenderer.getDirections();
-        if (result) {
-            recalculateTotalsFromDraggedRoute(result);
-        }
-    });
-
-    // Setup autocomplete
+    // Setup free autocomplete
     const inputOrigen = document.getElementById('map-origen');
     const inputDestino = document.getElementById('map-destino');
-    new google.maps.places.Autocomplete(inputOrigen, { componentRestrictions: { country: 'mx' }});
-    new google.maps.places.Autocomplete(inputDestino, { componentRestrictions: { country: 'mx' }});
+    if (window.setupFreeAutocomplete) {
+        window.setupFreeAutocomplete(inputOrigen);
+        window.setupFreeAutocomplete(inputDestino);
+    }
 }
 
 function calculateMapRoute() {
@@ -610,14 +590,9 @@ function calculateMapRoute() {
     if (unitTypeValue === 'thor' || unitTypeValue === 'torton') geminiUnitType = 'torton';
     
     const waypointInputs = document.querySelectorAll('.waypoint-input');
-    const routeWaypoints = [];
     const waypointNames = [];
     waypointInputs.forEach(input => {
         if (input.value.trim()) {
-            routeWaypoints.push({
-                location: input.value.trim(),
-                stopover: true
-            });
             waypointNames.push(input.value.trim());
         }
     });
@@ -625,100 +600,93 @@ function calculateMapRoute() {
     const loading = document.getElementById('map-loading');
     loading.classList.remove('hidden');
 
-    const request = {
-        origin: origen,
-        destination: destino,
-        waypoints: routeWaypoints,
-        travelMode: google.maps.TravelMode.DRIVING,
-        provideRouteAlternatives: false,
-        avoidTolls: document.getElementById('pref-avoid-tolls').checked,
-        avoidFerries: document.getElementById('pref-avoid-ferries').checked
-    };
-
-    directionsService.route(request, async (result, status) => {
+    fetchTollsViaRoutesAPI(origen, destino, waypointNames).then(async (routesApiResponse) => {
         loading.classList.add('hidden');
-        if (status == 'OK') {
-            directionsRenderer.setDirections(result);
-            
-            // Remove previous toll markers
-            if (window.tollMarkers) window.tollMarkers.forEach(m => m.setMap(null));
-            window.tollMarkers = [];
-            
-            let totalDistanceMeters = 0;
-            result.routes[0].legs.forEach(leg => {
-                totalDistanceMeters += leg.distance.value;
-                // Add basic orange markers for tolls from Google
-                leg.steps.forEach(step => {
-                    const instructions = step.instructions.toLowerCase();
-                    if (instructions.includes('cuota') || instructions.includes('peaje') || instructions.includes('toll')) {
-                        const marker = new google.maps.marker.AdvancedMarkerElement({
-                            position: step.start_location,
-                            map: map,
-                            title: 'Caseta de Cobro'
-                        });
-                        window.tollMarkers.push(marker);
-                    }
-                });
-            });
-            
-            const distanceValueKm = totalDistanceMeters / 1000;
-            
-            // Time breakdown
-            const drivingTimeH = distanceValueKm / speedKmH;
-            const stopTimeH = waypointNames.length * 0.5; // Assume 30 mins per stop for now
-            const restTimeH = document.getElementById('pref-opt-nom').checked ? Math.floor(drivingTimeH / 5) * 0.5 : 0; // NOM-012 rest (30 min every 5h)
-            
-            const totalTimeH = drivingTimeH + stopTimeH + restTimeH;
-            
-            function formatTime(hoursDecimal) {
-                const hours = Math.floor(hoursDecimal);
-                const minutes = Math.round((hoursDecimal - hours) * 60);
-                return `${hours}h:${minutes.toString().padStart(2, '0')}m`;
-            }
-            
-            // Populate Reporte Ruta
-            const today = new Date().toLocaleDateString('es-MX');
-            const repOrig = document.getElementById('rep-origen');
-            const repDest = document.getElementById('rep-destino');
-            const repDate = document.getElementById('rep-fecha');
-            const repVeh = document.getElementById('rep-vehiculo');
-            const repTTotal = document.getElementById('rep-time-total');
-            const repTDrive = document.getElementById('rep-time-drive');
-            const repDTotal = document.getElementById('rep-dist-total');
-            const repDVacio = document.getElementById('rep-dist-vacio');
-            const repTitCost = document.getElementById('rep-tit-cost');
-
-            if (repOrig) repOrig.textContent = origen;
-            if (repDest) repDest.textContent = destino;
-            if (repDate) repDate.textContent = today;
-            if (repVeh) repVeh.textContent = unitTypeName;
-            
-            if (repDTotal) repDTotal.innerHTML = `${distanceValueKm.toLocaleString('es-MX', {maximumFractionDigits: 0})} <span class="text-xs font-normal text-slate-400 uppercase tracking-tighter">km</span>`;
-            if (repDVacio) repDVacio.textContent = distanceValueKm.toLocaleString('es-MX', {maximumFractionDigits: 0});
-            
-            if (repTTotal) repTTotal.innerHTML = `${formatTime(totalTimeH)} <span class="text-xs font-normal text-slate-400 uppercase tracking-tighter">h</span>`;
-            if (repTDrive) repTDrive.textContent = formatTime(drivingTimeH);
-            if (repTitCost) repTitCost.textContent = 'Calculando...';
-            
-            window.currentRouteData = {
-                origen, destino, waypointNames, distance: distanceValueKm, unitTypeName, geminiUnitType
-            };
-            
-            // Switch to Report Tab
-            document.getElementById('tab-btn-report').click();
-            
-            // Trigger AI Tolls & Payroll Calc
-            triggerTollCalculationAndPayroll(distanceValueKm, geminiUnitType);
-
-        } else {
-            console.error("Directions requests failed: ", status);
-            Swal.fire('Ruta no encontrada', 'No se pudo trazar la ruta entre estos puntos.', 'error');
+        
+        // 1. Draw route polyline in Leaflet
+        if (routePolyline) {
+            map.removeLayer(routePolyline);
+            routePolyline = null;
         }
+
+        const coords = decodePolyline(routesApiResponse.encodedPolyline);
+        if (coords.length > 0) {
+            routePolyline = L.polyline(coords, {
+                color: '#4f46e5',
+                weight: 6,
+                opacity: 0.8
+            }).addTo(map);
+
+            // Fit map bounds
+            map.fitBounds(routePolyline.getBounds());
+
+            // Clear old waypoint markers
+            waypointMarkers.forEach(m => map.removeLayer(m));
+            waypointMarkers = [];
+
+            // Draw start and end markers
+            const startMarker = L.marker(coords[0], { title: 'Origen' }).addTo(map).bindPopup('<b>Origen</b><br>' + origen);
+            const endMarker = L.marker(coords[coords.length - 1], { title: 'Destino' }).addTo(map).bindPopup('<b>Destino</b><br>' + destino);
+            waypointMarkers.push(startMarker, endMarker);
+        }
+
+        const distanceValueKm = routesApiResponse.distanceMeters / 1000;
+        
+        // Time breakdown
+        const drivingTimeH = routesApiResponse.durationSeconds / 3600;
+        const stopTimeH = waypointNames.length * 0.5;
+        const restTimeH = document.getElementById('pref-opt-nom').checked ? Math.floor(drivingTimeH / 5) * 0.5 : 0;
+        const totalTimeH = drivingTimeH + stopTimeH + restTimeH;
+        
+        function formatTime(hoursDecimal) {
+            const hours = Math.floor(hoursDecimal);
+            const minutes = Math.round((hoursDecimal - hours) * 60);
+            return `${hours}h:${minutes.toString().padStart(2, '0')}m`;
+        }
+        
+        // Populate Reporte Ruta
+        const today = new Date().toLocaleDateString('es-MX');
+        const repOrig = document.getElementById('rep-origen');
+        const repDest = document.getElementById('rep-destino');
+        const repDate = document.getElementById('rep-fecha');
+        const repVeh = document.getElementById('rep-vehiculo');
+        const repTTotal = document.getElementById('rep-time-total');
+        const repTDrive = document.getElementById('rep-time-drive');
+        const repDTotal = document.getElementById('rep-dist-total');
+        const repDVacio = document.getElementById('rep-dist-vacio');
+        const repTitCost = document.getElementById('rep-tit-cost');
+
+        if (repOrig) repOrig.textContent = origen;
+        if (repDest) repDest.textContent = destino;
+        if (repDate) repDate.textContent = today;
+        if (repVeh) repVeh.textContent = unitTypeName;
+        
+        if (repDTotal) repDTotal.innerHTML = `${distanceValueKm.toLocaleString('es-MX', {maximumFractionDigits: 0})} <span class="text-xs font-normal text-slate-400 uppercase tracking-tighter">km</span>`;
+        if (repDVacio) repDVacio.textContent = distanceValueKm.toLocaleString('es-MX', {maximumFractionDigits: 0});
+        
+        if (repTTotal) repTTotal.innerHTML = `${formatTime(totalTimeH)} <span class="text-xs font-normal text-slate-400 uppercase tracking-tighter">h</span>`;
+        if (repTDrive) repTDrive.textContent = formatTime(drivingTimeH);
+        if (repTitCost) repTitCost.textContent = 'Calculando...';
+        
+        window.currentRouteData = {
+            origen, destino, waypointNames, distance: distanceValueKm, unitTypeName, geminiUnitType
+        };
+        
+        // Switch to Report Tab
+        document.getElementById('tab-btn-report').click();
+        
+        // Trigger AI Tolls & Payroll Calc
+        await triggerTollCalculationAndPayroll(distanceValueKm, geminiUnitType, routesApiResponse);
+
+    }).catch(err => {
+        loading.classList.add('hidden');
+        console.error("Error al trazar la ruta:", err);
+        Swal.fire('Ruta no encontrada', 'No se pudo trazar la ruta entre estos puntos. Verifique las direcciones y su API Key.', 'error');
     });
 }
 
 // Nueva función extraída para calcular casetas y no repetir código al arrastrar
-async function triggerTollCalculationAndPayroll(distanceKm, geminiUnitType) {
+async function triggerTollCalculationAndPayroll(distanceKm, geminiUnitType, precomputedTollsResponse = null) {
     const origen = window.currentRouteData.origen;
     const destino = window.currentRouteData.destino;
     const waypoints = window.currentRouteData.waypointNames;
@@ -736,11 +704,15 @@ async function triggerTollCalculationAndPayroll(distanceKm, geminiUnitType) {
         try {
             // STEP 1: Calcular tarifa real base con Google Routes API (2026)
             let baseTollCost = 0;
-            try {
-                const routesApiResponse = await fetchTollsViaRoutesAPI(origen, destino, waypoints);
-                baseTollCost = routesApiResponse.costoTotalNumerical || 0;
-            } catch (googleApiErr) {
-                console.warn("Falla al recuperar casetas desde Google API:", googleApiErr);
+            if (precomputedTollsResponse) {
+                baseTollCost = precomputedTollsResponse.costoTotalNumerical || 0;
+            } else {
+                try {
+                    const routesApiResponse = await fetchTollsViaRoutesAPI(origen, destino, waypoints);
+                    baseTollCost = routesApiResponse.costoTotalNumerical || 0;
+                } catch (googleApiErr) {
+                    console.warn("Falla al recuperar casetas desde Google API:", googleApiErr);
+                }
             }
 
             // STEP 2: Aplicar tarifa de carga pesada CAPUFE
@@ -857,104 +829,44 @@ function populateCasetasModal(tollsArray, totalCost) {
     });
 }
 
+// recalculateTotalsFromDraggedRoute is deprecated as dragging is not supported in Leaflet.
 function recalculateTotalsFromDraggedRoute(result) {
-    if (window.tollMarkers) {
-        window.tollMarkers.forEach(m => m.map = null);
+    console.warn("Drag routing is not supported in Leaflet.");
+}
+
+function decodePolyline(encoded) {
+    if (!encoded) return [];
+    let len = encoded.length;
+    let index = 0;
+    let array = [];
+    let lat = 0;
+    let lng = 0;
+
+    while (index < len) {
+        let b;
+        let shift = 0;
+        let result = 0;
+        do {
+            b = encoded.charCodeAt(index++) - 63;
+            result |= (b & 0x1f) << shift;
+            shift += 5;
+        } while (b >= 0x20);
+        let dlat = ((result & 1) ? ~(result >> 1) : (result >> 1));
+        lat += dlat;
+
+        shift = 0;
+        result = 0;
+        do {
+            b = encoded.charCodeAt(index++) - 63;
+            result |= (b & 0x1f) << shift;
+            shift += 5;
+        } while (b >= 0x20);
+        let dlng = ((result & 1) ? ~(result >> 1) : (result >> 1));
+        lng += dlng;
+
+        array.push([lat * 1e-5, lng * 1e-5]);
     }
-    window.tollMarkers = [];
-    
-    let totalDistanceMeters = 0;
-    const legWaypoints = [];
-    const viaWaypoints = [];
-    const origen = result.request.origin.query || result.request.origin.location.toString();
-    const destino = result.request.destination.query || result.request.destination.location.toString();
-
-    result.routes[0].legs.forEach(leg => {
-        totalDistanceMeters += leg.distance.value;
-        if(leg.start_address) legWaypoints.push(leg.start_address);
-        if(leg.via_waypoints && leg.via_waypoints.length > 0) {
-             leg.via_waypoints.forEach(vwp => {
-                 viaWaypoints.push(`${vwp.location.lat()},${vwp.location.lng()}`);
-             });
-        }
-
-        leg.steps.forEach(step => {
-            const instructions = step.instructions.toLowerCase();
-            if (instructions.includes('cuota') || instructions.includes('peaje') || instructions.includes('toll')) {
-                const marker = new google.maps.marker.AdvancedMarkerElement({
-                    position: step.start_location,
-                    map: map,
-                    title: 'Caseta de Cobro'
-                });
-
-                marker.addListener('mouseover', () => {
-                    infoWindow.setContent(`<div class="p-1"><p class="font-bold text-orange-600 text-xs"><i class="fas fa-ticket-alt"></i> Caseta de Peaje (Modificada)</p><p class="text-[10px] text-gray-500">Punto de cobro detectado en la nueva ruta.</p></div>`);
-                    infoWindow.open(map, marker);
-                });
-                marker.addListener('mouseout', () => {
-                    infoWindow.close();
-                });
-
-                window.tollMarkers.push(marker);
-            }
-        });
-    });
-
-    const distanceValueKm = totalDistanceMeters / 1000;
-    const speedKmH = parseFloat(document.getElementById('map-speed').value) || 75;
-    const stopTimeH = legWaypoints.length * 0.5;
-    const drivingTimeH = distanceValueKm / speedKmH;
-    const restTimeH = document.getElementById('pref-opt-nom').checked ? Math.floor(drivingTimeH / 5) * 0.5 : 0;
-    const totalTimeH = drivingTimeH + stopTimeH + restTimeH;
-    
-    function formatTime(hoursDecimal) {
-        const h = Math.floor(hoursDecimal);
-        const m = Math.round((hoursDecimal - h) * 60);
-        return `${h}h:${m.toString().padStart(2, '0')}m`;
-    }
-    
-    // Update Report tab
-    const repOrig = document.getElementById('rep-origen');
-    const repDest = document.getElementById('rep-destino');
-    const repDate = document.getElementById('rep-fecha');
-    const repVeh = document.getElementById('rep-vehiculo');
-    const repTTotal = document.getElementById('rep-time-total');
-    const repTDrive = document.getElementById('rep-time-drive');
-    const repDTotal = document.getElementById('rep-dist-total');
-    const repDVacio = document.getElementById('rep-dist-vacio');
-    const repTitCost = document.getElementById('rep-tit-cost');
-
-    if (repOrig) repOrig.textContent = origen;
-    if (repDest) repDest.textContent = destino;
-    if (repDate) repDate.textContent = new Date().toLocaleDateString('es-MX');
-    if (repVeh) repVeh.textContent = document.getElementById('map-unit-type').options[document.getElementById('map-unit-type').selectedIndex].text;
-    
-    if (repDTotal) repDTotal.innerHTML = `${distanceValueKm.toLocaleString('es-MX', {maximumFractionDigits: 0})} <span class="text-xs font-normal text-slate-400 uppercase tracking-tighter">km</span>`;
-    if (repDVacio) repDVacio.textContent = distanceValueKm.toLocaleString('es-MX', {maximumFractionDigits: 0});
-    
-    if (repTTotal) repTTotal.innerHTML = `${formatTime(totalTimeH)} <span class="text-xs font-normal text-slate-400 uppercase tracking-tighter">h</span>`;
-    if (repTDrive) repTDrive.textContent = formatTime(drivingTimeH);
-    if (repTitCost) repTitCost.textContent = 'Calculando...';
-
-    const unitTypeOptions = document.getElementById('map-unit-type');
-    const unitTypeName = unitTypeOptions.options[unitTypeOptions.selectedIndex].text;
-    const unitTypeValue = unitTypeOptions.value;
-    let geminiUnitType = 'full';
-    if (unitTypeValue === 't3s2' || unitTypeValue === 't3s3') geminiUnitType = 'sencillo';
-    if (unitTypeValue === 'thor' || unitTypeValue === 'torton') geminiUnitType = 'torton';
-
-    // Actualizar datos globales
-    window.currentRouteData = {
-        origen,
-        destino,
-        waypointNames: legWaypoints.slice(1, -1),
-        viaWaypoints: viaWaypoints,
-        distance: distanceValueKm,
-        unitTypeName: unitTypeName,
-        geminiUnitType: geminiUnitType
-    };
-
-    triggerTollCalculationAndPayroll(distanceValueKm, geminiUnitType);
+    return array;
 }
 
 async function fetchTollsViaRoutesAPI(originStr, destinationStr, waypointsArray) {
@@ -979,7 +891,7 @@ async function fetchTollsViaRoutesAPI(originStr, destinationStr, waypointsArray)
         headers: {
             'Content-Type': 'application/json',
             'X-Goog-Api-Key': GOOGLE_MAPS_API_KEY,
-            'X-Goog-FieldMask': 'routes.distanceMeters,routes.duration,routes.travelAdvisory.tollInfo'
+            'X-Goog-FieldMask': 'routes.distanceMeters,routes.duration,routes.travelAdvisory.tollInfo,routes.polyline.encodedPolyline'
         },
         body: JSON.stringify(requestBody)
     });
@@ -992,30 +904,38 @@ async function fetchTollsViaRoutesAPI(originStr, destinationStr, waypointsArray)
 
     const data = JSON.parse(await response.text());
     
-    // Calcula el costo total basado en la moneda local
     let costoTotal = 0;
     let currencyCode = "MXN";
+    let encodedPolyline = "";
+    let distanceMeters = 0;
+    let durationSeconds = 0;
 
-    if (data.routes && data.routes[0] && data.routes[0].travelAdvisory && data.routes[0].travelAdvisory.tollInfo) {
-        const tollInfo = data.routes[0].travelAdvisory.tollInfo;
-        if (tollInfo.estimatedPrice && tollInfo.estimatedPrice.length > 0) {
-            costoTotal = parseFloat(tollInfo.estimatedPrice[0].units) || 0;
-            const nanos = tollInfo.estimatedPrice[0].nanos || 0;
-            costoTotal += (nanos / 1000000000); // 1 nano = 10^-9
-            currencyCode = tollInfo.estimatedPrice[0].currencyCode;
+    if (data.routes && data.routes[0]) {
+        const route = data.routes[0];
+        distanceMeters = route.distanceMeters || 0;
+        if (route.duration) {
+            durationSeconds = parseInt(route.duration.replace('s', '')) || 0;
+        }
+        if (route.polyline && route.polyline.encodedPolyline) {
+            encodedPolyline = route.polyline.encodedPolyline;
+        }
+        if (route.travelAdvisory && route.travelAdvisory.tollInfo) {
+            const tollInfo = route.travelAdvisory.tollInfo;
+            if (tollInfo.estimatedPrice && tollInfo.estimatedPrice.length > 0) {
+                costoTotal = parseFloat(tollInfo.estimatedPrice[0].units) || 0;
+                const nanos = tollInfo.estimatedPrice[0].nanos || 0;
+                costoTotal += (nanos / 1000000000);
+                currencyCode = tollInfo.estimatedPrice[0].currencyCode;
+            }
         }
     }
 
-    if(costoTotal === 0) {
-        return {
-            costoTotalFormatted: "Sin Costo de Casetas Libre de Peaje",
-            costoTotalNumerical: 0
-        };
-    }
-
     return {
-         costoTotalFormatted: new Intl.NumberFormat('es-MX', { style: 'currency', currency: currencyCode }).format(costoTotal) + " " + currencyCode,
-         costoTotalNumerical: costoTotal
+        costoTotalFormatted: costoTotal === 0 ? "Sin Costo de Casetas Libre de Peaje" : new Intl.NumberFormat('es-MX', { style: 'currency', currency: currencyCode }).format(costoTotal) + " " + currencyCode,
+        costoTotalNumerical: costoTotal,
+        distanceMeters: distanceMeters,
+        durationSeconds: durationSeconds,
+        encodedPolyline: encodedPolyline
     };
 }
 
@@ -1161,25 +1081,30 @@ async function runNOM012Analysis() {
 
 // ---- INTERACTION & UTILITIES ---- //
 function geocodeLatLng(latLng) {
-    if (!geocoder) return;
-    geocoder.geocode({ location: latLng }, (results, status) => {
-        if (status === "OK") {
-            if (results[0]) {
-                infoWindow.setContent(`
-                    <div class="p-2 max-w-xs">
-                        <p class="font-bold text-gray-800 text-sm mb-1"><i class="fas fa-map-marker-alt text-indigo-500"></i> Ubicación Seleccionada</p>
-                        <p class="text-xs text-gray-600 leading-relaxed">${results[0].formatted_address}</p>
-                    </div>
-                `);
-                infoWindow.setPosition(latLng);
-                infoWindow.open(map);
-            } else {
-                infoWindow.setContent('<div class="p-1 text-xs">No se encontraron resultados para esta ubicación.</div>');
-                infoWindow.setPosition(latLng);
-                infoWindow.open(map);
-            }
+    if (!map) return;
+    const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latLng.lat}&lon=${latLng.lng}&zoom=18&addressdetails=1`;
+    fetch(url, {
+        headers: {
+            'User-Agent': 'OperacionesPanel/1.0 (contact@operatorpanel.com)'
         }
-    });
+    })
+        .then(response => response.json())
+        .then(data => {
+            if (data && data.display_name) {
+                L.popup()
+                    .setLatLng(latLng)
+                    .setContent(`
+                        <div class="p-2 max-w-xs text-xs">
+                            <p class="font-bold text-gray-800 text-sm mb-1"><i class="fas fa-map-marker-alt text-indigo-500"></i> Ubicación Seleccionada</p>
+                            <p class="text-gray-600 leading-relaxed">${data.display_name}</p>
+                        </div>
+                    `)
+                    .openOn(map);
+            }
+        })
+        .catch(err => {
+            console.error("Nominatim Reverse Geocoding Error:", err);
+        });
 }
 
 

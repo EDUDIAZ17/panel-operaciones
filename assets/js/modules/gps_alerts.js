@@ -392,25 +392,26 @@ function initAutocomplete() {
     if (!input) return;
 
     try {
-        if (typeof google === 'object' && google.maps && google.maps.places) {
-            const autocomplete = new google.maps.places.Autocomplete(input, {
-                componentRestrictions: { country: 'MX' } // Focus on Mexico locations
-            });
-
-            autocomplete.addListener('place_changed', () => {
-                const place = autocomplete.getPlace();
-                if (place.geometry) {
-                    const lat = place.geometry.location.lat();
-                    const lng = place.geometry.location.lng();
-                    alertState.selectedAutocompleteCoords = { lat, lng, name: place.name || place.formatted_address };
+        if (window.setupFreeAutocomplete) {
+            window.setupFreeAutocomplete(input);
+            
+            input.addEventListener('change', () => {
+                const lat = parseFloat(input.dataset.lat);
+                const lng = parseFloat(input.dataset.lng);
+                if (!isNaN(lat) && !isNaN(lng)) {
+                    alertState.selectedAutocompleteCoords = { lat, lng, name: input.value };
                     document.getElementById('alert-coords-preview').innerText = `Coordenadas: Lat ${lat.toFixed(5)}, Lng ${lng.toFixed(5)}`;
+                    
+                    // Center maps
+                    if (alertState.activeMap) {
+                        alertState.activeMap.setView([lat, lng], 10);
+                    }
+                    updateCirclesOnMap();
                 } else {
                     alertState.selectedAutocompleteCoords = null;
                     document.getElementById('alert-coords-preview').innerText = `Coordenadas: No encontradas`;
                 }
             });
-        } else {
-            console.warn("Autocomplete places library not available yet.");
         }
     } catch(e) {
         console.error("Autocomplete setup failed:", e);
@@ -536,20 +537,18 @@ async function handleUnitSelectChange(e) {
     if (destString && destString !== '---') {
         if (destNameInput) destNameInput.value = destString;
         
-        // Use maps geocoder to fetch the coordinates of this text automatically!
-        if (typeof google === 'object' && google.maps) {
-            const geocoder = new google.maps.Geocoder();
-            geocoder.geocode({ address: destString + ", Mexico" }, (results, status) => {
-                if (status === 'OK' && results[0]) {
-                    const lat = results[0].geometry.location.lat();
-                    const lng = results[0].geometry.location.lng();
+        // Use Nominatim geocoder to fetch the coordinates of this text automatically!
+        if (window.freeGeocodeNominatim) {
+            window.freeGeocodeNominatim(destString + ", Mexico").then(res => {
+                if (res) {
+                    const lat = res.lat;
+                    const lng = res.lng;
                     alertState.selectedAutocompleteCoords = { lat, lng, name: destString };
                     document.getElementById('alert-coords-preview').innerText = `Coordenadas: Lat ${lat.toFixed(5)}, Lng ${lng.toFixed(5)}`;
                     
                     // Center maps
                     if (alertState.activeMap) {
-                        alertState.activeMap.setCenter({ lat, lng });
-                        alertState.activeMap.setZoom(10);
+                        alertState.activeMap.setView([lat, lng], 10);
                     }
                     updateCirclesOnMap();
                 }
@@ -777,13 +776,12 @@ async function handleFormSubmit(e) {
     if (!coords && destName.trim()) {
         // Fallback to geocoding the entered text directly (handles cases where autocomplete didn't register or was blocked)
         coords = await new Promise((resolve) => {
-            if (typeof google === 'object' && google.maps) {
-                const geocoder = new google.maps.Geocoder();
-                geocoder.geocode({ address: destName.trim() + ", Mexico" }, (results, status) => {
-                    if (status === 'OK' && results[0]) {
+            if (window.freeGeocodeNominatim) {
+                window.freeGeocodeNominatim(destName.trim() + ", Mexico").then(res => {
+                    if (res) {
                         resolve({
-                            lat: results[0].geometry.location.lat(),
-                            lng: results[0].geometry.location.lng(),
+                            lat: res.lat,
+                            lng: res.lng,
                             name: destName.trim()
                         });
                     } else {
@@ -1214,7 +1212,7 @@ window.markAlertAsSent = async function(id) {
 };
 
 // -------------------------------------------------------------
-// Google Maps rendering & real-time plotting
+// Leaflet mapping & real-time plotting
 // -------------------------------------------------------------
 function initGoogleMap() {
     const mapEl = document.getElementById('gps-alerts-map');
@@ -1222,28 +1220,25 @@ function initGoogleMap() {
     if (!mapEl) return;
 
     try {
-        if (typeof google === 'object' && google.maps) {
-            // Center around standard coordinates in Mexico (Querétaro center)
-            const mapOptions = {
-                center: { lat: 20.5888, lng: -100.3899 },
-                zoom: 6,
-                mapId: "SAMSARA_ALERTS_MAP",
-                mapTypeControl: false,
-                streetViewControl: false
-            };
+        const mexicoCenter = [20.5888, -100.3899];
+        // Initialize Leaflet Map
+        alertState.activeMap = L.map(mapEl).setView(mexicoCenter, 6);
 
-            alertState.activeMap = new google.maps.Map(mapEl, mapOptions);
-            if (loadingEl) loadingEl.remove();
+        // OpenStreetMap Tile Layer
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(alertState.activeMap);
 
-            // Setup map click listener for simulation
-            alertState.activeMap.addListener('click', handleMapClickForSimulation);
+        if (loadingEl) loadingEl.remove();
 
-            // Populate Map initially
-            updateMapMarkers();
-        }
+        // Setup map click listener for simulation
+        alertState.activeMap.on('click', handleMapClickForSimulation);
+
+        // Populate Map initially
+        updateMapMarkers();
     } catch(err) {
-        console.error("Google maps failed to load in view:", err);
-        mapEl.innerHTML = `<div class="p-8 text-center text-red-500 font-bold"><i class="fas fa-exclamation-triangle"></i> No se pudo iniciar Google Maps en esta vista.</div>`;
+        console.error("Leaflet maps failed to load in view:", err);
+        mapEl.innerHTML = `<div class="p-8 text-center text-red-500 font-bold"><i class="fas fa-exclamation-triangle"></i> No se pudo iniciar el mapa de alertas en esta vista.</div>`;
     }
 }
 
@@ -1253,43 +1248,38 @@ function updateMapMarkers() {
 
     // 1. Remove obsolete markers
     Object.keys(alertState.mapMarkers).forEach(key => {
-        alertState.mapMarkers[key].setMap(null);
+        alertState.activeMap.removeLayer(alertState.mapMarkers[key]);
     });
     alertState.mapMarkers = {};
 
     // Remove old circles
     Object.keys(alertState.geofenceCircles).forEach(key => {
-        alertState.geofenceCircles[key].setMap(null);
+        alertState.activeMap.removeLayer(alertState.geofenceCircles[key]);
     });
     alertState.geofenceCircles = {};
 
     // 2. Draw Geofence Destinations
     alertState.alerts.forEach(alert => {
         if (alert.status !== 'Enviada' && alert.status !== 'Cancelada') {
-            const destPos = { lat: Number(alert.latitude), lng: Number(alert.longitude) };
+            const destPos = [Number(alert.latitude), Number(alert.longitude)];
             
-            // Draw Target Pin
-            const destMarker = new google.maps.Marker({
-                position: destPos,
-                map: alertState.activeMap,
-                title: `Destino: ${alert.destination_name}`,
-                icon: {
-                    url: 'https://maps.google.com/mapfiles/ms/icons/red-pushpin.png'
-                }
-            });
+            // Draw Target Pin in Leaflet
+            const destMarker = L.marker(destPos, {
+                title: `Destino: ${alert.destination_name}`
+            }).addTo(alertState.activeMap)
+              .bindPopup(`<b>Destino:</b> ${alert.destination_name}<br>Radio: ${alert.radius_km} km`);
+            
             alertState.mapMarkers[`dest_${alert.id}`] = destMarker;
 
-            // Draw circular geofence
-            const geofenceCircle = new google.maps.Circle({
-                strokeColor: "#4F46E5",
-                strokeOpacity: 0.8,
-                strokeWeight: 2,
+            // Draw circular geofence in Leaflet
+            const geofenceCircle = L.circle(destPos, {
+                color: "#4F46E5",
+                weight: 2,
                 fillColor: "#4F46E5",
                 fillOpacity: 0.15,
-                map: alertState.activeMap,
-                center: destPos,
                 radius: Number(alert.radius_km) * 1000 // Convert km to meters
-            });
+            }).addTo(alertState.activeMap);
+            
             alertState.geofenceCircles[alert.id] = geofenceCircle;
         }
     });
@@ -1316,32 +1306,30 @@ function updateMapMarkers() {
         }
 
         if (lat !== null && lng !== null) {
-            const unitPos = { lat, lng };
+            const unitPos = [lat, lng];
 
-            // Dynamic color/icon depending on simulator
-            const pinColor = isSimulated ? 'orange' : 'blue';
-            const marker = new google.maps.Marker({
-                position: unitPos,
-                map: alertState.activeMap,
-                title: `${unit.economic_number} - ${unit.operators?.name || 'S/O'}`,
-                label: {
-                    text: unit.economic_number,
-                    color: "white",
-                    fontWeight: "bold",
-                    fontSize: "11px"
-                },
-                icon: {
-                    path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
-                    scale: 6,
-                    strokeColor: "white",
-                    strokeWeight: 2,
-                    fillColor: pinColor,
-                    fillOpacity: 0.9,
-                }
+            // Dynamic color depending on simulator
+            const markerColor = isSimulated ? '#f97316' : '#2563eb'; // Orange or Blue
+            
+            // Create a custom DivIcon for Leaflet to show vehicle number nicely
+            const unitIcon = L.divIcon({
+                className: 'custom-unit-icon',
+                html: `
+                    <div style="background-color: ${markerColor}; color: white; padding: 4px 8px; border-radius: 9999px; border: 2px solid white; font-weight: bold; font-size: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.3); white-space: nowrap; display: inline-block;">
+                        <i class="fas fa-truck"></i> ${unit.economic_number}
+                    </div>
+                `,
+                iconSize: null,
+                iconAnchor: [15, 12]
             });
 
+            const marker = L.marker(unitPos, {
+                icon: unitIcon,
+                title: `${unit.economic_number} - ${unit.operators?.name || 'S/O'}`
+            }).addTo(alertState.activeMap);
+
             // Double click marker to open simulation helper
-            marker.addListener('dblclick', () => {
+            marker.on('dblclick', () => {
                 const simSelect = document.getElementById('sim-unit-select');
                 if (simSelect) {
                     simSelect.value = unit.id;
@@ -1363,19 +1351,18 @@ function updateCirclesOnMap() {
     if (alertState.selectedAutocompleteCoords && alertState.activeMap) {
         const previewKey = 'preview_geofence';
         if (alertState.geofenceCircles[previewKey]) {
-            alertState.geofenceCircles[previewKey].setMap(null);
+            alertState.activeMap.removeLayer(alertState.geofenceCircles[previewKey]);
         }
 
-        const circle = new google.maps.Circle({
-            strokeColor: "#e11d48",
-            strokeOpacity: 0.7,
-            strokeWeight: 1,
+        const centerPos = [alertState.selectedAutocompleteCoords.lat, alertState.selectedAutocompleteCoords.lng];
+        const circle = L.circle(centerPos, {
+            color: "#e11d48",
+            weight: 1,
             fillColor: "#e11d48",
             fillOpacity: 0.1,
-            map: alertState.activeMap,
-            center: alertState.selectedAutocompleteCoords,
             radius: currentRadius
-        });
+        }).addTo(alertState.activeMap);
+        
         alertState.geofenceCircles[previewKey] = circle;
     }
 }
@@ -1403,8 +1390,8 @@ function handleMapClickForSimulation(event) {
         return;
     }
 
-    const clickedLat = event.latLng.lat();
-    const clickedLng = event.latLng.lng();
+    const clickedLat = event.latlng.lat;
+    const clickedLng = event.latlng.lng;
 
     // Position marker
     alertState.simulatedPositions[unitId] = { lat: clickedLat, lng: clickedLng };
@@ -1465,20 +1452,15 @@ window.syncGPSAlertForUnit = async function(unitId, unitNum, destinationName, at
         let lng = -99.1332;
         let coordsFetched = false;
 
-        if (typeof google === 'object' && google.maps) {
-            const geocoder = new google.maps.Geocoder();
-            await new Promise((resolve) => {
-                geocoder.geocode({ address: destinationName + ", Mexico" }, (results, status) => {
-                    if (status === 'OK' && results[0]) {
-                        lat = results[0].geometry.location.lat();
-                        lng = results[0].geometry.location.lng();
-                        coordsFetched = true;
-                    } else {
-                        console.warn(`GPS-MONITOR: Geocoding failed for ${destinationName} (Status: ${status}). Using default/current fallback.`);
-                    }
-                    resolve();
-                });
-            });
+        if (window.freeGeocodeNominatim) {
+            const res = await window.freeGeocodeNominatim(destinationName + ", Mexico");
+            if (res) {
+                lat = res.lat;
+                lng = res.lng;
+                coordsFetched = true;
+            } else {
+                console.warn(`GPS-MONITOR: Geocoding failed for ${destinationName}. Using default/current fallback.`);
+            }
         }
 
         if (!coordsFetched) {
