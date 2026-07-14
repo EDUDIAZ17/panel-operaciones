@@ -35,3 +35,6 @@ npm-debug.log*
 # Temporary files
 *.tmp
 *.bak
+
+# App configuration credentials
+assets/js/config/config.js

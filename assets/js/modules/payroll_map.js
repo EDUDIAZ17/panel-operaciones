@@ -571,6 +571,91 @@ function initMap() {
     }
 }
 
+async function renderCalculatedRoute(routesApiResponse, origen, destino, waypointNames, speedKmH, unitTypeName, geminiUnitType, loading) {
+    loading.classList.add('hidden');
+    
+    // 1. Draw route polyline in Leaflet
+    if (routePolyline) {
+        map.removeLayer(routePolyline);
+        routePolyline = null;
+    }
+
+    let coords = [];
+    if (routesApiResponse.isOSRM) {
+        coords = routesApiResponse.coordinates;
+    } else {
+        coords = decodePolyline(routesApiResponse.encodedPolyline);
+    }
+
+    if (coords.length > 0) {
+        routePolyline = L.polyline(coords, {
+            color: '#4f46e5',
+            weight: 6,
+            opacity: 0.8
+        }).addTo(map);
+
+        // Fit map bounds
+        map.fitBounds(routePolyline.getBounds());
+
+        // Clear old waypoint markers
+        waypointMarkers.forEach(m => map.removeLayer(m));
+        waypointMarkers = [];
+
+        // Draw start and end markers
+        const startMarker = L.marker(coords[0], { title: 'Origen' }).addTo(map).bindPopup('<b>Origen</b><br>' + origen);
+        const endMarker = L.marker(coords[coords.length - 1], { title: 'Destino' }).addTo(map).bindPopup('<b>Destino</b><br>' + destino);
+        waypointMarkers.push(startMarker, endMarker);
+    }
+
+    const distanceValueKm = routesApiResponse.distanceMeters / 1000;
+    
+    // Time breakdown
+    const drivingTimeH = routesApiResponse.durationSeconds / 3600;
+    const stopTimeH = waypointNames.length * 0.5;
+    const restTimeH = document.getElementById('pref-opt-nom').checked ? Math.floor(drivingTimeH / 5) * 0.5 : 0;
+    const totalTimeH = drivingTimeH + stopTimeH + restTimeH;
+    
+    function formatTime(hoursDecimal) {
+        const hours = Math.floor(hoursDecimal);
+        const minutes = Math.round((hoursDecimal - hours) * 60);
+        return `${hours}h:${minutes.toString().padStart(2, '0')}m`;
+    }
+    
+    // Populate Reporte Ruta
+    const today = new Date().toLocaleDateString('es-MX');
+    const repOrig = document.getElementById('rep-origen');
+    const repDest = document.getElementById('rep-destino');
+    const repDate = document.getElementById('rep-fecha');
+    const repVeh = document.getElementById('rep-vehiculo');
+    const repTTotal = document.getElementById('rep-time-total');
+    const repTDrive = document.getElementById('rep-time-drive');
+    const repDTotal = document.getElementById('rep-dist-total');
+    const repDVacio = document.getElementById('rep-dist-vacio');
+    const repTitCost = document.getElementById('rep-tit-cost');
+
+    if (repOrig) repOrig.textContent = origen;
+    if (repDest) repDest.textContent = destino;
+    if (repDate) repDate.textContent = today;
+    if (repVeh) repVeh.textContent = unitTypeName;
+    
+    if (repDTotal) repDTotal.innerHTML = `${distanceValueKm.toLocaleString('es-MX', {maximumFractionDigits: 0})} <span class="text-xs font-normal text-slate-400 uppercase tracking-tighter">km</span>`;
+    if (repDVacio) repDVacio.textContent = distanceValueKm.toLocaleString('es-MX', {maximumFractionDigits: 0});
+    
+    if (repTTotal) repTTotal.innerHTML = `${formatTime(totalTimeH)} <span class="text-xs font-normal text-slate-400 uppercase tracking-tighter">h</span>`;
+    if (repTDrive) repTDrive.textContent = formatTime(drivingTimeH);
+    if (repTitCost) repTitCost.textContent = 'Calculando...';
+    
+    window.currentRouteData = {
+        origen, destino, waypointNames, distance: distanceValueKm, unitTypeName, geminiUnitType
+    };
+    
+    // Switch to Report Tab
+    document.getElementById('tab-btn-report').click();
+    
+    // Trigger AI Tolls & Payroll Calc
+    await triggerTollCalculationAndPayroll(distanceValueKm, geminiUnitType, routesApiResponse);
+}
+
 function calculateMapRoute() {
     const origen = document.getElementById('map-origen').value;
     const destino = document.getElementById('map-destino').value;
@@ -601,87 +686,17 @@ function calculateMapRoute() {
     loading.classList.remove('hidden');
 
     fetchTollsViaRoutesAPI(origen, destino, waypointNames).then(async (routesApiResponse) => {
-        loading.classList.add('hidden');
-        
-        // 1. Draw route polyline in Leaflet
-        if (routePolyline) {
-            map.removeLayer(routePolyline);
-            routePolyline = null;
+        await renderCalculatedRoute(routesApiResponse, origen, destino, waypointNames, speedKmH, unitTypeName, geminiUnitType, loading);
+    }).catch(async (err) => {
+        console.warn("Falla en Google Routes API. Intentando fallback OSRM gratuito...", err);
+        try {
+            const osrmResponse = await fetchRouteViaOSRM(origen, destino, waypointNames);
+            await renderCalculatedRoute(osrmResponse, origen, destino, waypointNames, speedKmH, unitTypeName, geminiUnitType, loading);
+        } catch (osrmErr) {
+            loading.classList.add('hidden');
+            console.error("Falla también en OSRM:", osrmErr);
+            Swal.fire('Ruta no encontrada', 'No se pudo trazar la ruta (Google API y OSRM fallaron). Verifique las direcciones.', 'error');
         }
-
-        const coords = decodePolyline(routesApiResponse.encodedPolyline);
-        if (coords.length > 0) {
-            routePolyline = L.polyline(coords, {
-                color: '#4f46e5',
-                weight: 6,
-                opacity: 0.8
-            }).addTo(map);
-
-            // Fit map bounds
-            map.fitBounds(routePolyline.getBounds());
-
-            // Clear old waypoint markers
-            waypointMarkers.forEach(m => map.removeLayer(m));
-            waypointMarkers = [];
-
-            // Draw start and end markers
-            const startMarker = L.marker(coords[0], { title: 'Origen' }).addTo(map).bindPopup('<b>Origen</b><br>' + origen);
-            const endMarker = L.marker(coords[coords.length - 1], { title: 'Destino' }).addTo(map).bindPopup('<b>Destino</b><br>' + destino);
-            waypointMarkers.push(startMarker, endMarker);
-        }
-
-        const distanceValueKm = routesApiResponse.distanceMeters / 1000;
-        
-        // Time breakdown
-        const drivingTimeH = routesApiResponse.durationSeconds / 3600;
-        const stopTimeH = waypointNames.length * 0.5;
-        const restTimeH = document.getElementById('pref-opt-nom').checked ? Math.floor(drivingTimeH / 5) * 0.5 : 0;
-        const totalTimeH = drivingTimeH + stopTimeH + restTimeH;
-        
-        function formatTime(hoursDecimal) {
-            const hours = Math.floor(hoursDecimal);
-            const minutes = Math.round((hoursDecimal - hours) * 60);
-            return `${hours}h:${minutes.toString().padStart(2, '0')}m`;
-        }
-        
-        // Populate Reporte Ruta
-        const today = new Date().toLocaleDateString('es-MX');
-        const repOrig = document.getElementById('rep-origen');
-        const repDest = document.getElementById('rep-destino');
-        const repDate = document.getElementById('rep-fecha');
-        const repVeh = document.getElementById('rep-vehiculo');
-        const repTTotal = document.getElementById('rep-time-total');
-        const repTDrive = document.getElementById('rep-time-drive');
-        const repDTotal = document.getElementById('rep-dist-total');
-        const repDVacio = document.getElementById('rep-dist-vacio');
-        const repTitCost = document.getElementById('rep-tit-cost');
-
-        if (repOrig) repOrig.textContent = origen;
-        if (repDest) repDest.textContent = destino;
-        if (repDate) repDate.textContent = today;
-        if (repVeh) repVeh.textContent = unitTypeName;
-        
-        if (repDTotal) repDTotal.innerHTML = `${distanceValueKm.toLocaleString('es-MX', {maximumFractionDigits: 0})} <span class="text-xs font-normal text-slate-400 uppercase tracking-tighter">km</span>`;
-        if (repDVacio) repDVacio.textContent = distanceValueKm.toLocaleString('es-MX', {maximumFractionDigits: 0});
-        
-        if (repTTotal) repTTotal.innerHTML = `${formatTime(totalTimeH)} <span class="text-xs font-normal text-slate-400 uppercase tracking-tighter">h</span>`;
-        if (repTDrive) repTDrive.textContent = formatTime(drivingTimeH);
-        if (repTitCost) repTitCost.textContent = 'Calculando...';
-        
-        window.currentRouteData = {
-            origen, destino, waypointNames, distance: distanceValueKm, unitTypeName, geminiUnitType
-        };
-        
-        // Switch to Report Tab
-        document.getElementById('tab-btn-report').click();
-        
-        // Trigger AI Tolls & Payroll Calc
-        await triggerTollCalculationAndPayroll(distanceValueKm, geminiUnitType, routesApiResponse);
-
-    }).catch(err => {
-        loading.classList.add('hidden');
-        console.error("Error al trazar la ruta:", err);
-        Swal.fire('Ruta no encontrada', 'No se pudo trazar la ruta entre estos puntos. Verifique las direcciones y su API Key.', 'error');
     });
 }
 
@@ -936,6 +951,51 @@ async function fetchTollsViaRoutesAPI(originStr, destinationStr, waypointsArray)
         distanceMeters: distanceMeters,
         durationSeconds: durationSeconds,
         encodedPolyline: encodedPolyline
+    };
+}
+
+async function fetchRouteViaOSRM(originStr, destinationStr, waypointsArray) {
+    console.log("SISTEMA: Usando fallback de OSRM gratuito para trazar la ruta...");
+    const originCoords = window.freeGeocodeNominatim ? await window.freeGeocodeNominatim(originStr) : null;
+    const destCoords = window.freeGeocodeNominatim ? await window.freeGeocodeNominatim(destinationStr) : null;
+    if (!originCoords || !destCoords) {
+        throw new Error("No se pudieron geocodificar los puntos de origen o destino.");
+    }
+
+    const coordsList = [originCoords];
+    if (waypointsArray && waypointsArray.length > 0) {
+        for (const wp of waypointsArray) {
+            const wpCoords = window.freeGeocodeNominatim ? await window.freeGeocodeNominatim(wp) : null;
+            if (wpCoords) coordsList.push(wpCoords);
+        }
+    }
+    coordsList.push(destCoords);
+
+    const coordsQuery = coordsList.map(c => `${c.lng},${c.lat}`).join(';');
+    const url = `https://router.project-osrm.org/route/v1/driving/${coordsQuery}?overview=full&geometries=geojson`;
+
+    const response = await fetch(url);
+    if (!response.ok) {
+        throw new Error(`OSRM Error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    if (!data.routes || data.routes.length === 0) {
+        throw new Error("No se encontró ruta en OSRM.");
+    }
+
+    const route = data.routes[0];
+    const distanceMeters = route.distance || 0;
+    const durationSeconds = route.duration || 0;
+    const coordinates = route.geometry.coordinates.map(c => [c[1], c[0]]);
+
+    return {
+        distanceMeters: distanceMeters,
+        durationSeconds: durationSeconds,
+        coordinates: coordinates,
+        costoTotalNumerical: 0,
+        costoTotalFormatted: "Casetas no disponibles (Sin API de Google)",
+        isOSRM: true
     };
 }
 
