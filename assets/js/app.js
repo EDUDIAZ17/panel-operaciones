@@ -11,6 +11,7 @@ import { renderATCReports } from './modules/atc_reports.js';
 import { renderHistoryReports } from './modules/history_reports.js';
 import { renderTripLogs } from './modules/trip_logs.js';
 import { renderPayrollMap } from './modules/payroll_map.js';
+import { renderLogisticsNetwork } from './modules/logistics_network.js';
 import { renderFuel } from './modules/fuel.js?v=11.1';
 import { renderSecurityVial } from './modules/security_vial.js';
 import { renderGPSAlerts } from './modules/gps_alerts.js';
@@ -89,7 +90,7 @@ try {
             'nav-assignments', 'nav-trip-logs', 'nav-expenses', 'nav-fuel', 'nav-reports',
             'nav-client-reports', 'nav-atc-reports', 'nav-history-reports', 'nav-security-vial',
             'nav-observations', 'nav-cameras', 'nav-incidents', 'nav-admin', 'nav-payroll-map',
-            'nav-gps-alerts', 'nav-telemetry', 'nav-maintenance'
+            'nav-gps-alerts', 'nav-telemetry', 'nav-maintenance', 'nav-logistics-network'
         ];
 
         if (role === 'mantenimiento' || role === 'manto' || role === 'maintenance') {
@@ -156,7 +157,7 @@ try {
         } 
         else if (role === 'operaciones') {
             allNavs.forEach(nav => {
-                if(nav !== 'nav-assignments' && nav !== 'nav-expenses' && nav !== 'nav-fuel' && nav !== 'nav-payroll-map' && nav !== 'nav-admin' && nav !== 'nav-gps-alerts' && nav !== 'nav-telemetry' && nav !== 'nav-maintenance') document.getElementById(nav)?.classList.add('hidden-section');
+                if(nav !== 'nav-assignments' && nav !== 'nav-expenses' && nav !== 'nav-fuel' && nav !== 'nav-payroll-map' && nav !== 'nav-admin' && nav !== 'nav-gps-alerts' && nav !== 'nav-telemetry' && nav !== 'nav-maintenance' && nav !== 'nav-logistics-network') document.getElementById(nav)?.classList.add('hidden-section');
             });
         } 
         else if (role === 'otros_usuarios') {
@@ -311,6 +312,11 @@ function loadView(view) {
             setActiveNav('nav-payroll-map');
             renderPayrollMap(contentArea);
             break;
+        case 'logistics-network':
+            pageTitle.textContent = 'Red Logística Automotriz (Plantas, Puertos y Fronteras)';
+            setActiveNav('nav-logistics-network');
+            renderLogisticsNetwork(contentArea);
+            break;
         case 'fuel':
             pageTitle.textContent = 'Control de Combustible';
             setActiveNav('nav-fuel');
@@ -397,6 +403,7 @@ attachNav('nav-client-reports', 'client-reports');
 attachNav('nav-atc-reports', 'atc-reports');
 attachNav('nav-history-reports', 'history-reports');
 attachNav('nav-payroll-map', 'payroll-map');
+attachNav('nav-logistics-network', 'logistics-network');
 attachNav('nav-fuel', 'fuel');
 attachNav('nav-security-vial', 'security-vial');
 attachNav('nav-gps-alerts', 'gps-alerts');

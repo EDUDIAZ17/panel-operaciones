@@ -429,3 +429,61 @@ export async function getAssignmentSuggestionsAI(availableUnits, pendingTrips) {
 }
 
 window.getAssignmentSuggestionsAI = getAssignmentSuggestionsAI;
+
+export async function getLogisticsNetworkSuggestionsAI(payload) {
+    const prompt = `
+        Actúa como Director de Logística y Optimización de Redes de "Alexa Transportes" (transporte de vehículos terminados en México, madrinas / car carriers).
+        Analiza la red automotriz nacional: plantas armadoras (origen de vehículos nuevos), puertos con terminal de automóviles (exportación marítima) y cruces fronterizos (exportación terrestre a EE.UU.).
+
+        Datos calculados por el sistema (distancias carreteras estimadas y costos en pesos mexicanos):
+        ${JSON.stringify(payload)}
+
+        Instrucciones de análisis:
+        1. Recomienda entre 4 y 6 movimientos CONCRETOS (planta -> puerto/frontera) que reduzcan costo, citando el ahorro estimado en pesos y en kilómetros cuando el dato exista.
+        2. Prioriza la reducción de kilómetros vacíos: propón triangulaciones (después de descargar en el puerto/frontera, recoger carga en la planta más cercana en lugar de regresar vacío).
+        3. Señala clústeres estratégicos (Bajío, Noreste, Noroeste, Centro, Golfo) y cuál es la puerta de salida natural de cada uno.
+        4. Si un corredor tiene una alternativa más barata que la ruta tradicional, dilo explícitamente ("usar X en lugar de Y ahorra aproximadamente $Z por viaje").
+        5. Agrega una advertencia breve sobre restricciones reales: rutas ET/A para doble articulado, zonas de robo de carga y temporada alta de embarques.
+        6. No inventes plantas, puertos ni cifras que no estén en los datos entregados; usa únicamente los nodos y montos proporcionados.
+
+        Devuelve el resultado ÚNICAMENTE en HTML limpio y moderno (sin bloques markdown como \`\`\`html).
+        Usa clases de Tailwind CSS: tarjetas con bg-white o bg-indigo-50/50, bordes finos border-slate-200, títulos font-black, badges de color y iconos de Font Awesome (por ejemplo <i class="fas fa-route text-indigo-600"></i>).
+        Sé concreto y breve: máximo 2 líneas de texto por recomendación.
+    `;
+
+    const modelsToTry = [
+        'gemini-2.5-flash',
+        'gemini-2.5-pro'
+    ];
+    let lastError = null;
+
+    for (const model of modelsToTry) {
+        try {
+            const { data, error } = await supabase.functions.invoke('gemini-proxy', {
+                body: { model, prompt }
+            });
+
+            if (error) {
+                console.warn(`Model ${model} failed via proxy for logistics network:`, error);
+                lastError = error;
+                continue;
+            }
+
+            const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (text) {
+                return text.replace(/\`\`\`html/gi, '').replace(/\`\`\`/g, '').trim();
+            }
+        } catch (err) {
+            console.warn(`Fetch error for model ${model} in logistics network:`, err);
+            lastError = err;
+        }
+    }
+
+    console.error("All Gemini models failed for logistics network. Last error:", lastError);
+    return `<div class="p-4 bg-red-50 border border-red-200 rounded-lg text-center text-red-600 font-medium">
+        <i class="fas fa-exclamation-triangle mr-2 text-red-500"></i>
+        No se pudieron obtener recomendaciones de la IA en este momento. Las oportunidades calculadas abajo siguen disponibles.
+    </div>`;
+}
+
+window.getLogisticsNetworkSuggestionsAI = getLogisticsNetworkSuggestionsAI;
