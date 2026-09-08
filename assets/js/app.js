@@ -108,16 +108,20 @@ try {
             setTimeout(() => {
                 const nav = document.querySelector('nav');
                 if (nav) {
+                    // Red Logistica es la vista de entrada de Direccion General:
+                    // va primero en el menu y sin candado (es modulo de consulta).
+                    const logisticsNetwork = document.getElementById('nav-logistics-network');
                     const dashboard = document.getElementById('nav-dashboard');
                     const expenses = document.getElementById('nav-expenses');
                     const reports = document.getElementById('nav-reports');
                     
+                    if (logisticsNetwork) nav.appendChild(logisticsNetwork);
                     if (dashboard) nav.appendChild(dashboard);
                     if (expenses) nav.appendChild(expenses);
                     if (reports) nav.appendChild(reports);
                     
                     const others = Array.from(nav.children).filter(child => 
-                        !['nav-dashboard', 'nav-expenses', 'nav-reports'].includes(child.id)
+                        !['nav-logistics-network', 'nav-dashboard', 'nav-expenses', 'nav-reports'].includes(child.id)
                     );
                     
                     others.forEach(child => {
@@ -487,6 +491,8 @@ const init = () => {
     const role = currentUser?.role ? currentUser.role.toLowerCase().trim() : '';
     if (role === 'mantenimiento' || role === 'manto' || role === 'maintenance') {
         loadView('maintenance');
+    } else if (role === 'direccion_general') {
+        loadView('logistics-network');
     } else {
         loadView('dashboard');
     }
