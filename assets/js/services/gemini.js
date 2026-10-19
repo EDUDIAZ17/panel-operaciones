@@ -433,14 +433,14 @@ window.getAssignmentSuggestionsAI = getAssignmentSuggestionsAI;
 export async function getLogisticsNetworkSuggestionsAI(payload) {
     const prompt = `
         Actúa como Director de Logística y Optimización de Redes de "Alexa Transportes" (transporte de vehículos terminados en México, madrinas / car carriers).
-        Analiza la red automotriz nacional: plantas armadoras (origen de vehículos nuevos), puertos con terminal de automóviles (exportación marítima) y cruces fronterizos (exportación terrestre a EE.UU.).
+        Analiza la red automotriz nacional: plantas armadoras (origen de vehículos nuevos), puertos de exportación, puertos de importación (algunos hacen ambas cosas), terminales ferroviarias de exportación terrestre (Ferromex) y ciudades grandes que reciben viajes domésticos desde las plantas Nissan.
 
         Datos calculados por el sistema (distancias carreteras estimadas y costos en pesos mexicanos):
         ${JSON.stringify(payload)}
 
         Instrucciones de análisis:
         1. Recomienda entre 4 y 6 movimientos CONCRETOS (planta -> puerto/frontera) que reduzcan costo, citando el ahorro estimado en pesos y en kilómetros cuando el dato exista.
-        2. Prioriza la reducción de kilómetros vacíos: propón triangulaciones (después de descargar en el puerto/frontera, recoger carga en la planta más cercana en lugar de regresar vacío).
+        2. Prioriza la reducción de kilómetros vacíos: propón triangulaciones (después de descargar, recoger carga en el punto de carga más cercano en lugar de regresar vacío). Si el puerto de exportación también importa, el regreso puede ir cargado con vehículos importados: resáltalo. Usa "recorridos_en_vacio" para señalar los tramos vacíos más caros.
         3. Señala clústeres estratégicos (Bajío, Noreste, Noroeste, Centro, Golfo) y cuál es la puerta de salida natural de cada uno.
         4. Si un corredor tiene una alternativa más barata que la ruta tradicional, dilo explícitamente ("usar X en lugar de Y ahorra aproximadamente $Z por viaje").
         5. Agrega una advertencia breve sobre restricciones reales: rutas ET/A para doble articulado, zonas de robo de carga y temporada alta de embarques.

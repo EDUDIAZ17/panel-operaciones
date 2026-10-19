@@ -1,7 +1,6 @@
 import { renderDashboard } from './modules/dashboard.js';
 import { renderAssignments } from './modules/assignments.js';
 import { renderExpenses } from './modules/expenses.js';
-import { renderBilling } from './modules/billing.js';
 import { renderAdmin } from './modules/admin.js';
 import { renderReports } from './modules/reports.js';
 import { renderObservations } from './modules/observations.js';
@@ -91,7 +90,7 @@ try {
             'nav-assignments', 'nav-trip-logs', 'nav-expenses', 'nav-fuel', 'nav-reports',
             'nav-client-reports', 'nav-atc-reports', 'nav-history-reports', 'nav-security-vial',
             'nav-observations', 'nav-cameras', 'nav-incidents', 'nav-admin', 'nav-payroll-map',
-            'nav-gps-alerts', 'nav-telemetry', 'nav-maintenance', 'nav-logistics-network', 'nav-billing'
+            'nav-gps-alerts', 'nav-telemetry', 'nav-maintenance', 'nav-logistics-network'
         ];
 
         if (role === 'mantenimiento' || role === 'manto' || role === 'maintenance') {
@@ -187,7 +186,7 @@ try {
         }
         else if (role === 'contabilidad') {
             allNavs.forEach(nav => {
-                if(nav !== 'nav-expenses' && nav !== 'nav-fuel' && nav !== 'nav-reports' && nav !== 'nav-payroll-map' && nav !== 'nav-billing') document.getElementById(nav)?.classList.add('hidden-section');
+                if(nav !== 'nav-expenses' && nav !== 'nav-fuel' && nav !== 'nav-reports' && nav !== 'nav-payroll-map') document.getElementById(nav)?.classList.add('hidden-section');
             });
         }
         else if (role === 'atc') {
@@ -266,11 +265,6 @@ function loadView(view) {
             setActiveNav('nav-expenses');
             renderExpenses(contentArea);
             break;
-        case 'billing':
-            pageTitle.textContent = 'Cuentas por Cobrar y por Pagar (CFDI)';
-            setActiveNav('nav-billing');
-            renderBilling(contentArea);
-            break;
         case 'admin':
             pageTitle.textContent = 'Gestión Administrativa';
             setActiveNav('nav-admin');
@@ -323,7 +317,7 @@ function loadView(view) {
             renderPayrollMap(contentArea);
             break;
         case 'logistics-network':
-            pageTitle.textContent = 'Red Logística Automotriz (Plantas, Puertos y Fronteras)';
+            pageTitle.textContent = 'Red Logística Automotriz (Armadoras, Puertos, Tren y Ciudades)';
             setActiveNav('nav-logistics-network');
             renderLogisticsNetwork(contentArea);
             break;
@@ -404,7 +398,6 @@ attachNav('nav-dashboard', 'dashboard');
 attachNav('nav-assignments', 'assignments');
 attachNav('nav-trip-logs', 'trip-logs');
 attachNav('nav-expenses', 'expenses');
-attachNav('nav-billing', 'billing');
 attachNav('nav-reports', 'reports');
 attachNav('nav-observations', 'observations');
 attachNav('nav-admin', 'admin');
