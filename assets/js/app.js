@@ -489,7 +489,11 @@ navButtons.forEach(btn => {
 const init = () => {
     const currentUser = JSON.parse(sessionStorage.getItem('currentUser'));
     const role = currentUser?.role ? currentUser.role.toLowerCase().trim() : '';
-    if (role === 'mantenimiento' || role === 'manto' || role === 'maintenance') {
+    // index.html#tv abre la Red Logística a pantalla completa (pantalla de patio).
+    const navRed = document.getElementById('nav-logistics-network');
+    if (location.hash === '#tv' && navRed && !navRed.classList.contains('hidden-section')) {
+        loadView('logistics-network');
+    } else if (role === 'mantenimiento' || role === 'manto' || role === 'maintenance') {
         loadView('maintenance');
     } else if (role === 'direccion_general') {
         loadView('logistics-network');

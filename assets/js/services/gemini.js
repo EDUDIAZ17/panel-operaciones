@@ -432,23 +432,25 @@ window.getAssignmentSuggestionsAI = getAssignmentSuggestionsAI;
 
 export async function getLogisticsNetworkSuggestionsAI(payload) {
     const prompt = `
-        Actúa como Director de Logística y Optimización de Redes de "Alexa Transportes" (transporte de vehículos terminados en México, madrinas / car carriers).
-        Analiza la red automotriz nacional: plantas armadoras (origen de vehículos nuevos), puertos de exportación, puertos de importación (algunos hacen ambas cosas), terminales ferroviarias de exportación terrestre (Ferromex) y ciudades grandes que reciben viajes domésticos desde las plantas Nissan.
+        Actúa como Director Comercial y de Logística de "Alexa Transportes" (San Mateo Atenco, Estado de México).
+        La empresa tiene flota 100% propia y tres líneas de negocio: nodrizas (vehículos), pipas grado alimenticio y jaulas, y contenedores.
+        El sistema calculó, para cada destino doméstico del país, cuántos kilómetros regresa vacía una unidad hasta el punto de carga más cercano (armadora, puerto o terminal de tren).
+        Un "punto muerto" es un destino donde ese vacío supera el umbral: ahí se pierde dinero en cada viaje.
 
-        Datos calculados por el sistema (distancias carreteras estimadas y costos en pesos mexicanos):
+        Datos (distancias carreteras estimadas, costos en pesos mexicanos):
         ${JSON.stringify(payload)}
 
-        Instrucciones de análisis:
-        1. Recomienda entre 4 y 6 movimientos CONCRETOS (planta -> puerto/frontera) que reduzcan costo, citando el ahorro estimado en pesos y en kilómetros cuando el dato exista.
-        2. Prioriza la reducción de kilómetros vacíos: propón triangulaciones (después de descargar, recoger carga en el punto de carga más cercano en lugar de regresar vacío). Si el puerto de exportación también importa, el regreso puede ir cargado con vehículos importados: resáltalo. Usa "recorridos_en_vacio" para señalar los tramos vacíos más caros.
-        3. Señala clústeres estratégicos (Bajío, Noreste, Noroeste, Centro, Golfo) y cuál es la puerta de salida natural de cada uno.
-        4. Si un corredor tiene una alternativa más barata que la ruta tradicional, dilo explícitamente ("usar X en lugar de Y ahorra aproximadamente $Z por viaje").
-        5. Agrega una advertencia breve sobre restricciones reales: rutas ET/A para doble articulado, zonas de robo de carga y temporada alta de embarques.
-        6. No inventes plantas, puertos ni cifras que no estén en los datos entregados; usa únicamente los nodos y montos proporcionados.
+        Instrucciones:
+        1. Para cada punto muerto, propón cómo convertir el regreso vacío en viaje pagado usando alguna de las tres líneas de negocio: qué tipo de carga suele salir de esa región (por ejemplo lácteos, aceites, agroindustria, química, contenedores de importación o exportación), qué tipo de cliente buscar y hacia dónde iría esa carga (idealmente hacia el centro del país o hacia un punto de carga).
+        2. Si mencionas empresas o plantas específicas que no vienen en los datos, márcalas como "(por validar)".
+        3. Agrupa los puntos muertos por región (Sureste, Norte, Noroeste, etc.) cuando compartan estrategia.
+        4. Da una estrategia de tarifa para cuando no haya carga de regreso: cobrar el vacío, viaje redondo, consolidar varios destinos en una vuelta, o reposicionar a un punto de carga.
+        5. Cierra con las 3 acciones comerciales más rentables de esta semana, ordenadas por el costo de vacío que eliminan.
+        6. No inventes cifras: usa solo los kilómetros y montos de los datos.
 
         Devuelve el resultado ÚNICAMENTE en HTML limpio y moderno (sin bloques markdown como \`\`\`html).
-        Usa clases de Tailwind CSS: tarjetas con bg-white o bg-indigo-50/50, bordes finos border-slate-200, títulos font-black, badges de color y iconos de Font Awesome (por ejemplo <i class="fas fa-route text-indigo-600"></i>).
-        Sé concreto y breve: máximo 2 líneas de texto por recomendación.
+        Usa clases de Tailwind CSS: tarjetas con bg-white o bg-red-50/50, bordes finos border-slate-200, títulos font-black, badges de color e iconos de Font Awesome (por ejemplo <i class="fas fa-route text-indigo-600"></i>).
+        Sé concreto: máximo 2 líneas por recomendación.
     `;
 
     const modelsToTry = [
