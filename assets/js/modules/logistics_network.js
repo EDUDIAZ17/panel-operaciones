@@ -417,7 +417,7 @@ function leyendaHtml(oscura = false) {
         ${punto(`background:${COLOR.planta};box-shadow:0 0 0 2px ${COLOR.patio}`, 'Armadora cliente')}
         ${punto(`background:${COLOR.ciudad}`, 'Destino doméstico')}
         ${punto(`background:${COLOR.ciudad};box-shadow:0 0 0 3px ${COLOR.vacio}`, 'Punto muerto')}
-        <div class="pt-1.5 mt-1.5 border-t ${oscura ? 'border-slate-700' : 'border-slate-200'} space-y-1.5">
+        <div class="col-span-2 pt-1.5 mt-1.5 border-t ${oscura ? 'border-slate-700' : 'border-slate-200'} space-y-1.5">
             ${linea(`border-top:2px dashed ${COLOR.patio}`, 'Nuestra red desde el patio')}
             ${linea(`border-top:3px dashed ${COLOR.vacio}`, 'Vacío al punto de carga más cercano')}
         </div>`;
@@ -964,13 +964,13 @@ function abrirModoTV() {
         <!-- Los paneles van sobre zonas vacías del mapa: la leyenda y la tarjeta
              sobre el Pacífico, los indicadores sobre el Golfo y Texas. Así no
              tapan ningún nodo, en especial el sureste. -->
-        <div class="absolute left-6 top-[16%] z-[1000] bg-slate-900/85 backdrop-blur border border-slate-700 rounded-2xl p-4 space-y-1.5">
+        <div id="rl-tv-legend" class="absolute left-6 top-[27%] z-[1000] bg-slate-900/85 backdrop-blur border border-slate-700 rounded-2xl p-3 grid grid-cols-2 gap-x-4 gap-y-1">
             ${leyendaHtml(true)}
         </div>
 
         <div id="rl-tv-kpis" class="absolute right-6 top-[17%] z-[1000] grid grid-cols-2 gap-3 w-[min(470px,30vw)]"></div>
 
-        <div id="rl-tv-spot" class="absolute bottom-6 left-6 z-[1000] w-[min(620px,40vw)]"></div>
+        <div id="rl-tv-spot" class="absolute bottom-6 left-6 z-[1000] w-[min(620px,36vw)]"></div>
 
         <button id="rl-tv-exit" class="absolute top-6 left-1/2 -translate-x-1/2 z-[1001] opacity-0 hover:opacity-100 focus:opacity-100 transition-opacity bg-slate-800/90 border border-slate-600 rounded-lg px-4 py-2 text-xs font-black uppercase tracking-widest">
             <i class="fas fa-xmark mr-2"></i> Salir del Modo TV (Esc)
@@ -1107,12 +1107,12 @@ function rotarSpotlight() {
                     </span>
                     <span class="text-xs font-bold text-slate-400 uppercase tracking-widest">${(tv.indice - 1) % lista.length + 1} / ${lista.length}</span>
                 </div>
-                <p class="text-3xl font-black mt-3 leading-tight">${d.ciudad.nombre}, ${d.ciudad.estado}</p>
-                <p class="text-lg font-bold text-slate-300 mt-1">
+                <p class="text-2xl 2xl:text-3xl font-black mt-3 leading-tight">${d.ciudad.nombre}, ${d.ciudad.estado}</p>
+                <p class="text-base 2xl:text-lg font-bold text-slate-300 mt-1">
                     <span class="${muerto ? 'text-red-400' : 'text-amber-400'}">${km(d.km)} en vacío</span>
                     hasta ${d.hub.nombre} · <span class="text-white">${money(d.costo)}</span> por viaje
                 </p>
-                <p class="text-base text-slate-300 mt-3 leading-snug"><i class="fas fa-lightbulb text-amber-400 mr-2"></i>${oportunidad(d)}</p>
+                <p class="text-sm 2xl:text-base text-slate-300 mt-3 leading-snug"><i class="fas fa-lightbulb text-amber-400 mr-2"></i>${oportunidad(d)}</p>
                 <p class="text-xs font-bold text-cyan-300 mt-3 uppercase tracking-widest">A ${km(d.patioKm)} de nuestro patio</p>
             </div>
             <div class="h-1 bg-slate-800">
